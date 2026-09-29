@@ -1,0 +1,51 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { FEEDBACK_VARIANT_COOKIE, LandingApp, type FeedbackVariant } from "@/components/landing/LandingApp";
+import { LandingError } from "@/components/landing/LandingError";
+import { ThemeStyle } from "@/components/ThemeStyle";
+import { BRAND } from "@/config/brand";
+import { firstParam, loadVenue, requestLocale, sourceParam, venueParam } from "@/server/request";
+import "@/styles/landing.css";
+
+export async function generateMetadata({ searchParams }: PageProps<"/s">): Promise<Metadata> {
+  const venue = loadVenue(venueParam(await searchParams));
+  return {
+    title: venue ? venue.name : BRAND.name,
+    // Venue pages are reached by QR code; they have nothing to offer a search index.
+    robots: { index: false, follow: false },
+  };
+}
+
+function parseVariant(value: string | undefined): FeedbackVariant | null {
+  if (value === "box" || value === "cta_box") return "box";
+  if (value === "anon" || value === "cta_anon") return "anon";
+  return null;
+}
+
+function drawVariant(): FeedbackVariant {
+  return Math.random() < 0.5 ? "box" : "anon";
+}
+
+/** `/s?i=<venue code>&s=<scan source>` — the page a table QR code opens. */
+export default async function LandingPage({ searchParams }: PageProps<"/s">) {
+  const params = await searchParams;
+  const code = venueParam(params);
+  const source = sourceParam(params);
+  const locale = await requestLocale();
+
+  if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
+  const venue = loadVenue(code);
+  if (!venue) return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
+
+  // `?cta=` forces a bucket for QA without touching the visitor's stored one.
+  const forced = parseVariant(firstParam(params.cta));
+  const stored = parseVariant((await cookies()).get(FEEDBACK_VARIANT_COOKIE)?.value);
+  const variant = forced ?? stored ?? drawVariant();
+
+  return (
+    <>
+      <ThemeStyle branding={venue.branding} />
+      <LandingApp venue={venue} locale={locale} source={source} feedbackVariant={variant} persistVariant={!forced && !stored} />
+    </>
+  );
+}

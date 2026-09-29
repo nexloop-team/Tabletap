@@ -1,0 +1,65 @@
+import { describe, expect, it } from "vitest";
+import { DEMO_VENUES } from "@/server/seed";
+import type { PublicVenue } from "./types";
+import { applyFeatureOrder, buildFeatures, consentAgeThreshold, resolvedTitle, safeImageUrl, sanitiseExternalUrl, wifiView } from "./features";
+
+const [juniper, kettle, bloom] = DEMO_VENUES;
+
+function venue(overrides: Partial<PublicVenue>): PublicVenue {
+  return { ...juniper, ...overrides, branding: { ...juniper.branding, ...overrides.branding } };
+}
+
+describe("buildFeatures", () => {
+  it("puts the merchant's order first and appends unlisted cards in default order", () => {
+    expect(buildFeatures(juniper)).toEqual(["loyalty", "google_review", "menu", "wifi", "feedback", "sudoku"]);
+  });
+
+  it("always offers feedback, even with nothing else configured", () => {
+    const bare = venue({ loyaltyProgram: null, menus: [], wifi: null, branding: { sudokuEnabled: false, showGoogleReviewButton: false, featureOrder: [] } });
+    expect(buildFeatures(bare)).toEqual(["feedback"]);
+  });
+
+  it("shows loyalty for a rewards-only programme and drops sudoku when disabled", () => {
+    expect(buildFeatures(kettle)).not.toContain("sudoku");
+    expect(buildFeatures(bloom)).toContain("loyalty");
+  });
+
+  it("adds custom links and hides ones with unsafe URLs", () => {
+    const withBadLink = venue({ externalLinks: [...bloom.externalLinks, { id: "evil", url: "javascript:alert(1)" }] });
+    const features = buildFeatures(withBadLink);
+    expect(features).toContain("link:lnk_book");
+    expect(features).not.toContain("link:evil");
+  });
+
+  it("hides the menu card when its external URL is not http(s)", () => {
+    const badMenu = venue({ menus: [{ id: "m", name: "M", externalUrl: "ftp://x", sections: [] }] });
+    expect(buildFeatures(badMenu)).not.toContain("menu");
+  });
+});
+
+describe("applyFeatureOrder", () => {
+  it("can reorder but never add or duplicate a card", () => {
+    expect(applyFeatureOrder(["menu", "feedback"], ["feedback", "wifi", "feedback", "menu"])).toEqual(["feedback", "menu"]);
+  });
+});
+
+describe("header and helpers", () => {
+  it("resolves the title: whitespace override hides it, empty falls back to the name", () => {
+    expect(resolvedTitle({ titleOverride: "   " }, "Cafe")).toBeNull();
+    expect(resolvedTitle({ titleOverride: "" }, "Cafe")).toBe("Cafe");
+    expect(resolvedTitle({}, "  ")).toBeNull();
+  });
+
+  it("only allows http(s) links and same-origin images", () => {
+    expect(sanitiseExternalUrl(" https://a.b ")).toBe("https://a.b");
+    expect(sanitiseExternalUrl("data:text/html,x")).toBeNull();
+    expect(safeImageUrl("/demo/x.svg")).toBe("/demo/x.svg");
+    expect(safeImageUrl("//evil.com/x.png")).toBeNull();
+  });
+
+  it("treats open networks as passwordless and raises the age line for pubs", () => {
+    expect(wifiView(bloom)).toMatchObject({ isOpen: true, canCopyPassword: false });
+    expect(consentAgeThreshold(kettle)).toBe(18);
+    expect(consentAgeThreshold(juniper)).toBe(13);
+  });
+});

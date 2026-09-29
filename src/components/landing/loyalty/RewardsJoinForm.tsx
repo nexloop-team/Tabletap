@@ -1,0 +1,100 @@
+"use client";
+
+import { useState } from "react";
+import { rewardsPassLine } from "@/lib/landing-copy";
+import { birthdayAskOn } from "@/lib/venue/features";
+import { FilledHeart } from "../../icons";
+import { BirthdayFields, EMPTY_BIRTHDAY, RewardsConsent, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
+import { useLanding, type Membership } from "../LandingContext";
+import { useRewardsJoin } from "../useJoin";
+
+export function RewardsJoinedPanel({ membership }: { membership: Membership }) {
+  const { t, tf } = useLanding();
+  const line = rewardsPassLine(membership.response, membership.email, true, tf);
+  return (
+    <SuccessPanel icon="heart" title={t("rewards_joined")}>
+      {line && <p>{line}</p>}
+      {membership.response.confirmationPending && <p className="confirm-notice">{t("check_inbox_confirm")}</p>}
+      <WalletActions response={membership.response} context="rewards_join" />
+    </SuccessPanel>
+  );
+}
+
+/**
+ * The rewards-only join, used on the home card and on the feedback thank-you.
+ * Validation happens on tap: the button is never disabled up front.
+ */
+export function RewardsJoinForm({ door, withBirthday }: { door: "home" | "feedback"; withBirthday: boolean }) {
+  const { venue, t, track } = useLanding();
+  const join = useRewardsJoin();
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [ageAttested, setAgeAttested] = useState(false);
+  const [birthday, setBirthday] = useState(EMPTY_BIRTHDAY);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const showBirthday = withBirthday && birthdayAskOn(venue);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    const result = await join({ email, firstName, ageAttested, door, birthday: showBirthday ? birthdayAnswer(birthday) : null });
+    setBusy(false);
+    if (!result.ok) setError(t(result.error));
+    else if (result.response.confirmationPending) track("consent_confirmation_sent", { source: "rewards" });
+  }
+
+  return (
+    <>
+      <form
+        className="form-stack"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <input className="text-input" type="text" placeholder={t("first_name")} autoComplete="given-name" autoCorrect="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label={t("first_name")} />
+        <input className="text-input" type="email" placeholder={t("email_address")} autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("email_address")} />
+        {showBirthday && (
+          <div className="birthday-block">
+            <p className="sub-text">{t("birthday_join_label")}</p>
+            <BirthdayFields value={birthday} onChange={setBirthday} />
+          </div>
+        )}
+        <RewardsConsent checked={ageAttested} onChange={setAgeAttested} />
+        <button type="submit" className={`primary-btn${busy ? " busy" : ""}`} disabled={busy}>
+          {busy ? t("enrolling") : t("feature_loyalty")}
+        </button>
+      </form>
+      {error && (
+        <p className="form-error" role="alert" style={{ marginTop: 10 }}>
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** Home-card sheet for a rewards-only venue. */
+export function RewardsSheet() {
+  const { venue, t, membership } = useLanding();
+  return (
+    <div className="sheet-inner">
+      {membership ? (
+        <RewardsJoinedPanel membership={membership} />
+      ) : (
+        <>
+          <div className="loyalty-header">
+            <div className="loyalty-icon">
+              <FilledHeart />
+            </div>
+            <h3>{venue.name || t("feature_loyalty")}</h3>
+            <p>{t("rewards_sub")}</p>
+          </div>
+          <RewardsJoinForm door="home" withBirthday />
+        </>
+      )}
+    </div>
+  );
+}
