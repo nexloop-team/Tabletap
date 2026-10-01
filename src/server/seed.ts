@@ -158,8 +158,11 @@ export const DEMO_VENUES: PublicVenue[] = [
 
 export function seedDemoVenues(db: DatabaseSync) {
   const insert = db.prepare("INSERT OR IGNORE INTO venues (id, short_code, config) VALUES (?, ?, ?)");
+  // Demos show every feature, so they sit on the paid plan with no owner.
+  const subscribe = db.prepare("INSERT OR IGNORE INTO subscriptions (venue_id, plan, status) VALUES (?, 'pro', 'active')");
   for (const venue of DEMO_VENUES) {
     const { id, shortCode, ...config } = venue;
     insert.run(id, shortCode, JSON.stringify(config));
+    subscribe.run(id);
   }
 }

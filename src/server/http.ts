@@ -47,7 +47,11 @@ const buckets = new Map<string, number[]>();
  * needs a shared store (Redis) instead.
  */
 export function rateLimit(request: Request, route: string, limit: number, windowMs = 60_000) {
-  const key = `${route}:${clientKey(request)}`;
+  rateLimitKey(`${route}:${clientKey(request)}`, limit, windowMs);
+}
+
+/** The same limiter on any key, e.g. per account email for login attempts. */
+export function rateLimitKey(key: string, limit: number, windowMs = 60_000) {
   const now = Date.now();
   const hits = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
   if (hits.length >= limit) throw new ServiceError(429, "Too many requests, please try again shortly");
@@ -55,11 +59,25 @@ export function rateLimit(request: Request, route: string, limit: number, window
   buckets.set(key, hits);
 }
 
+/**
+ * CSRF guard for cookie-authenticated writes. SameSite=Lax already keeps the
+ * session cookie off cross-site POSTs; this also refuses any request a
+ * browser marks as coming from another origin.
+ */
+export function assertSameOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  if (origin) {
+    if (origin !== requestOrigin(request) && origin !== new URL(request.url).origin) throw new ServiceError(403, "Cross-origin request refused");
+    return;
+  }
+  if (request.headers.get("sec-fetch-site") === "cross-site") throw new ServiceError(403, "Cross-origin request refused");
+}
+
 /** Wraps a handler so ServiceErrors become JSON responses and anything else a 500. */
-export function handle(fn: (request: Request) => Promise<Response>) {
-  return async (request: Request): Promise<Response> => {
+export function handle<C = unknown>(fn: (request: Request, ctx: C) => Promise<Response>) {
+  return async (request: Request, ctx: C): Promise<Response> => {
     try {
-      return await fn(request);
+      return await fn(request, ctx);
     } catch (error) {
       if (error instanceof ServiceError) return jsonError(error.status, error.message);
       console.error(error);

@@ -30,6 +30,15 @@ export function queryString(params: SearchParams): string {
   return out ? `?${out}` : "";
 }
 
+/** This deployment's public origin for links shown in the dashboard (APP_URL wins when set). */
+export async function serverOrigin(): Promise<string> {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, "");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 /** Server-rendered text uses the browser's Accept-Language, so the first paint is already localised. */
 export async function requestLocale(): Promise<Locale> {
   return detectLocale((await headers()).get("accept-language"));

@@ -1,0 +1,133 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
+import { safeNext } from "@/lib/safe-next";
+
+function useSubmit(run: (form: FormData) => Promise<void>) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      await run(new FormData(event.currentTarget));
+    } catch (err) {
+      setError(errorMessage(err));
+      setPending(false);
+    }
+  }
+  return { pending, error, onSubmit };
+}
+
+function Input({ label, name, type = "text", autoComplete, hint, minLength, autoFocus }: { label: string; name: string; type?: string; autoComplete?: string; hint?: string; minLength?: number; autoFocus?: boolean }) {
+  return (
+    <div className="field">
+      <label htmlFor={name}>{label}</label>
+      <input className="input" id={name} name={name} type={type} autoComplete={autoComplete} required minLength={minLength} autoFocus={autoFocus} />
+      {hint && <p className="hint">{hint}</p>}
+    </div>
+  );
+}
+
+function Submit({ pending, children }: { pending: boolean; children: ReactNode }) {
+  return (
+    <button className="btn btn-primary btn-block" type="submit" disabled={pending}>
+      {pending ? "Please wait…" : children}
+    </button>
+  );
+}
+
+function ErrorNotice({ error }: { error: string | null }) {
+  return error ? (
+    <div className="notice notice-error" role="alert" style={{ marginTop: 16 }}>
+      {error}
+    </div>
+  ) : null;
+}
+
+const text = (form: FormData, key: string) => String(form.get(key) ?? "");
+
+export function LoginForm({ next }: { next?: string }) {
+  const router = useRouter();
+  const { pending, error, onSubmit } = useSubmit(async (form) => {
+    await dashboardApi.login({ email: text(form, "email"), password: text(form, "password") });
+    router.replace(safeNext(next));
+    router.refresh();
+  });
+  return (
+    <form onSubmit={onSubmit} noValidate={false}>
+      <Input label="Email" name="email" type="email" autoComplete="email" autoFocus />
+      <Input label="Password" name="password" type="password" autoComplete="current-password" />
+      <p className="hint" style={{ marginTop: 8 }}>
+        <Link href="/forgot-password">Forgot your password?</Link>
+      </p>
+      <ErrorNotice error={error} />
+      <Submit pending={pending}>Sign in</Submit>
+    </form>
+  );
+}
+
+export function SignupForm() {
+  const router = useRouter();
+  const { pending, error, onSubmit } = useSubmit(async (form) => {
+    await dashboardApi.signup({ name: text(form, "name"), email: text(form, "email"), password: text(form, "password") });
+    router.replace("/onboarding");
+    router.refresh();
+  });
+  return (
+    <form onSubmit={onSubmit}>
+      <Input label="Your name" name="name" autoComplete="name" autoFocus />
+      <Input label="Work email" name="email" type="email" autoComplete="email" />
+      <Input label="Password" name="password" type="password" autoComplete="new-password" minLength={8} hint="At least 8 characters." />
+      <ErrorNotice error={error} />
+      <Submit pending={pending}>Create account</Submit>
+      <p className="hint" style={{ marginTop: 12, textAlign: "center" }}>
+        By signing up you agree to our <Link href="/terms">terms</Link> and <Link href="/privacy">privacy notice</Link>.
+      </p>
+    </form>
+  );
+}
+
+export function ForgotPasswordForm() {
+  const [sent, setSent] = useState(false);
+  const { pending, error, onSubmit } = useSubmit(async (form) => {
+    await dashboardApi.forgotPassword({ email: text(form, "email") });
+    setSent(true);
+  });
+  if (sent) {
+    return (
+      <div className="notice notice-ok" role="status">
+        If an account exists for that address, a reset link is on its way. It works for one hour.
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={onSubmit}>
+      <Input label="Email" name="email" type="email" autoComplete="email" autoFocus />
+      <ErrorNotice error={error} />
+      <Submit pending={pending}>Send reset link</Submit>
+    </form>
+  );
+}
+
+export function ResetPasswordForm({ token }: { token: string }) {
+  const router = useRouter();
+  const { pending, error, onSubmit } = useSubmit(async (form) => {
+    if (text(form, "password") !== text(form, "confirm")) throw new Error("The two passwords don't match");
+    await dashboardApi.resetPassword({ token, password: text(form, "password") });
+    router.replace("/dashboard");
+    router.refresh();
+  });
+  return (
+    <form onSubmit={onSubmit}>
+      <Input label="New password" name="password" type="password" autoComplete="new-password" minLength={8} hint="At least 8 characters." autoFocus />
+      <Input label="Confirm new password" name="confirm" type="password" autoComplete="new-password" minLength={8} />
+      <ErrorNotice error={error} />
+      <Submit pending={pending}>Set new password</Submit>
+    </form>
+  );
+}

@@ -77,6 +77,55 @@ const MIGRATIONS: string[] = [
      params TEXT,
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    );`,
+  // Merchant accounts: owners sign up, own venues, and pay per venue.
+  `CREATE TABLE users (
+     id TEXT PRIMARY KEY,
+     email TEXT NOT NULL UNIQUE,
+     name TEXT NOT NULL,
+     password_hash TEXT NOT NULL,
+     email_verified_at TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE TABLE sessions (
+     id TEXT PRIMARY KEY,
+     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     expires_at TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX sessions_user ON sessions(user_id);
+   CREATE TABLE auth_tokens (
+     id TEXT PRIMARY KEY,
+     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     purpose TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     used_at TEXT
+   );
+   CREATE TABLE venue_members (
+     venue_id TEXT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     role TEXT NOT NULL DEFAULT 'owner',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (venue_id, user_id)
+   );
+   CREATE INDEX venue_members_user ON venue_members(user_id);
+   CREATE TABLE subscriptions (
+     venue_id TEXT PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+     plan TEXT NOT NULL DEFAULT 'free',
+     status TEXT NOT NULL DEFAULT 'active',
+     trial_ends_at TEXT,
+     current_period_end TEXT,
+     provider TEXT,
+     provider_customer_id TEXT,
+     provider_subscription_id TEXT,
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   ALTER TABLE venues ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+   ALTER TABLE venues ADD COLUMN updated_at TEXT;
+   ALTER TABLE events ADD COLUMN venue_id TEXT;
+   UPDATE events SET venue_id = json_extract(params, '$.venue_id');
+   CREATE INDEX events_venue ON events(venue_id, name, created_at);
+   CREATE INDEX feedback_venue ON feedback(venue_id, created_at);
+   CREATE INDEX visits_venue ON visits(venue_id, created_at);`,
 ];
 
 function migrate(db: DatabaseSync) {
@@ -101,6 +150,8 @@ function migrate(db: DatabaseSync) {
 declare global {
   // Survives dev-server hot reloads so we keep one connection.
   var __appDb: DatabaseSync | undefined;
+  // How many migrations the kept connection has seen.
+  var __appDbMigrations: number | undefined;
 }
 
 export function getDb(): DatabaseSync {
@@ -108,9 +159,14 @@ export function getDb(): DatabaseSync {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const db = new DatabaseSync(DB_PATH);
     db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-    migrate(db);
-    seedDemoVenues(db);
     globalThis.__appDb = db;
+  }
+  // A hot reload can bring new migrations while the connection lives on, so
+  // check on every call (a number compare) rather than only at open.
+  if (globalThis.__appDbMigrations !== MIGRATIONS.length) {
+    migrate(globalThis.__appDb);
+    seedDemoVenues(globalThis.__appDb);
+    globalThis.__appDbMigrations = MIGRATIONS.length;
   }
   return globalThis.__appDb;
 }

@@ -331,10 +331,12 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
           <Header venue={venue} />
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
-          <Link className="powered-by" href="/" aria-label={tf("powered_by", { brand: BRAND.name })}>
-            <BrandMark />
-            {BRAND.name}
-          </Link>
+          {venue.showPoweredBy !== false && (
+            <Link className="powered-by" href="/" aria-label={tf("powered_by", { brand: BRAND.name })}>
+              <BrandMark />
+              {BRAND.name}
+            </Link>
+          )}
         </main>
       </div>
       <AppDialog content={dialog} okLabel={t("ok")} onClose={() => setDialog(null)} />

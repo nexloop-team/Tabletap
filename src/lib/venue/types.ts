@@ -126,4 +126,6 @@ export interface PublicVenue {
   branding: VenueBranding;
   externalLinks: ExternalLink[];
   crm: CrmSettings;
+  /** The "Powered by" footer; paid plans may hide it. */
+  showPoweredBy?: boolean;
 }
