@@ -19,6 +19,14 @@ export function safeImageUrl(value: unknown): string | null {
   return sanitiseExternalUrl(trimmed);
 }
 
+/** The announcement to show today, or null once its last day (`until`, inclusive) has passed. */
+export function liveAnnouncement(announcement: PublicVenue["announcement"], today: string): PublicVenue["announcement"] {
+  const text = announcement?.text?.trim();
+  if (!text) return null;
+  if (announcement?.until && announcement.until < today) return null;
+  return { text, until: announcement?.until ?? null };
+}
+
 /** A stamp card programme (the common case). */
 export function hasLoyaltyProgram(venue: PublicVenue): boolean {
   const lp = venue.loyaltyProgram;

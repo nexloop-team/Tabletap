@@ -485,3 +485,218 @@
   font-variant-numeric: tabular-nums;
   color: var(--card-text-tertiary, var(--text-tertiary));
 }
+
+/* Card: code for staff, and the toast when a stamp lands */
+.card-staff {
+  margin-top: 18px;
+  text-align: center;
+}
+.card-staff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.card-staff-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.card-staff-btn.secondary {
+  margin-top: 10px;
+  min-height: 40px;
+  background: transparent;
+  color: var(--card-text-secondary, var(--text-secondary));
+  border: 0.5px solid var(--separator);
+}
+.card-staff-qr {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  width: min(240px, 80%);
+  margin: 0 auto;
+}
+.card-staff-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.card-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--success-green);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  max-width: calc(100vw - 32px);
+}
+
+/* Menu: easier reading, "What's this?", badges, specials strip */
+.menu-item-head h3 {
+  font-size: 16.5px;
+}
+.menu-price {
+  font-size: 16px;
+}
+.menu-desc {
+  font-size: 15px;
+  line-height: 1.45;
+}
+.menu-item {
+  padding: 16px;
+}
+.menu-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -3px;
+  width: 26px;
+  height: 26px;
+  margin-inline-start: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent-blue);
+  cursor: pointer;
+}
+.menu-info-btn svg {
+  width: 19px;
+  height: 19px;
+}
+.menu-info-btn[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+}
+.menu-explainer {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-blue) 9%, transparent);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.menu-explainer-note {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--card-text-tertiary, var(--text-tertiary));
+}
+.menu-tag.highlight {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  color: #b45309;
+}
+.menu-tag.highlight.spicy {
+  background: color-mix(in srgb, #ef4444 15%, transparent);
+  color: #b91c1c;
+}
+.menu-tag.highlight.new {
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  color: var(--accent-blue);
+}
+.menu-specials {
+  margin-top: 16px;
+}
+.menu-specials h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.menu-specials-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.menu-special {
+  flex: 0 0 auto;
+  width: 150px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  text-align: start;
+  border: 0.5px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  box-shadow: 0 3px 6px var(--card-shadow);
+  cursor: pointer;
+}
+.menu-special img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.menu-special-name {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.menu-special-price {
+  font-size: 13px;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.menu-item {
+  scroll-margin-top: 80px;
+}
+/* Photo first on phones: the picture sells the dish. */
+@media (max-width: 480px) {
+  .menu-item.has-photo {
+    flex-direction: column-reverse;
+  }
+  .menu-item.has-photo .menu-item-img {
+    width: 100%;
+    height: 180px;
+  }
+}
+
+.card-invite {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 0.5px solid var(--separator);
+  text-align: center;
+}
+.card-invite h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* The member card shown inline on the guest page */
+.my-card {
+  padding-top: 4px;
+}
+.my-card-holder {
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.my-card-status {
+  text-align: center;
+  padding: 12px 0;
+}
+.my-card .stamp-grid {
+  margin-top: 4px;
+}
+.my-card,
+.my-card .sub-text {
+  text-align: center;
+}
+.my-card .tier-list {
+  text-align: start;
+}

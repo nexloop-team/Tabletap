@@ -23,6 +23,7 @@ export interface LoyaltyProgram {
   /** `false` makes this a rewards-only membership: a pass, but no stamps. */
   stampsEnabled?: boolean;
   rewardTiers?: RewardTier[];
+  referral?: { enabled: boolean; referrerStamps: number; friendStamps: number };
 }
 
 export interface MenuItem {
@@ -35,6 +36,11 @@ export interface MenuItem {
   dietaryTags: string[];
   calories?: number | null;
   imageUrl?: string | null;
+  /** "What's this?" text for unfamiliar dishes. */
+  explainer?: string | null;
+  badges?: ("popular" | "new" | "spicy" | "chef")[];
+  /** In the "Today's specials" strip. */
+  featured?: boolean;
 }
 
 export interface MenuSection {
@@ -128,4 +134,6 @@ export interface PublicVenue {
   crm: CrmSettings;
   /** The "Powered by" footer; paid plans may hide it. */
   showPoweredBy?: boolean;
+  /** Banner under the header, e.g. today's special; `until` is the last day it shows. */
+  announcement?: { text: string; until?: string | null } | null;
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getDb } from "../db";
@@ -66,10 +66,13 @@ export function destroyAllSessions(userId: string) {
   getDb().prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
 }
 
-/** Server components: send anonymous visitors to the login page. */
+/** Server components: send anonymous visitors to the login page, then back to where they were. */
 export async function requireUser(): Promise<User> {
   const user = await currentUser();
-  if (!user) redirect("/login");
+  if (!user) {
+    const path = (await headers()).get("x-pathname");
+    redirect(path && path.startsWith("/") && !path.startsWith("//") ? `/login?next=${encodeURIComponent(path)}` : "/login");
+  }
   return user;
 }
 

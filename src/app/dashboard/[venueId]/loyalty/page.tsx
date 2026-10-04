@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
+import { AutomationsForm } from "@/components/dashboard/AutomationsForm";
 import { LoyaltyEditor } from "@/components/dashboard/LoyaltyEditor";
+import { StaffDevices } from "@/components/dashboard/StaffDevices";
 import { loadDashboardVenue } from "@/server/dashboard";
+import { referralStats } from "@/server/repositories/retention";
+import { getVenueSettings } from "@/server/repositories/venues";
+import { listStaffDevices } from "@/server/services/staff";
 
 export const metadata: Metadata = { title: "Loyalty & capture" };
 
 export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[venueId]/loyalty">) {
   const { venue, can } = await loadDashboardVenue((await params).venueId);
+  const program = venue.config.loyaltyProgram;
+  const crm = venue.config.crm;
+  const settings = getVenueSettings(venue.id);
   return (
     <>
       <div className="page-head">
@@ -18,7 +26,21 @@ export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[ven
         venueId={venue.id}
         isPro={can.loyalty}
         venueType={venue.config.venueType}
-        initial={{ loyaltyProgram: venue.config.loyaltyProgram ?? null, crm: venue.config.crm }}
+        initial={{ loyaltyProgram: program ?? null, crm }}
+        referralStats={referralStats(venue.id)}
+      />
+      <StaffDevices
+        venueId={venue.id}
+        devices={listStaffDevices(venue.id)}
+        cooldownMinutes={settings.stampPolicy.cooldownMinutes}
+        enabled={can.loyalty && !!program && program.stampsEnabled !== false}
+      />
+      <AutomationsForm
+        venueId={venue.id}
+        initial={settings.automations}
+        isPro={can.automations}
+        collectsConsent={crm.enabled && crm.consentAsk}
+        collectsBirthdays={crm.enabled && crm.birthdayAsk}
       />
     </>
   );

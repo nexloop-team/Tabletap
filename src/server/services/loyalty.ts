@@ -8,7 +8,10 @@ import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
 import { ServiceError } from "../http";
 import { findCustomerByEmail, setBirthday, upsertCustomer } from "../repositories/customers";
-import { addFeedbackStamp, createCard, findCardByCustomer, hoursSince, markPassEmailed, type LoyaltyCardRow } from "../repositories/loyalty-cards";
+import { addFeedbackStamp, createCard, findCardByCustomer, hoursSince, markPassEmailed, setCardStamps, type LoyaltyCardRow } from "../repositories/loyalty-cards";
+import { attachReferral, findReferrerCard } from "../repositories/retention";
+import { recordStampEvent } from "../repositories/stamps";
+import { friendJoinBonus } from "./retention";
 import { findVenue } from "../repositories/venues";
 import { deliver, recordConsent } from "./consent";
 import { sendMail } from "./mailer";
@@ -70,6 +73,18 @@ export function enroll(input: z.output<typeof enrollRequest>, origin: string): E
       const stamps = rewardsOnly || isRewardsJoin ? 0 : (input.initialStamps ?? 0);
       card = createCard(db, venue.id, customer.id, stamps);
       if (input.captureSource === "feedback" && stamps > 0) addFeedbackStampCooldownOnly(db, card.id);
+      // Joined through a member's invite: link the cards (the inviter is
+      // rewarded at the friend's first staff stamp) and add welcome stamps.
+      const referrer = input.ref && !rewardsOnly && !isRewardsJoin ? findReferrerCard(db, venue.id, input.ref) : null;
+      if (referrer && referrer.customer_id !== customer.id && venue.loyaltyProgram?.referral?.enabled) {
+        attachReferral(db, card.id, referrer.id);
+        const bonus = friendJoinBonus(venue, card.stamps);
+        if (bonus > 0) {
+          setCardStamps(db, card.id, card.stamps + bonus);
+          recordStampEvent(db, { venueId: venue.id, cardId: card.id, kind: "bonus", delta: bonus });
+        }
+        card = findCardByCustomer(db, customer.id)!;
+      }
     }
     const consent = recordConsent(db, venue, customer, consentAnswer, origin);
     const consented = !!consentAnswer?.marketingConsent && !!consentAnswer.ageAttested;
@@ -85,8 +100,10 @@ export function enroll(input: z.output<typeof enrollRequest>, origin: string): E
   if (passEmailed) markPassEmailed(getDb(), card.id);
   deliver(consent.mail);
 
-  // A returning member's card is only ever re-sent by email: handing it to
-  // whoever typed their address would hand over their card.
+  // A returning member who types their email again gets their card back on
+  // the spot (owner's decision, 2026-10-04): at a café till, staff already
+  // find members by name or email, so the email is the identity here too.
+  // Wallet passes are still only minted on first join.
   const pass = wasExisting
     ? { passBase64: null, googleWalletUrl: null }
     : issueWalletPass({ cardId: card.id, venueName: venue.name, holderName: customer.first_name ?? customer.name, stamps: card.stamps });
@@ -98,7 +115,7 @@ export function enroll(input: z.output<typeof enrollRequest>, origin: string): E
     passEmailed,
     passBase64: pass.passBase64,
     googleWalletUrl: pass.googleWalletUrl,
-    cardUrl: wasExisting ? null : cardUrl(origin, card),
+    cardUrl: cardUrl(origin, card),
     confirmationPending: consent.confirmationPending,
   };
 }

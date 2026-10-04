@@ -55,6 +55,22 @@ describe("passwords", () => {
   });
 });
 
+describe("request origin", () => {
+  const forged = new Request("http://localhost:3000/api/auth/forgot", { headers: { "x-forwarded-host": "evil.example", "x-forwarded-proto": "https" } });
+
+  it("ignores forged forwarding headers once APP_URL is set", async () => {
+    const { requestOrigin } = await import("./http");
+    process.env.APP_URL = "https://tabletap.example/";
+    try {
+      expect(requestOrigin(forged)).toBe("https://tabletap.example");
+    } finally {
+      delete process.env.APP_URL;
+    }
+    // Local development without APP_URL still follows the proxy.
+    expect(requestOrigin(forged)).toBe("https://evil.example");
+  });
+});
+
 describe("Stripe webhook signatures", () => {
   const secret = "whsec_test";
   const body = '{"type":"ping"}';

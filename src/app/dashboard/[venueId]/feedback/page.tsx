@@ -36,7 +36,7 @@ export default async function FeedbackPage({ params, searchParams }: PageProps<"
       <div className="page-head">
         <div>
           <h1>Feedback</h1>
-          <p>Anonymous notes from your guests. Unhappy ones stay private; happy guests are nudged to Google.</p>
+          <p>Anonymous notes from your guests, for your eyes only. Every guest is also invited to review you on Google.</p>
         </div>
       </div>
 

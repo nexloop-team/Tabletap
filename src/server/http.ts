@@ -27,8 +27,14 @@ export async function parseBody<S extends z.ZodType>(request: Request, schema: S
   return result.data;
 }
 
-/** Origin for absolute links in emails; honours the proxy header when present. */
+/**
+ * Origin for absolute links in emails and the same-origin check. APP_URL wins
+ * when set: request headers are client-controlled, so trusting them would let
+ * anyone send a password-reset email whose link points at their own site.
+ * Without APP_URL (local development) the proxy headers are honoured.
+ */
 export function requestOrigin(request: Request): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, "");
   const url = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host");
   const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");

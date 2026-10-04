@@ -1083,3 +1083,27 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Owner's announcement under the header, e.g. today's special */
+.announcement {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  border: 0.5px solid var(--card-border);
+  box-shadow: 0 3px 6px var(--card-shadow);
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.announcement svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--loyalty-rose);
+}

@@ -22,12 +22,26 @@ function earlierTiers(program: Program | null | undefined): Tier[] {
   return tiers.length > 1 ? tiers.slice(0, -1) : [];
 }
 
-function compose(main: { rewardName: string; stampsRequired: number }, earlier: Tier[]): Program {
+function compose(main: { rewardName: string; stampsRequired: number }, earlier: Tier[], referral: Program["referral"]): Program {
   const sorted = [...earlier].sort((a, b) => a.stampsRequired - b.stampsRequired);
-  return { ...main, stampsEnabled: true, rewardTiers: sorted.length ? [...sorted, main] : undefined };
+  return { ...main, stampsEnabled: true, rewardTiers: sorted.length ? [...sorted, main] : undefined, referral };
 }
 
-export function LoyaltyEditor({ venueId, initial, isPro, venueType }: { venueId: string; initial: Draft; isPro: boolean; venueType: string | null | undefined }) {
+const DEFAULT_REFERRAL = { enabled: false, referrerStamps: 2, friendStamps: 1 };
+
+export function LoyaltyEditor({
+  venueId,
+  initial,
+  isPro,
+  venueType,
+  referralStats,
+}: {
+  venueId: string;
+  initial: Draft;
+  isPro: boolean;
+  venueType: string | null | undefined;
+  referralStats?: { joined: number; visited: number };
+}) {
   const editor = useVenueDraft<Draft>(venueId, initial);
   const { draft, update } = editor;
   const program = draft.loyaltyProgram ?? null;
@@ -41,11 +55,13 @@ export function LoyaltyEditor({ venueId, initial, isPro, venueType }: { venueId:
   function setMode(next: Mode) {
     if (next === "off") update("loyaltyProgram", null);
     else if (next === "membership") update("loyaltyProgram", { rewardName: "", stampsRequired: 0, stampsEnabled: false });
-    else update("loyaltyProgram", compose({ rewardName: main.rewardName || "Free coffee", stampsRequired: main.stampsRequired }, earlier));
+    else update("loyaltyProgram", compose({ rewardName: main.rewardName || "Free coffee", stampsRequired: main.stampsRequired }, earlier, program?.referral));
   }
 
-  const setMain = (patch: Partial<typeof main>) => update("loyaltyProgram", compose({ ...main, ...patch }, earlier));
-  const setEarlier = (tiers: Tier[]) => update("loyaltyProgram", compose(main, tiers));
+  const referral = program?.referral ?? DEFAULT_REFERRAL;
+  const setMain = (patch: Partial<typeof main>) => update("loyaltyProgram", compose({ ...main, ...patch }, earlier, program?.referral));
+  const setEarlier = (tiers: Tier[]) => update("loyaltyProgram", compose(main, tiers, program?.referral));
+  const setReferral = (patch: Partial<typeof referral>) => update("loyaltyProgram", compose(main, earlier, { ...referral, ...patch }));
 
   return (
     <>
@@ -134,6 +150,40 @@ export function LoyaltyEditor({ venueId, initial, isPro, venueType }: { venueId:
           </>
         )}
       </Card>
+
+      {mode === "stamps" && (
+        <Card title="Refer a friend" description="Members get an invite link on their card. Their friend joins with it, and once the friend's first visit is stamped, the member gets bonus stamps.">
+          <SwitchRow title="Reward invites" checked={referral.enabled} onChange={(on) => setReferral({ enabled: on })} />
+          {referral.enabled && (
+            <div className="row" style={{ marginTop: 6 }}>
+              <Field label="Stamps for the member who invited" htmlFor="referrer-stamps">
+                <select id="referrer-stamps" className="select" value={referral.referrerStamps} onChange={(event) => setReferral({ referrerStamps: Number(event.target.value) })}>
+                  {[1, 2, 3].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Welcome stamps for the friend" htmlFor="friend-stamps">
+                <select id="friend-stamps" className="select" value={referral.friendStamps} onChange={(event) => setReferral({ friendStamps: Number(event.target.value) })}>
+                  {[0, 1, 2].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          )}
+          {referral.enabled && <p className="hint" style={{ marginTop: 10 }}>To stop abuse, a member can earn invite stamps at most 5 times a month, and only after a real visit.</p>}
+          {referralStats && (referralStats.joined > 0 || referral.enabled) && (
+            <p className="hint" style={{ marginTop: 6 }}>
+              So far: {referralStats.joined} friend{referralStats.joined === 1 ? "" : "s"} joined through an invite, {referralStats.visited} visited.
+            </p>
+          )}
+        </Card>
+      )}
 
       <Card title="Guest capture" description="Build a list of guests you can reach again, with their permission.">
         <SwitchRow

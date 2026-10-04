@@ -28,7 +28,7 @@ const CARD_LABELS: Record<string, string> = {
   google_review: "Google review",
 };
 
-type Draft = Pick<VenueConfig, "branding" | "wifi" | "socialLinks" | "externalLinks">;
+type Draft = Pick<VenueConfig, "branding" | "wifi" | "socialLinks" | "externalLinks" | "announcement">;
 
 export function DesignEditor({
   venueId,
@@ -46,6 +46,7 @@ export function DesignEditor({
     wifi: config.wifi ?? null,
     socialLinks: config.socialLinks,
     externalLinks: config.externalLinks,
+    announcement: config.announcement ?? null,
   });
   const { draft, update } = editor;
   const branding = draft.branding;
@@ -101,6 +102,28 @@ export function DesignEditor({
             checked={titleHidden}
             onChange={(on) => setBranding({ titleOverride: on ? " " : null })}
           />
+        </Card>
+
+        <Card title="Announcement" description="A short message at the top of your page: today's special, an event, holiday hours.">
+          <div className="row">
+            <TextField
+              label="Message"
+              value={draft.announcement?.text}
+              onChange={(value) => update("announcement", value ? { text: value, until: draft.announcement?.until ?? null } : null)}
+              placeholder="Today's special: pumpkin spice latte"
+              maxLength={160}
+            />
+            <Field label="Show until (optional)" htmlFor="announcement-until" hint="It disappears by itself after this day.">
+              <input
+                id="announcement-until"
+                className="input"
+                type="date"
+                disabled={!draft.announcement?.text}
+                value={draft.announcement?.until ?? ""}
+                onChange={(event) => draft.announcement && update("announcement", { ...draft.announcement, until: event.target.value || null })}
+              />
+            </Field>
+          </div>
         </Card>
 
         <Card title="Colours & style">
@@ -161,7 +184,7 @@ export function DesignEditor({
           )}
         </Card>
 
-        <Card title="Google reviews" description="Guests who leave happy feedback are invited to review you on Google.">
+        <Card title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">
           <TextField
             label="Review link"
             value={social.google}
@@ -172,7 +195,7 @@ export function DesignEditor({
           />
           <SwitchRow
             title="Show a “Leave a Google review” card"
-            description="Without it, the review link is still offered after positive feedback."
+            description="Without it, the review link is still offered after guests leave feedback."
             checked={!!branding.showGoogleReviewButton}
             onChange={(on) => setBranding({ showGoogleReviewButton: on })}
           />
@@ -282,7 +305,7 @@ export function DesignEditor({
 
       <aside className="preview-pane">
         <div className="phone">
-          <iframe key={editor.version} src={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} title="Live page preview" />
+          <iframe key={editor.version} src={`/s?i=${encodeURIComponent(shortCode)}&s=preview&embed=1`} title="Live page preview" />
         </div>
         <p className="hint">{editor.dirty ? "Save to update the preview." : "Live preview of your page."}</p>
       </aside>

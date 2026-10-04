@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { safeNext } from "@/lib/safe-next";
+import { captchaToken, resetTurnstile, Turnstile } from "./Turnstile";
 
 function useSubmit(run: (form: FormData) => Promise<void>) {
   const [pending, setPending] = useState(false);
@@ -18,6 +19,7 @@ function useSubmit(run: (form: FormData) => Promise<void>) {
     } catch (err) {
       setError(errorMessage(err));
       setPending(false);
+      resetTurnstile();
     }
   }
   return { pending, error, onSubmit };
@@ -74,7 +76,7 @@ export function LoginForm({ next }: { next?: string }) {
 export function SignupForm() {
   const router = useRouter();
   const { pending, error, onSubmit } = useSubmit(async (form) => {
-    await dashboardApi.signup({ name: text(form, "name"), email: text(form, "email"), password: text(form, "password") });
+    await dashboardApi.signup({ name: text(form, "name"), email: text(form, "email"), password: text(form, "password"), captchaToken: captchaToken(form) });
     router.replace("/onboarding");
     router.refresh();
   });
@@ -83,6 +85,7 @@ export function SignupForm() {
       <Input label="Your name" name="name" autoComplete="name" autoFocus />
       <Input label="Work email" name="email" type="email" autoComplete="email" />
       <Input label="Password" name="password" type="password" autoComplete="new-password" minLength={8} hint="At least 8 characters." />
+      <Turnstile />
       <ErrorNotice error={error} />
       <Submit pending={pending}>Create account</Submit>
       <p className="hint" style={{ marginTop: 12, textAlign: "center" }}>
@@ -95,7 +98,7 @@ export function SignupForm() {
 export function ForgotPasswordForm() {
   const [sent, setSent] = useState(false);
   const { pending, error, onSubmit } = useSubmit(async (form) => {
-    await dashboardApi.forgotPassword({ email: text(form, "email") });
+    await dashboardApi.forgotPassword({ email: text(form, "email"), captchaToken: captchaToken(form) });
     setSent(true);
   });
   if (sent) {
@@ -108,6 +111,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit}>
       <Input label="Email" name="email" type="email" autoComplete="email" autoFocus />
+      <Turnstile />
       <ErrorNotice error={error} />
       <Submit pending={pending}>Send reset link</Submit>
     </form>

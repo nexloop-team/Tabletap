@@ -8,7 +8,11 @@ import type { PublicVenue } from "./types";
 export function applyEntitlements(venue: PublicVenue, can: Entitlements): PublicVenue {
   return {
     ...venue,
-    loyaltyProgram: can.loyalty ? venue.loyaltyProgram : null,
+    loyaltyProgram: !can.loyalty
+      ? null
+      : can.referrals || !venue.loyaltyProgram?.referral
+        ? venue.loyaltyProgram
+        : { ...venue.loyaltyProgram, referral: { ...venue.loyaltyProgram.referral, enabled: false } },
     crm: can.crm ? venue.crm : { enabled: false, consentAsk: false, wifiCapture: false, feedbackCapture: false, birthdayAsk: false },
     branding: can.stylePresets ? venue.branding : { ...venue.branding, style: null },
     showPoweredBy: !can.removeBranding,

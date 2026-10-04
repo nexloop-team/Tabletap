@@ -19,11 +19,17 @@ export interface Entitlements {
   removeBranding: boolean;
   /** Download the guest list as CSV. */
   guestExport: boolean;
+  /** AI menu import and "What's this dish?" drafts. */
+  ai: boolean;
+  /** Reward-ready, birthday and win-back emails to guests. */
+  automations: boolean;
+  /** Refer-a-friend stamps. */
+  referrals: boolean;
 }
 
 export const ENTITLEMENTS: Record<PlanId, Entitlements> = {
-  free: { loyalty: false, crm: false, stylePresets: false, removeBranding: false, guestExport: false },
-  pro: { loyalty: true, crm: true, stylePresets: true, removeBranding: true, guestExport: true },
+  free: { loyalty: false, crm: false, stylePresets: false, removeBranding: false, guestExport: false, ai: false, automations: false, referrals: false },
+  pro: { loyalty: true, crm: true, stylePresets: true, removeBranding: true, guestExport: true, ai: true, automations: true, referrals: true },
 };
 
 export const TRIAL_DAYS = 14;
@@ -42,14 +48,24 @@ export const PLANS: PlanInfo[] = [
     name: "Free",
     price: "Free",
     blurb: "Everything a table needs.",
-    features: ["Hosted menu with allergens", "Wi-Fi card", "Feedback box with Google review routing", "Custom links and socials", "Unlimited QR codes", "Scan analytics"],
+    features: ["Hosted menu with allergens", "Wi-Fi card", "Private feedback box and Google review invitations", "Custom links and socials", "Unlimited QR codes", "Scan analytics and weekly summary email"],
   },
   {
     id: "pro",
     name: "Pro",
     price: process.env.NEXT_PUBLIC_PRO_PRICE_LABEL || "£19 / month per venue",
     blurb: "Turn first visits into regulars.",
-    features: ["Everything in Free", "Digital loyalty stamp cards", "Guest list with marketing consent", "Wi-Fi email capture and birthdays", "Typography presets", "Remove our branding", "CSV export"],
+    features: [
+      "Everything in Free",
+      "Digital stamp cards, stamped at the till",
+      "Refer-a-friend rewards",
+      "Automatic reward, birthday and win-back emails",
+      "AI menu import and dish explanations",
+      "Guest list with marketing consent",
+      "Wi-Fi email capture and birthdays",
+      "Typography presets and no branding",
+      "CSV export",
+    ],
   },
 ];
 

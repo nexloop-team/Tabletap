@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { MenuEditor } from "@/components/dashboard/MenuEditor";
 import { loadDashboardVenue } from "@/server/dashboard";
+import { aiConfigured, aiImportLimits } from "@/server/services/ai";
 
 export const metadata: Metadata = { title: "Menu" };
 
 export default async function MenuPage({ params }: PageProps<"/dashboard/[venueId]/menu">) {
-  const { venue } = await loadDashboardVenue((await params).venueId);
+  const { venue, can } = await loadDashboardVenue((await params).venueId);
+  const ai = !aiConfigured() ? "off" : can.ai ? "on" : "upgrade";
   return (
     <>
       <div className="page-head">
@@ -18,7 +20,7 @@ export default async function MenuPage({ params }: PageProps<"/dashboard/[venueI
           <ExternalLink aria-hidden /> View menu
         </a>
       </div>
-      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} />
+      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} ai={ai} importLimits={aiImportLimits()} />
     </>
   );
 }

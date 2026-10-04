@@ -29,6 +29,8 @@ export const enrollRequest = z.object({
   ageAttested: z.boolean().optional(),
   birthday: birthday.optional(),
   locale,
+  /** Invite code from a member's "Invite a friend" link. */
+  ref: z.string().trim().regex(/^[a-z0-9]{6,16}$/i).optional(),
 });
 export type EnrollRequest = z.input<typeof enrollRequest>;
 
@@ -103,6 +105,22 @@ export const analyticsEvent = z.object({
   params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
 });
 export type AnalyticsEvent = z.input<typeof analyticsEvent>;
+
+/** A member's card, for the holder of its private link. */
+export interface MemberCardView {
+  cardId: string;
+  venueId: string;
+  venueName: string;
+  holder: string | null;
+  memberSince: string;
+  stamps: number;
+  /** Stamps for the top reward; 0 for a members club without stamps. */
+  goal: number;
+  tiers: { rewardName: string; stampsRequired: number; unlocked: boolean }[];
+  /** The code staff scan; null when the venue has no stamp card. */
+  staffQrSvg: string | null;
+  invite: { url: string; referrerStamps: number; friendStamps: number } | null;
+}
 
 export interface ApiError {
   error: string;

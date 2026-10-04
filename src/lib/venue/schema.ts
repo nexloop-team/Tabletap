@@ -34,6 +34,7 @@ export const ALLERGENS = [
   "celery", "gluten", "crustaceans", "eggs", "fish", "lupin", "milk", "molluscs", "mustard", "nuts", "peanuts", "sesame", "soya", "sulphites",
 ] as const;
 export const DIETARY_TAGS = ["vegan", "vegetarian", "gluten_free"] as const;
+export const MENU_BADGES = ["popular", "new", "spicy", "chef"] as const;
 export const VENUE_TYPES = ["cafe", "restaurant", "bakery", "pub", "bar", "hotel", "other"] as const;
 export const CURRENCIES = ["GBP", "EUR", "USD", "INR", "AUD", "CAD", "NZD", "AED", "SGD", "ZAR"] as const;
 export const LINK_LABEL_TOKENS = ["view_menu", "view_price_list", "our_services", "book_now", "visit_website", "order_online"] as const;
@@ -48,6 +49,11 @@ export const menuItemSchema = z.object({
   dietaryTags: z.array(z.enum(DIETARY_TAGS)).max(DIETARY_TAGS.length),
   calories: z.number().int().min(0).max(10_000).nullish(),
   imageUrl,
+  /** "What's this?" text for unfamiliar dishes; written or approved by the owner. */
+  explainer: optionalText(600),
+  badges: z.array(z.enum(MENU_BADGES)).max(MENU_BADGES.length).optional(),
+  /** Shown in the "Today's specials" strip at the top of the menu. */
+  featured: z.boolean().optional(),
 });
 
 export const menuSectionSchema = z.object({
@@ -115,6 +121,15 @@ export const loyaltySchema = z
       .array(z.object({ rewardName: text(80).min(1), stampsRequired: z.number().int().min(1).max(50) }))
       .max(5)
       .optional(),
+    referral: z
+      .object({
+        enabled: z.boolean(),
+        /** Stamps for the member who invited, once the friend's first visit is stamped. */
+        referrerStamps: z.number().int().min(1).max(3),
+        /** Welcome stamps for the friend when they join through the invite. */
+        friendStamps: z.number().int().min(0).max(2),
+      })
+      .optional(),
   })
   .nullish()
   .superRefine((value, ctx) => {
@@ -143,6 +158,16 @@ export const venueConfigSchema = z.object({
   branding: brandingSchema,
   externalLinks: z.array(externalLinkSchema).max(12),
   crm: crmSchema,
+  announcement: z
+    .object({
+      text: text(160).min(1, "Write the announcement or remove it"),
+      /** Last day it shows (YYYY-MM-DD, venue-local); empty means until removed. */
+      until: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
+        .nullish(),
+    })
+    .nullish(),
 });
 
 /** The editable shape; saved configs are always the schema's parse of one of these. */

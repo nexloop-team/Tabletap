@@ -87,6 +87,13 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
           <div className="sub">to Google</div>
         </div>
         <div className="card stat">
+          <div className="label">Stamps given</div>
+          <div className="value">{stats.stampsGiven}</div>
+          <div className="sub">
+            {stats.rewardsRedeemed} reward{stats.rewardsRedeemed === 1 ? "" : "s"} redeemed
+          </div>
+        </div>
+        <div className="card stat">
           <div className="label">Guests</div>
           <div className="value">{stats.totalGuests}</div>
           <div className="sub">+{stats.newGuests} this month · {stats.members} members</div>

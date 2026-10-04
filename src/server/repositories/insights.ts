@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "../db";
+import { stampActivity } from "./stamps";
 
 /**
  * Read-only queries behind the merchant dashboard. Scans made from the
@@ -21,6 +22,8 @@ export interface VenueStats {
   totalGuests: number;
   members: number;
   stampsHeld: number;
+  stampsGiven: number;
+  rewardsRedeemed: number;
   daily: { day: string; scans: number }[];
   sources: { source: string; scans: number }[];
 }
@@ -95,6 +98,7 @@ export function venueStats(venueId: string, days = 30): VenueStats {
     totalGuests: guests.total,
     members: cards.n,
     stampsHeld: cards.stamps,
+    ...stampActivity(venueId, days),
     daily,
     sources,
   };

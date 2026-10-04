@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FEEDBACK_VARIANT_COOKIE, LandingApp, type FeedbackVariant } from "@/components/landing/LandingApp";
 import { LandingError } from "@/components/landing/LandingError";
+import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
 import { firstParam, loadVenue, requestLocale, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
+// The member card (stamp grid, staff code) shows inline on this page.
+import "@/styles/pages.css";
 
 export async function generateMetadata({ searchParams }: PageProps<"/s">): Promise<Metadata> {
   const venue = loadVenue(venueParam(await searchParams));
@@ -45,6 +48,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
   return (
     <>
       <ThemeStyle branding={venue.branding} />
+      <EmbedStyle embed={firstParam(params.embed)} />
       <LandingApp venue={venue} locale={locale} source={source} feedbackVariant={variant} persistVariant={!forced && !stored} />
     </>
   );

@@ -58,13 +58,45 @@ export const safeStorage = {
   },
 };
 
+export interface CardCredentials {
+  cardId: string;
+  token: string;
+}
+
+/** The id and private token in a card link (`/card/<id>?t=<token>`), or null. */
+export function cardCredentialsFromUrl(url: string | null | undefined): CardCredentials | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, "http://local");
+    const match = /^\/card\/(crd_[A-Za-z0-9]+)$/.exec(parsed.pathname);
+    const token = parsed.searchParams.get("t");
+    return match && token ? { cardId: match[1], token } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseCardCredentials(raw: string | null): CardCredentials | null {
+  try {
+    const value = JSON.parse(raw ?? "null") as CardCredentials | null;
+    return value && /^crd_[A-Za-z0-9]+$/.test(value.cardId) && typeof value.token === "string" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Per-venue device memory. Only the opaque customer id is stored — never the
- * guest's email or name.
+ * Per-venue device memory. Only opaque ids are stored (the customer id, and
+ * the card's id and private token so the guest page can show the card) —
+ * never the guest's email or name.
  */
 export const deviceMemory = {
   customerId: (venueId: string) => safeStorage.get(`tt.customer.${venueId}`),
   rememberCustomer: (venueId: string, customerId: string) => safeStorage.set(`tt.customer.${venueId}`, customerId),
+  /** The stored value as a string, stable enough for useSyncExternalStore; parse with `parseCardCredentials`. */
+  cardRaw: (venueId: string) => safeStorage.get(`tt.card.${venueId}`),
+  rememberCard: (venueId: string, card: CardCredentials) => safeStorage.set(`tt.card.${venueId}`, JSON.stringify(card)),
+  forgetCard: (venueId: string) => safeStorage.set(`tt.card.${venueId}`, "null"),
   /** "1" / "2" = skipped once / twice, "answered" = saved. */
   birthdayState: (venueId: string) => safeStorage.get(`tt.bday.${venueId}`) ?? "",
   setBirthdayState: (venueId: string, state: string) => safeStorage.set(`tt.bday.${venueId}`, state),

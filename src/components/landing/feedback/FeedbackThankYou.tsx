@@ -10,7 +10,7 @@ import { SocialLinks, hasSocialLinks } from "../SocialLinks";
 import { useGoogleReview } from "../useGoogleReview";
 import { FreeStampJoin } from "./FreeStampJoin";
 
-/** Positive enough to ask for a public review. */
+/** Positive enough for the "so glad you enjoyed it" wording on the socials branch. */
 const POSITIVE_THRESHOLD = 0.5;
 
 function GoogleReviewButton({ feedbackText, context }: { feedbackText: string; context: string }) {
@@ -35,12 +35,17 @@ function ReviewNudge({ feedbackText, context }: { feedbackText: string; context:
 }
 
 /**
- * After feedback, route the guest by sentiment. The first matching branch wins:
- *  1. stamp card not yet joined → free-stamp join (+ review nudge if positive)
- *  2. rewards-only, not joined  → rewards join (+ review nudge if positive)
- *  3. positive + Google link    → Google review as the main ask, socials below
+ * After feedback, the next ask. The first matching branch wins:
+ *  1. stamp card not yet joined → free-stamp join (+ review nudge)
+ *  2. rewards-only, not joined  → rewards join (+ review nudge)
+ *  3. Google link               → Google review as the main ask, socials below
  *  4. positive, socials only    → social links
  *  otherwise just the thank-you.
+ *
+ * Every guest who leaves feedback is offered the Google review, whatever
+ * they wrote: Google's policy forbids selectively asking happy customers
+ * ("review gating"), and venues caught doing it can lose their reviews.
+ * Sentiment only reaches the owner's dashboard and weekly digest.
  */
 export function FeedbackThankYou({ text, score }: { text: string; score: number }) {
   const { venue, t, tf, track, loyaltyDone, membership } = useLanding();
@@ -48,7 +53,7 @@ export function FeedbackThankYou({ text, score }: { text: string; score: number 
   const review = useGoogleReview();
 
   const positive = score > POSITIVE_THRESHOLD;
-  const showGoogle = positive && !!review.url;
+  const showGoogle = !!review.url;
   // Decided once, when the thank-you appears: joining below must not swap the branch out from under the guest.
   const [branch] = useState(() => {
     if (hasLoyaltyProgram(venue) && !loyaltyDone) return "loyalty";

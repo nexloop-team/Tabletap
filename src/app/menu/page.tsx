@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { LandingError } from "@/components/landing/LandingError";
 import { MenuView } from "@/components/menu/MenuView";
+import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
-import { loadVenue, queryString, requestLocale, sourceParam, venueParam } from "@/server/request";
+import { firstParam, loadVenue, queryString, requestLocale, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
 
@@ -29,6 +30,7 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
   return (
     <>
       <ThemeStyle branding={venue.branding} />
+      <EmbedStyle embed={firstParam(params.embed)} />
       <MenuView venueId={venue.id} venueName={venue.name} currencyCode={venue.currencyCode} menus={menus} locale={locale} source={source} backHref={`/s${queryString(params)}`} />
     </>
   );

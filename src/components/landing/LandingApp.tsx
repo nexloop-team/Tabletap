@@ -1,13 +1,15 @@
 "use client";
 
+import { Megaphone } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { BRAND } from "@/config/brand";
 import { createTracker } from "@/lib/analytics";
-import { deviceMemory, subscribeNever } from "@/lib/browser";
+import { deviceMemory, parseCardCredentials, subscribeNever, type CardCredentials } from "@/lib/browser";
 import { createTranslator, type Locale } from "@/lib/i18n";
 import { linkLabel } from "@/lib/landing-copy";
+import { rememberReferral } from "@/lib/referral";
 import { computeTheme } from "@/lib/theme";
 import {
   buildFeatures,
@@ -25,7 +27,8 @@ import {
 import type { PublicVenue } from "@/lib/venue/types";
 import { BrandMark, FeatureGlyphs, FilledHeart, GoogleG, LINK_ICON_TOKENS, LinkIconGlyph, MenuGlyph, type LinkIconToken } from "../icons";
 import { AppDialog } from "./AppDialog";
-import { ActionCard, ExpandableCard, LinkCard } from "./FeatureCard";
+import { ActionCard, ExpandableCard, LinkCard, useSheet } from "./FeatureCard";
+import { MyCard } from "./loyalty/MyCard";
 import { FEEDBACK_TEXTAREA_ID, FeedbackSheet } from "./feedback/FeedbackSheet";
 import { LandingContext, useLanding, type DialogContent, type LandingSession, type Membership } from "./LandingContext";
 import { LoyaltySheet } from "./loyalty/LoyaltySheet";
@@ -120,10 +123,27 @@ function MenuCardIcon({ token, custom }: { token: string | null | undefined; cus
   return <Icon aria-hidden strokeWidth={2} />;
 }
 
+/** Polls only while the sheet is open. */
+function MyCardSheet({ credentials, onMissing }: { credentials: CardCredentials; onMissing: () => void }) {
+  const { isOpen } = useSheet();
+  const { membership, t } = useLanding();
+  return (
+    <div className="sheet-inner">
+      {membership?.response.confirmationPending && <p className="confirm-notice">{t("check_inbox_confirm")}</p>}
+      <MyCard credentials={credentials} active={isOpen} onMissing={onMissing} />
+    </div>
+  );
+}
+
 function FeatureList({ features }: { features: FeatureKey[] }) {
   const { venue, t, track, theme, feedbackVariant } = useLanding();
   const review = useGoogleReview();
   const router = useRouter();
+  // A member who joined (or opened their card link) on this device sees their card here.
+  const storedCardRaw = useSyncExternalStore(subscribeNever, () => deviceMemory.cardRaw(venue.id), () => null);
+  const [cardGone, setCardGone] = useState(false);
+  const storedCard = useMemo(() => (cardGone ? null : parseCardCredentials(storedCardRaw)), [storedCardRaw, cardGone]);
+  const forgetCard = useCallback(() => setCardGone(true), []);
 
   return (
     <div className="feature-grid">
@@ -132,6 +152,23 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
 
         switch (feature) {
           case "loyalty":
+            if (storedCard && !isRewardsOnly(venue)) {
+              return (
+                <ExpandableCard
+                  key={feature}
+                  feature={feature}
+                  label={t("feature_my_card")}
+                  icon={<FilledHeart />}
+                  tint={TINT.loyalty}
+                  lazy
+                  onToggle={(open) => {
+                    if (open) tapped();
+                  }}
+                >
+                  <MyCardSheet credentials={storedCard} onMissing={forgetCard} />
+                </ExpandableCard>
+              );
+            }
             return (
               <ExpandableCard
                 key={feature}
@@ -290,6 +327,9 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
   const [loyaltyDone, setLoyaltyDoneState] = useState(false);
   const [dialog, setDialog] = useState<DialogContent | null>(null);
 
+  // An invite link (`?ref=`) counts if the friend joins at any point in this visit.
+  useEffect(() => rememberReferral(venue.id), [venue.id]);
+
   useEffect(() => {
     if (persistVariant) document.cookie = `${FEEDBACK_VARIANT_COOKIE}=${feedbackVariant}; path=/; max-age=31536000; SameSite=Lax`;
   }, [persistVariant, feedbackVariant]);
@@ -329,6 +369,12 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
       <div className="landing" data-style={theme.style ?? undefined}>
         <main className="page-wrapper">
           <Header venue={venue} />
+          {venue.announcement?.text && (
+            <p className="announcement" role="note">
+              <Megaphone aria-hidden />
+              <span>{venue.announcement.text}</span>
+            </p>
+          )}
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
           {venue.showPoweredBy !== false && (

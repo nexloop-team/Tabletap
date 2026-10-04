@@ -6,6 +6,8 @@ export interface Mail {
   to: string;
   subject: string;
   text: string;
+  /** Extra headers, e.g. List-Unsubscribe on marketing email. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -29,7 +31,7 @@ export function sendMail(mail: Mail): boolean {
   void fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: BRAND.emailFrom, to: [mail.to], subject: mail.subject, text: mail.text }),
+    body: JSON.stringify({ from: BRAND.emailFrom, to: [mail.to], subject: mail.subject, text: mail.text, headers: mail.headers }),
     signal: AbortSignal.timeout(15_000),
   })
     .then(async (response) => {

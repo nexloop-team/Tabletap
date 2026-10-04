@@ -1,10 +1,14 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
+import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
+import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
+import { MenuAiTools } from "./MenuAiTools";
 import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
+
+const BADGE_LABELS: Record<(typeof MENU_BADGES)[number], string> = { popular: "Popular", new: "New", spicy: "Spicy", chef: "Chef's pick" };
 
 type Menu = VenueConfig["menus"][number];
 type Section = Menu["sections"][number];
@@ -32,10 +36,25 @@ function capitalise(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function MenuEditor({ venueId, menus, currencyCode }: { venueId: string; menus: VenueConfig["menus"]; currencyCode: string }) {
+export function MenuEditor({
+  venueId,
+  menus,
+  currencyCode,
+  ai,
+  importLimits,
+}: {
+  venueId: string;
+  menus: VenueConfig["menus"];
+  currencyCode: string;
+  /** "upgrade": shown with an upgrade hint; "off": AI isn't configured on this server. */
+  ai: "on" | "upgrade" | "off";
+  importLimits: { maxImages: number; pdf: boolean };
+}) {
   const editor = useVenueDraft<{ menus: VenueConfig["menus"] }>(venueId, { menus });
   const list = editor.draft.menus;
   const [selected, setSelected] = useState(0);
+  // Imported items whose allergens came from the AI, until the owner opens them.
+  const [toCheck, setToCheck] = useState<Set<string>>(() => new Set());
   const menu = list[Math.min(selected, list.length - 1)];
   const money = new Intl.NumberFormat(undefined, { style: "currency", currency: currencyCode });
 
@@ -127,10 +146,45 @@ export function MenuEditor({ venueId, menus, currencyCode }: { venueId: string; 
 
           {!external && (
             <>
+              {ai !== "off" && (
+                <MenuAiTools
+                  venueId={venueId}
+                  ai={ai}
+                  importLimits={importLimits}
+                  sections={menu.sections}
+                  onImport={(sections, mode, flagged) => {
+                    setSections(mode === "replace" ? sections : [...menu.sections, ...sections]);
+                    setToCheck((current) => new Set([...current, ...flagged]));
+                  }}
+                  onExplanations={(byItemId) =>
+                    setSections(
+                      menu.sections.map((section) => ({
+                        ...section,
+                        items: section.items.map((item) => (byItemId[item.id] ? { ...item, explainer: byItemId[item.id] } : item)),
+                      })),
+                    )
+                  }
+                />
+              )}
+              {toCheck.size > 0 && (
+                <div className="notice notice-warn" style={{ margin: "14px 0" }}>
+                  {toCheck.size} imported dish{toCheck.size === 1 ? " has" : "es have"} AI-suggested allergens. Open each one marked “Check allergens” and confirm before saving.
+                </div>
+              )}
               {menu.sections.map((section, sectionIndex) => (
                 <SectionEditor
                   key={section.id}
                   venueId={venueId}
+                  ai={ai === "on"}
+                  toCheck={toCheck}
+                  onOpened={(itemId) =>
+                    setToCheck((current) => {
+                      if (!current.has(itemId)) return current;
+                      const next = new Set(current);
+                      next.delete(itemId);
+                      return next;
+                    })
+                  }
                   section={section}
                   money={money}
                   first={sectionIndex === 0}
@@ -166,6 +220,9 @@ export function MenuEditor({ venueId, menus, currencyCode }: { venueId: string; 
 
 function SectionEditor({
   venueId,
+  ai,
+  toCheck,
+  onOpened,
   section,
   money,
   first,
@@ -175,6 +232,9 @@ function SectionEditor({
   onRemove,
 }: {
   venueId: string;
+  ai: boolean;
+  toCheck: Set<string>;
+  onOpened: (itemId: string) => void;
   section: Section;
   money: Intl.NumberFormat;
   first: boolean;
@@ -211,11 +271,21 @@ function SectionEditor({
         {section.items.map((item, index) => (
           <div key={item.id} className="list-row">
             <div className="list-row-head">
-              <button type="button" className="item-summary" aria-expanded={open === item.id} onClick={() => setOpen(open === item.id ? null : item.id)}>
+              <button
+                type="button"
+                className="item-summary"
+                aria-expanded={open === item.id}
+                onClick={() => {
+                  setOpen(open === item.id ? null : item.id);
+                  onOpened(item.id);
+                }}
+              >
                 {open === item.id ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
                 {/* eslint-disable-next-line @next/next/no-img-element -- merchant uploads, already sized */}
                 {item.imageUrl ? <img className="item-thumb" src={item.imageUrl} alt="" /> : null}
                 <strong>{item.name || "Untitled item"}</strong>
+                {toCheck.has(item.id) && <span className="badge badge-warn">Check allergens</span>}
+                {item.featured && <span className="badge badge-pro">Special</span>}
                 {!item.isAvailable && <span className="badge badge-warn">Sold out</span>}
                 <span className="price">{money.format(item.priceInPence / 100)}</span>
               </button>
@@ -229,6 +299,7 @@ function SectionEditor({
             {open === item.id && (
               <ItemEditor
                 venueId={venueId}
+                ai={ai}
                 item={item}
                 onChange={(next) => setItems(section.items.map((i) => (i.id === item.id ? next : i)))}
                 onRemove={() => setItems(section.items.filter((i) => i.id !== item.id))}
@@ -244,9 +315,11 @@ function SectionEditor({
   );
 }
 
-function ItemEditor({ venueId, item, onChange, onRemove }: { venueId: string; item: Item; onChange: (item: Item) => void; onRemove: () => void }) {
+function ItemEditor({ venueId, ai, item, onChange, onRemove }: { venueId: string; ai: boolean; item: Item; onChange: (item: Item) => void; onRemove: () => void }) {
   // Typed text, so "4." or "" survive while the merchant is mid-edit.
   const [price, setPrice] = useState(item.priceInPence ? (item.priceInPence / 100).toFixed(2) : "");
+  const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const set = (patch: Partial<Item>) => onChange({ ...item, ...patch });
   const toggle = <T extends string>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
@@ -283,6 +356,59 @@ function ItemEditor({ venueId, item, onChange, onRemove }: { venueId: string; it
         </Field>
       </div>
       <TextField label="Description" value={item.description} onChange={(value) => set({ description: value })} multiline maxLength={500} />
+      <div className="field" style={{ marginTop: 14 }}>
+        <div className="spread">
+          <label htmlFor={`explainer-${item.id}`}>“What&apos;s this?” note</label>
+          {ai && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={drafting || !item.name.trim()}
+              onClick={async () => {
+                setDrafting(true);
+                setDraftError(null);
+                try {
+                  const { suggestions } = await dashboardApi.explainDishes(venueId, {
+                    items: [{ id: item.id, name: item.name, description: item.description ?? null }],
+                    onlyUnfamiliar: false,
+                  });
+                  if (suggestions[0]) set({ explainer: suggestions[0].explainer });
+                  else setDraftError("No draft came back. Try adding a short description first.");
+                } catch (err) {
+                  setDraftError(errorMessage(err));
+                } finally {
+                  setDrafting(false);
+                }
+              }}
+            >
+              {drafting ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />} Draft with AI
+            </button>
+          )}
+        </div>
+        <textarea
+          id={`explainer-${item.id}`}
+          className="textarea"
+          maxLength={600}
+          value={item.explainer ?? ""}
+          placeholder="For dishes guests might not know, e.g. “Shakshuka is eggs gently poached in a spiced tomato and pepper sauce…”"
+          onChange={(event) => set({ explainer: event.target.value || null })}
+        />
+        {draftError ? <p className="field-error">{draftError}</p> : <p className="hint">Guests tap ⓘ next to the dish name to read it. Leave blank for familiar dishes.</p>}
+      </div>
+      <div className="field" style={{ marginTop: 14 }}>
+        <span className="field-label">Highlight</span>
+        <div className="chips">
+          {MENU_BADGES.map((badge) => (
+            <button key={badge} type="button" className="chip" aria-pressed={(item.badges ?? []).includes(badge)} onClick={() => set({ badges: toggle(item.badges ?? [], badge) })}>
+              {BADGE_LABELS[badge]}
+            </button>
+          ))}
+          <button type="button" className="chip" aria-pressed={!!item.featured} onClick={() => set({ featured: !item.featured })}>
+            ★ Today&apos;s special
+          </button>
+        </div>
+        <p className="hint">Specials appear in a strip at the top of the menu.</p>
+      </div>
       <div className="field" style={{ marginTop: 14 }}>
         <span className="field-label">Contains (allergens)</span>
         <div className="chips">

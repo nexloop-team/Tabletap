@@ -7,6 +7,7 @@ import { BRAND } from "@/config/brand";
 import { CURRENCIES } from "@/lib/venue/schema";
 import { requireUser } from "@/server/auth/session";
 import { listVenuesForUser } from "@/server/repositories/venues";
+import { firstParam } from "@/server/request";
 import "@/styles/app.css";
 
 export const metadata: Metadata = { title: "Set up your venue" };
@@ -17,8 +18,9 @@ const REGION_CURRENCY: Record<string, (typeof CURRENCIES)[number]> = {
   US: "USD", IN: "INR", AU: "AUD", CA: "CAD", NZ: "NZD", AE: "AED", SG: "SGD", ZA: "ZAR",
 };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   const user = await requireUser();
+  const verified = firstParam((await searchParams).verified);
   const hasVenues = listVenuesForUser(user.id).length > 0;
   const region = /-([A-Z]{2})\b/.exec((await headers()).get("accept-language") ?? "")?.[1] ?? "";
   return (
@@ -31,6 +33,8 @@ export default async function OnboardingPage() {
           </Link>
           {hasVenues && <Link href="/dashboard">Back to dashboard</Link>}
         </div>
+        {verified === "1" && <div className="notice notice-ok" style={{ marginBottom: 12 }}>Your email is confirmed. Thanks! Now let&apos;s set up your venue.</div>}
+        {verified === "0" && <div className="notice notice-error" style={{ marginBottom: 12 }}>That confirmation link has expired or was already used.</div>}
         <OnboardingWizard defaultCurrency={REGION_CURRENCY[region] ?? "GBP"} />
       </div>
     </div>

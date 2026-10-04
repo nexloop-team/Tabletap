@@ -1,0 +1,238 @@
+"use client";
+
+import { FileUp, Loader2, Sparkles } from "lucide-react";
+import { useRef, useState } from "react";
+import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
+import { compressImage } from "@/lib/browser";
+import type { VenueConfig } from "@/lib/venue/schema";
+import { Card, UpgradeHint } from "./ui";
+
+type Section = VenueConfig["menus"][number]["sections"][number];
+
+/**
+ * AI helpers above the hosted menu: read a printed menu into sections, and
+ * draft "What's this?" notes for unfamiliar dishes. Both produce drafts the
+ * owner reviews here and then saves with the normal save bar.
+ */
+/** Big enough to read small menu print, small enough for every provider's upload limit. */
+async function shrinkForUpload(file: File): Promise<File> {
+  if (file.type === "application/pdf") return file;
+  try {
+    const { base64 } = await compressImage(file, 2000, 0.85);
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    return new File([bytes], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+export function MenuAiTools({
+  venueId,
+  ai,
+  importLimits,
+  sections,
+  onImport,
+  onExplanations,
+}: {
+  venueId: string;
+  ai: "on" | "upgrade";
+  /** What the server's AI provider can read: some take PDFs and more photos than others. */
+  importLimits: { maxImages: number; pdf: boolean };
+  sections: Section[];
+  onImport: (sections: Section[], mode: "add" | "replace", flaggedItemIds: string[]) => void;
+  onExplanations: (byItemId: Record<string, string>) => void;
+}) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"import" | "explain" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [imported, setImported] = useState<{ sections: Section[]; flaggedItemIds: string[] } | null>(null);
+  const [drafts, setDrafts] = useState<{ itemId: string; name: string; explainer: string; keep: boolean }[] | null>(null);
+
+  const items = sections.flatMap((section) => section.items);
+  const unexplained = items.filter((item) => item.name.trim() && !item.explainer);
+
+  if (ai === "upgrade") {
+    return (
+      <Card title="AI helpers" description="Photograph your paper menu and we'll type it in for you, and explain dishes guests might not know.">
+        <UpgradeHint venueId={venueId}>AI menu import and dish explanations are part of Pro.</UpgradeHint>
+      </Card>
+    );
+  }
+
+  async function runImport(files: File[]) {
+    setError(null);
+    setImported(null);
+    if (files.length > importLimits.maxImages) {
+      setError(`Choose up to ${importLimits.maxImages} photos at a time. Import the rest in a second go.`);
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+    if (!importLimits.pdf && files.some((file) => file.type === "application/pdf")) {
+      setError("PDFs can't be read right now. Take a photo or screenshot of each page instead.");
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+    setBusy("import");
+    try {
+      setImported(await dashboardApi.importMenu(venueId, await Promise.all(files.map(shrinkForUpload))));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(null);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  async function runExplain() {
+    setBusy("explain");
+    setError(null);
+    setDrafts(null);
+    try {
+      const { suggestions } = await dashboardApi.explainDishes(venueId, {
+        items: unexplained.slice(0, 150).map((item) => ({ id: item.id, name: item.name, description: item.description ?? null })),
+        onlyUnfamiliar: true,
+      });
+      const names = new Map(items.map((item) => [item.id, item.name]));
+      setDrafts(suggestions.map((s) => ({ ...s, name: names.get(s.itemId) ?? "", keep: true })));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const importedCount = imported?.sections.reduce((n, s) => n + s.items.length, 0) ?? 0;
+
+  return (
+    <Card title="AI helpers" description="Drafts only: nothing reaches guests until you review it and save.">
+      <div className="inline">
+        <button type="button" className="btn" disabled={!!busy} onClick={() => fileInput.current?.click()}>
+          {busy === "import" ? <Loader2 className="spin" aria-hidden /> : <FileUp aria-hidden />}
+          {busy === "import" ? "Reading your menu…" : importLimits.pdf ? "Import from photo or PDF" : "Import from photos"}
+        </button>
+        <button type="button" className="btn" disabled={!!busy || unexplained.length === 0} onClick={runExplain}>
+          {busy === "explain" ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />}
+          {busy === "explain" ? "Thinking…" : "Explain unusual dishes"}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept={importLimits.pdf ? "image/jpeg,image/png,image/webp,image/gif,application/pdf" : "image/jpeg,image/png,image/webp,image/gif"}
+          multiple
+          hidden
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            if (files.length) void runImport(files);
+          }}
+        />
+      </div>
+      {busy === "import" ? (
+        <p className="hint" style={{ marginTop: 8 }}>This usually takes under a minute. Keep this page open.</p>
+      ) : (
+        <p className="hint" style={{ marginTop: 8 }}>
+          Up to {importLimits.maxImages} clear, straight-on photos per import{importLimits.pdf ? ", or one PDF" : ""}.
+        </p>
+      )}
+      {error && <p className="field-error" style={{ marginTop: 10 }}>{error}</p>}
+
+      {imported && (
+        <div className="notice notice-info" style={{ display: "block", marginTop: 14 }}>
+          <strong>
+            Found {importedCount} dish{importedCount === 1 ? "" : "es"} in {imported.sections.length} section{imported.sections.length === 1 ? "" : "s"}:
+          </strong>{" "}
+          {imported.sections.map((s) => `${s.name} (${s.items.length})`).join(", ")}.
+          {imported.flaggedItemIds.length > 0 && (
+            <p style={{ marginTop: 6 }}>
+              {imported.flaggedItemIds.length} dish{imported.flaggedItemIds.length === 1 ? " has" : "es have"} suggested allergens, marked <span className="badge badge-warn">Check allergens</span>. Please check each one before saving.
+            </p>
+          )}
+          <div className="inline" style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                onImport(imported.sections, "add", imported.flaggedItemIds);
+                setImported(null);
+              }}
+            >
+              Add to this menu
+            </button>
+            {sections.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => {
+                  if (!window.confirm("Replace every section of this menu with the imported one?")) return;
+                  onImport(imported.sections, "replace", imported.flaggedItemIds);
+                  setImported(null);
+                }}
+              >
+                Replace this menu
+              </button>
+            )}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setImported(null)}>
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {drafts && (
+        <div className="notice notice-info" style={{ display: "block", marginTop: 14 }}>
+          {drafts.length === 0 ? (
+            <>
+              <strong>Nothing to explain.</strong> Your dish names look familiar enough. You can still write a note on any dish yourself.
+              <div style={{ marginTop: 10 }}>
+                <button type="button" className="btn btn-sm" onClick={() => setDrafts(null)}>
+                  OK
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <strong>Review the drafts.</strong> Edit anything that doesn&apos;t match how you make it.
+              <div className="stack" style={{ marginTop: 10 }}>
+                {drafts.map((draft, index) => (
+                  <div key={draft.itemId} className="list-row">
+                    <label className="inline" style={{ fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={draft.keep}
+                        onChange={(event) => setDrafts(drafts.map((d, i) => (i === index ? { ...d, keep: event.target.checked } : d)))}
+                      />
+                      {draft.name}
+                    </label>
+                    <textarea
+                      className="textarea"
+                      style={{ marginTop: 6 }}
+                      aria-label={`What's this: ${draft.name}`}
+                      value={draft.explainer}
+                      maxLength={600}
+                      onChange={(event) => setDrafts(drafts.map((d, i) => (i === index ? { ...d, explainer: event.target.value } : d)))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="inline" style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={!drafts.some((d) => d.keep && d.explainer.trim())}
+                  onClick={() => {
+                    onExplanations(Object.fromEntries(drafts.filter((d) => d.keep && d.explainer.trim()).map((d) => [d.itemId, d.explainer.trim()])));
+                    setDrafts(null);
+                  }}
+                >
+                  Add {drafts.filter((d) => d.keep).length} note{drafts.filter((d) => d.keep).length === 1 ? "" : "s"}
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDrafts(null)}>
+                  Discard
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}

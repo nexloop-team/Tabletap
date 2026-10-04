@@ -4,7 +4,8 @@ import { useCallback } from "react";
 import { api } from "@/lib/api/client";
 import type { EnrollResponse } from "@/lib/api/contracts";
 import type { MessageKey } from "@/lib/i18n";
-import { deviceMemory } from "@/lib/browser";
+import { cardCredentialsFromUrl, deviceMemory } from "@/lib/browser";
+import { storedReferral } from "@/lib/referral";
 import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
 import { useLanding } from "./LandingContext";
 
@@ -20,6 +21,9 @@ function useRecordJoin() {
   return useCallback(
     (response: EnrollResponse, email: string) => {
       deviceMemory.rememberCustomer(venue.id, response.customerId);
+      // Next visit, the guest page shows this card instead of the join form.
+      const card = cardCredentialsFromUrl(response.cardUrl);
+      if (card) deviceMemory.rememberCard(venue.id, card);
       rememberCustomer(response.customerId);
       setMembership({ response, email });
       if (!response.wasExisting) setLoyaltyDone();
@@ -57,6 +61,7 @@ export function useStampJoin() {
           ageAttested: input.consent,
           birthday: input.birthday ?? undefined,
           locale: currentLocale(),
+          ref: storedReferral(venue.id),
         });
         recordJoin(response, email);
         return { ok: true, response, email };

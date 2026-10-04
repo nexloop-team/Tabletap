@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { CURRENCIES, VENUE_TYPES, type VenueConfig } from "@/lib/venue/schema";
-import { Card, Field, SaveBar, TextField } from "./ui";
+import { Card, Field, SaveBar, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
 
 type Basics = Pick<VenueConfig, "name" | "venueType" | "currencyCode">;
@@ -122,6 +122,35 @@ export function DeleteVenueForm({ venueId, name }: { venueId: string; name: stri
         </button>
         <Status error={action.error} done={null} />
       </form>
+    </Card>
+  );
+}
+
+/** One switch per venue for the Monday digest; saves as soon as it's flipped. */
+export function DigestSwitches({ venues }: { venues: { id: string; name: string; enabled: boolean }[] }) {
+  const [state, setState] = useState(() => Object.fromEntries(venues.map((venue) => [venue.id, venue.enabled])));
+  const [error, setError] = useState<string | null>(null);
+  if (venues.length === 0) return null;
+  return (
+    <Card title="Email notifications" description="A short email every Monday morning with last week's scans, guests, stamps and feedback.">
+      {venues.map((venue) => (
+        <SwitchRow
+          key={venue.id}
+          title={`Weekly summary for ${venue.name}`}
+          checked={state[venue.id]}
+          onChange={async (on) => {
+            setState((s) => ({ ...s, [venue.id]: on }));
+            setError(null);
+            try {
+              await dashboardApi.setNotifications({ venueId: venue.id, weeklyDigest: on });
+            } catch (err) {
+              setState((s) => ({ ...s, [venue.id]: !on }));
+              setError(errorMessage(err));
+            }
+          }}
+        />
+      ))}
+      <Status error={error} done={null} />
     </Card>
   );
 }

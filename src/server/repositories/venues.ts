@@ -4,7 +4,10 @@ import path from "node:path";
 import type { PlanId } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/plans";
 import { applyEntitlements } from "@/lib/venue/entitlements";
+import { liveAnnouncement } from "@/lib/venue/features";
+import { localDate } from "../jobs/time";
 import type { VenueConfig } from "@/lib/venue/schema";
+import { resolveSettings, type VenueSettings } from "@/lib/venue/settings";
 import type { PublicVenue } from "@/lib/venue/types";
 import { DATA_DIR, getDb, transaction } from "../db";
 import { entitlementsFor, startTrial } from "./subscriptions";
@@ -50,7 +53,8 @@ export function findVenue(idOrCode: string): PublicVenue | null {
     .prepare("SELECT * FROM venues WHERE (id = ? OR short_code = ?) AND status = 'active' LIMIT 1")
     .get(idOrCode, idOrCode) as VenueRow | undefined;
   if (!row) return null;
-  return applyEntitlements(toVenue(row), entitlementsFor(row.id).can);
+  const venue = applyEntitlements(toVenue(row), entitlementsFor(row.id).can);
+  return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date())) };
 }
 
 /** The merchant's own view: the saved configuration, whatever the plan. */
@@ -109,6 +113,16 @@ export function updateShortCode(venueId: string, shortCode: string) {
   getDb().prepare("UPDATE venues SET short_code = ?, updated_at = datetime('now') WHERE id = ?").run(shortCode, venueId);
 }
 
+/** Owner-only settings (stamp policy, automations), with defaults filled in. */
+export function getVenueSettings(venueId: string): VenueSettings {
+  const row = getDb().prepare("SELECT settings FROM venues WHERE id = ?").get(venueId) as { settings: string | null } | undefined;
+  return resolveSettings(row?.settings ? JSON.parse(row.settings) : null);
+}
+
+export function saveVenueSettings(venueId: string, settings: VenueSettings) {
+  getDb().prepare("UPDATE venues SET settings = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(settings), venueId);
+}
+
 export function setVenueStatus(venueId: string, status: VenueStatus) {
   getDb().prepare("UPDATE venues SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, venueId);
 }
@@ -117,7 +131,8 @@ export function setVenueStatus(venueId: string, status: VenueStatus) {
 export function deleteVenue(venueId: string) {
   const photos = getDb().prepare("SELECT image_path FROM feedback WHERE venue_id = ? AND image_path IS NOT NULL").all(venueId) as { image_path: string }[];
   transaction((db) => {
-    for (const table of ["visits", "loyalty_cards", "customers", "feedback", "events", "venue_members", "subscriptions"]) {
+    db.prepare("DELETE FROM guest_emails WHERE customer_id IN (SELECT id FROM customers WHERE venue_id = ?)").run(venueId);
+    for (const table of ["visits", "stamp_events", "loyalty_cards", "customers", "feedback", "events", "ai_usage", "venue_members", "subscriptions"]) {
       db.prepare(`DELETE FROM ${table} WHERE venue_id = ?`).run(venueId);
     }
     db.prepare("DELETE FROM venues WHERE id = ?").run(venueId);

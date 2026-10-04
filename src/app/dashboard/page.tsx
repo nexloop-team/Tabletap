@@ -10,7 +10,7 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
   const user = await requireUser();
   const verified = firstParam((await searchParams).verified);
   const venues = listVenuesForUser(user.id);
-  if (venues.length === 0) redirect("/onboarding");
+  if (venues.length === 0) redirect(`/onboarding${verified ? `?verified=${encodeURIComponent(verified)}` : ""}`);
   if (venues.length === 1) redirect(`/dashboard/${venues[0].id}${verified ? `?verified=${verified}` : ""}`);
 
   return (

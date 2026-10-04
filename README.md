@@ -1,6 +1,8 @@
 # Tabletap — self-serve QR pages for hospitality venues
 
-Venue owners sign up, answer four onboarding questions and get a live guest page with printable QR codes, all without help from us. A guest who scans a table QR code gets the menu, Wi-Fi, a loyalty card, feedback that routes happy guests to Google reviews, and a Sudoku to pass the time. Owners manage everything from a dashboard and pay per venue for Pro features. Guest-page behaviour is modelled on the analysis in [docs/candour-analysis.md](docs/candour-analysis.md), with our own brand, copy and backend.
+Venue owners sign up, answer four onboarding questions and get a live guest page with printable QR codes, all without help from us. A guest who scans a table QR code gets the menu, Wi-Fi, a loyalty card that staff stamp at the till, a private feedback box with a Google review invitation for every guest, and a Sudoku to pass the time. Owners manage everything from a dashboard and pay per venue for Pro features. Guest-page behaviour is modelled on the analysis in [docs/candour-analysis.md](docs/candour-analysis.md), with our own brand, copy and backend.
+
+Plans, to-dos, decisions and the change log live in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Run it
 
@@ -68,6 +70,14 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` | Stripe Checkout and Customer Portal for the Pro plan |
 | `STRIPE_WEBHOOK_SECRET` | Verifies `/api/billing/webhook` |
 | `BILLING_DEV_MODE` | `1` allows dev-mode billing in a production build (for staging only) |
+| `GROQ_API_KEY` | Turns on AI menu import (photos, up to 3 at a time) and "What's this?" drafts (Pro) using Groq; used first when set |
+| `GROQ_TEXT_MODEL`, `GROQ_VISION_MODEL` | Groq models (defaults `openai/gpt-oss-120b` for text, `qwen/qwen3.8-27b` for menu photos) |
+| `ANTHROPIC_API_KEY` | Alternative AI provider (Claude); also reads PDF menus and up to 5 photos |
+| `ANTHROPIC_MODEL` | Claude model (default `claude-opus-5-5`) |
+| `AI_PROVIDER` | `groq` or `anthropic`, to choose when both keys are set |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile captcha on sign-up and password reset; off without them |
+| `CRON_SECRET` | Enables `POST /api/cron/run` for an external scheduler (`Authorization: Bearer …`) |
+| `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails), e.g. when running more than one server |
 | `NEXT_PUBLIC_PRO_PRICE_LABEL` | Price shown on the pricing page (default "£19 / month per venue") |
 | `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
@@ -90,6 +100,7 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `/dashboard/<venue>/billing`, `/settings` | Plan, venue details, page address, delete venue |
 | `/dashboard/account` | Name, password, delete account |
 | `/admin` | Operator view: all accounts and venues, suspend, comp Pro |
+| `/staff`, `/staff/stamp?c=<card>` | Till screens for paired staff devices: find a member, add stamps, redeem rewards, undo |
 
 **Guests**
 
@@ -100,6 +111,7 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `/card/<id>?t=<token>` | Member's web card (linked from the enrolment email) |
 | `/consent?status=` | Result of the double-opt-in link |
 | `/privacy`, `/terms` | Privacy notice and terms of service |
+| `/unsubscribe?token=` | Stop offer emails from one venue (also one-click from mail apps) |
 | `/media/<venue>/<file>` | Images uploaded by owners |
 
 **APIs:** `api/auth/*`, `api/account`, `api/dashboard/venues/*` and `api/admin/*` are cookie-authenticated, and their writes are refused from other origins. `api/billing/webhook` is signed by Stripe. The guest APIs (`api/venues`, `api/loyalty`, `api/feedback`, `api/guests`, `api/consent`, `api/events`) are unchanged.

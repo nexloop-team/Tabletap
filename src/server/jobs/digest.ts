@@ -1,0 +1,65 @@
+import "server-only";
+import { BRAND } from "@/config/brand";
+import { appOrigin } from "../origin";
+import { listFeedback, venueStats } from "../repositories/insights";
+import { digestRecipients, type DigestRecipient } from "../repositories/notifications";
+import { sendMail } from "../services/mailer";
+import { claimJob, releaseJob } from "./claims";
+import { digestWeek } from "./time";
+
+/**
+ * The Monday-morning email: last week's scans, guests, stamps and feedback
+ * for each venue an owner runs. Owners who never log in still see the value.
+ */
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+export function buildDigest(recipient: DigestRecipient, now = new Date()): { subject: string; text: string } {
+  const stats = venueStats(recipient.venueId, 7);
+  const weekAgo = now.getTime() - 7 * 86_400_000;
+  const notes = listFeedback(recipient.venueId, { limit: 10 }).rows.filter((row) => Date.parse(`${row.createdAt.replace(" ", "T")}Z`) >= weekAgo).slice(0, 3);
+  const origin = appOrigin();
+  const dashboard = `${origin}/dashboard/${recipient.venueId}`;
+
+  const lines = [
+    `Hi ${recipient.name.split(" ")[0] || "there"},`,
+    "",
+    `Here's your week at ${recipient.venueName}:`,
+    "",
+    `• ${plural(stats.scans, "scan")} (${plural(stats.visitors, "visit")})`,
+    `• ${plural(stats.menuViews, "menu view")}`,
+    `• ${plural(stats.newGuests, "new guest")} (${stats.totalGuests} in total)`,
+    `• ${plural(stats.stampsGiven, "stamp")} given, ${plural(stats.rewardsRedeemed, "reward")} redeemed`,
+    `• ${plural(stats.feedbackCount, "feedback note")}, ${plural(stats.reviewTaps, "tap")} on your Google review link`,
+  ];
+  if (notes.length) {
+    lines.push("", "Latest feedback:");
+    for (const note of notes) lines.push(`  “${note.text.length > 160 ? `${note.text.slice(0, 157)}…` : note.text}”`);
+    lines.push(`Read it all: ${dashboard}/feedback`);
+  }
+  if (stats.scans === 0) {
+    lines.push("", `No scans last week. Your QR codes might need a better spot: try one on every table and one at the counter. Print them here: ${dashboard}/qr`);
+  }
+  lines.push("", `Open your dashboard: ${dashboard}`, "", "—", `${BRAND.name} · Turn off this email: ${origin}/dashboard/account`);
+
+  return {
+    subject: `Your week at ${recipient.venueName}: ${plural(stats.scans, "scan")}, ${plural(stats.newGuests, "new guest")}`,
+    text: lines.join("\n"),
+  };
+}
+
+export async function runWeeklyDigest(now: Date): Promise<number> {
+  const week = digestWeek(now);
+  if (!week) return 0;
+  let sent = 0;
+  for (const recipient of digestRecipients()) {
+    const key = `${week}:${recipient.venueId}:${recipient.userId}`;
+    if (!claimJob("digest", key)) continue;
+    const { subject, text } = buildDigest(recipient, now);
+    if (sendMail({ to: recipient.email, subject, text })) sent += 1;
+    else releaseJob("digest", key);
+  }
+  return sent;
+}

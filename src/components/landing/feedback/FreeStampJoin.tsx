@@ -2,16 +2,18 @@
 
 import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api/client";
+import { cardCredentialsFromUrl, type CardCredentials } from "@/lib/browser";
 import { enrolEmailCopy } from "@/lib/landing-copy";
 import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
 import { SuccessPanel, WalletActions } from "../forms";
 import { useLanding } from "../LandingContext";
+import { MyCard } from "../loyalty/MyCard";
 import { useStampJoin } from "../useJoin";
 
 type Outcome =
   | { kind: "enrolled"; node: ReactNode }
-  | { kind: "stamped" }
-  | { kind: "not_stamped" };
+  | { kind: "stamped"; card: CardCredentials | null }
+  | { kind: "not_stamped"; card: CardCredentials | null };
 
 /**
  * The thank-you's loyalty ask: "you've earned a free stamp, join to claim it".
@@ -63,7 +65,8 @@ export function FreeStampJoin() {
         track("loyalty_stamp_from_feedback", { current_stamps: stamp.currentStamps });
         setLoyaltyDone();
       }
-      setOutcome({ kind: stamp.stamped ? "stamped" : "not_stamped" });
+      // Already a member: show their card right here, with today's stamp on it.
+      setOutcome({ kind: stamp.stamped ? "stamped" : "not_stamped", card: cardCredentialsFromUrl(response.cardUrl) });
     } catch {
       setBusy(false);
       setError(t("something_wrong"));
@@ -80,12 +83,13 @@ export function FreeStampJoin() {
         )}
         {outcome.kind === "stamped" && (
           <SuccessPanel icon="heart" title={t("stamp_added")}>
-            <p>{t("wallet_updates_automatically")}</p>
+            {outcome.card ? <MyCard credentials={outcome.card} /> : <p>{t("wallet_updates_automatically")}</p>}
           </SuccessPanel>
         )}
         {outcome.kind === "not_stamped" && (
           <SuccessPanel icon="heart">
             <p>{t("no_stamp_this_time")}</p>
+            {outcome.card && <MyCard credentials={outcome.card} />}
           </SuccessPanel>
         )}
       </>

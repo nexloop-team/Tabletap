@@ -6,6 +6,7 @@ import type {
   EnrollResponse,
   FeedbackRequest,
   FeedbackResponse,
+  MemberCardView,
   RecordVisitRequest,
   StampRequest,
   StampResponse,
@@ -46,6 +47,8 @@ function post<T>(path: string, body: unknown, timeoutMs: number) {
 }
 
 export const api = {
+  getCard: (cardId: string, token: string) =>
+    request<MemberCardView>(`/api/cards/${encodeURIComponent(cardId)}?t=${encodeURIComponent(token)}`, { method: "GET", cache: "no-store" }, 15_000),
   getVenue: (idOrCode: string) => request<PublicVenue>(`/api/venues/${encodeURIComponent(idOrCode)}`, { method: "GET" }, 15_000),
   enroll: (body: EnrollRequest) => post<EnrollResponse>("/api/loyalty/enroll", body, 30_000),
   stampForFeedback: (body: StampRequest) => post<StampResponse>("/api/loyalty/stamp", body, 15_000),

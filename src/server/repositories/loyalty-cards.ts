@@ -2,6 +2,7 @@ import "server-only";
 import type { DatabaseSync } from "node:sqlite";
 import { getDb } from "../db";
 import { newId, newToken } from "../ids";
+import { recordStampEvent } from "./stamps";
 
 export interface LoyaltyCardRow {
   id: string;
@@ -27,12 +28,23 @@ export function createCard(db: DatabaseSync, venueId: string, customerId: string
     newToken(),
     initialStamps,
   );
+  if (initialStamps > 0) recordStampEvent(db, { venueId, cardId: id, kind: "bonus", delta: initialStamps });
   return db.prepare("SELECT * FROM loyalty_cards WHERE id = ?").get(id) as unknown as LoyaltyCardRow;
+}
+
+export function findCardById(db: DatabaseSync, cardId: string): LoyaltyCardRow | null {
+  return (db.prepare("SELECT * FROM loyalty_cards WHERE id = ?").get(cardId) as LoyaltyCardRow | undefined) ?? null;
+}
+
+export function setCardStamps(db: DatabaseSync, cardId: string, stamps: number) {
+  db.prepare("UPDATE loyalty_cards SET stamps = ? WHERE id = ?").run(stamps, cardId);
 }
 
 export function addFeedbackStamp(db: DatabaseSync, cardId: string): number {
   db.prepare("UPDATE loyalty_cards SET stamps = stamps + 1, last_feedback_stamp_at = datetime('now') WHERE id = ?").run(cardId);
-  return (db.prepare("SELECT stamps FROM loyalty_cards WHERE id = ?").get(cardId) as { stamps: number }).stamps;
+  const card = db.prepare("SELECT venue_id, stamps FROM loyalty_cards WHERE id = ?").get(cardId) as { venue_id: string; stamps: number };
+  recordStampEvent(db, { venueId: card.venue_id, cardId, kind: "feedback", delta: 1 });
+  return card.stamps;
 }
 
 export function markPassEmailed(db: DatabaseSync, cardId: string) {

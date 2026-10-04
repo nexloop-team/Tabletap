@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, Info, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createTracker } from "@/lib/analytics";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
@@ -12,6 +12,13 @@ const DIETARY_KEYS: Record<string, MessageKey> = {
   vegetarian: "dietary_vegetarian",
   gluten_free: "dietary_gluten_free",
   "gluten-free": "dietary_gluten_free",
+};
+
+const BADGE_KEYS: Record<NonNullable<MenuItem["badges"]>[number], MessageKey> = {
+  popular: "badge_popular",
+  new: "badge_new",
+  spicy: "badge_spicy",
+  chef: "badge_chef",
 };
 
 function titleCase(value: string): string {
@@ -50,6 +57,7 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
   const [query, setQuery] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [openExplainer, setOpenExplainer] = useState<string | null>(null);
 
   const menu = menus[menuIndex] ?? null;
   const sections = useMemo(() => (menu ? [...menu.sections].sort((a, b) => a.sortOrder - b.sortOrder).filter((s) => s.items.length > 0) : []), [menu]);
@@ -60,6 +68,12 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
   }, [track, menus.length]);
 
   const needle = query.trim().toLowerCase();
+  /** Available specials that pass the allergen filter, in menu order. */
+  const specials = useMemo(
+    () => sections.flatMap((s) => s.items).filter((item) => item.featured && item.isAvailable && !item.allergens.some((a) => excluded.includes(a.toLowerCase()))),
+    [sections, excluded],
+  );
+
   const { visibleSections, hiddenByFilter } = useMemo(() => {
     const isExcluded = (item: MenuItem) => item.allergens.some((a) => excluded.includes(a.toLowerCase()));
     const searched = sections.map((section) => ({ ...section, items: section.items.filter((item) => matches(item, needle)) }));
@@ -73,6 +87,11 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
     const next = excluded.includes(allergen) ? excluded.filter((a) => a !== allergen) : [...excluded, allergen];
     setExcluded(next);
     track("menu_allergen_filter_changed", { excluded: next.join(",") });
+  }
+
+  function jumpToItem(itemId: string) {
+    document.getElementById(`item-${itemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    track("menu_special_tapped", { item_id: itemId });
   }
 
   function jumpTo(sectionId: string) {
@@ -123,6 +142,25 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
 
             {menu.welcomeText?.trim() && <p className="menu-welcome">{menu.welcomeText.trim()}</p>}
 
+            {specials.length > 0 && !needle && (
+              <section className="menu-specials" aria-label={t("menu_specials")}>
+                <h2>{t("menu_specials")}</h2>
+                <div className="menu-specials-row">
+                  {specials.map((item) => {
+                    const image = safeImageUrl(item.imageUrl);
+                    return (
+                      <button key={item.id} type="button" className="menu-special" onClick={() => jumpToItem(item.id)}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
+                        {image && <img src={image} alt="" loading="lazy" />}
+                        <span className="menu-special-name">{item.name}</span>
+                        <span className="menu-special-price">{formatPrice(item.priceInPence)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {filterOpen && allergens.length > 0 && (
               <section id="menu-filter" className="menu-filter">
                 <h2>{t("menu_filter_title")}</h2>
@@ -167,16 +205,46 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
                   <ul>
                     {section.items.map((item) => {
                       const image = safeImageUrl(item.imageUrl);
+                      const explainer = item.explainer?.trim();
+                      const explained = openExplainer === item.id;
                       return (
-                        <li key={item.id} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
+                        <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}${image ? " has-photo" : ""}`}>
                           <div className="menu-item-text">
                             <div className="menu-item-head">
-                              <h3>{item.name}</h3>
+                              <h3>
+                                {item.name}
+                                {explainer && (
+                                  <button
+                                    type="button"
+                                    className="menu-info-btn"
+                                    aria-label={t("menu_whats_this")}
+                                    aria-expanded={explained}
+                                    aria-controls={`explainer-${item.id}`}
+                                    onClick={() => {
+                                      setOpenExplainer(explained ? null : item.id);
+                                      if (!explained) track("menu_explainer_opened", { item_id: item.id });
+                                    }}
+                                  >
+                                    <Info aria-hidden />
+                                  </button>
+                                )}
+                              </h3>
                               <span className="menu-price">{formatPrice(item.priceInPence)}</span>
                             </div>
                             {item.description && <p className="menu-desc">{item.description}</p>}
+                            {explainer && explained && (
+                              <div id={`explainer-${item.id}`} className="menu-explainer">
+                                <p>{explainer}</p>
+                                <p className="menu-explainer-note">{t("menu_explainer_allergens")}</p>
+                              </div>
+                            )}
                             <div className="menu-tags">
                               {!item.isAvailable && <span className="menu-tag muted">{t("menu_unavailable")}</span>}
+                              {(item.badges ?? []).map((badge) => (
+                                <span key={badge} className={`menu-tag highlight ${badge}`}>
+                                  {t(BADGE_KEYS[badge])}
+                                </span>
+                              ))}
                               {item.dietaryTags.map((tag) => (
                                 <span key={tag} className="menu-tag diet">
                                   {DIETARY_KEYS[tag.toLowerCase()] ? t(DIETARY_KEYS[tag.toLowerCase()]) : titleCase(tag)}

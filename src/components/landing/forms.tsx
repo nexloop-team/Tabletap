@@ -2,11 +2,12 @@
 
 import { useEffect, useId, useMemo, type ReactNode } from "react";
 import type { EnrollResponse } from "@/lib/api/contracts";
-import { getPlatform, isApplePlatform } from "@/lib/browser";
+import { cardCredentialsFromUrl, getPlatform, isApplePlatform } from "@/lib/browser";
 import { daysInMonth } from "@/lib/validation";
 import { consentAgeThreshold } from "@/lib/venue/features";
 import { CheckCircle, FilledHeart } from "../icons";
 import { useLanding } from "./LandingContext";
+import { MyCardToggle } from "./loyalty/MyCard";
 
 function PrivacyLink() {
   const { t } = useLanding();
@@ -125,6 +126,8 @@ export function WalletActions({ response, context }: { response: EnrollResponse;
   }, [apple, response.passBase64]);
   const googleHref = !apple && isGoogleWalletSaveUrl(response.googleWalletUrl) ? response.googleWalletUrl : null;
   const walletShown = !!(appleHref || googleHref);
+  // The web card opens here on the venue's page, not in a new tab.
+  const cardCredentials = useMemo(() => cardCredentialsFromUrl(response.cardUrl), [response.cardUrl]);
 
   useEffect(() => {
     track("wallet_button_shown", { wallet_type: apple ? "apple" : "google", shown: walletShown, context });
@@ -142,11 +145,7 @@ export function WalletActions({ response, context }: { response: EnrollResponse;
           {t("add_google_wallet")}
         </a>
       )}
-      {!walletShown && response.cardUrl && (
-        <a className="wallet-btn" href={response.cardUrl} target="_blank" rel="noopener" onClick={() => track("card_link_opened", { context })}>
-          {t("view_card")}
-        </a>
-      )}
+      {!walletShown && cardCredentials && <MyCardToggle credentials={cardCredentials} />}
     </>
   );
 }

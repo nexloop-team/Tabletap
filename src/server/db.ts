@@ -126,6 +126,69 @@ const MIGRATIONS: string[] = [
    CREATE INDEX events_venue ON events(venue_id, name, created_at);
    CREATE INDEX feedback_venue ON feedback(venue_id, created_at);
    CREATE INDEX visits_venue ON visits(venue_id, created_at);`,
+  // Staff stamping, owner-only venue settings, digest preferences, jobs.
+  `CREATE TABLE stamp_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     venue_id TEXT NOT NULL,
+     card_id TEXT NOT NULL,
+     kind TEXT NOT NULL,
+     delta INTEGER NOT NULL,
+     reward_name TEXT,
+     device_id TEXT,
+     undone_at TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX stamp_events_card ON stamp_events(card_id, created_at);
+   CREATE INDEX stamp_events_venue ON stamp_events(venue_id, kind, created_at);
+   CREATE TABLE staff_devices (
+     id TEXT PRIMARY KEY,
+     venue_id TEXT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+     label TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     last_used_at TEXT,
+     revoked_at TEXT
+   );
+   CREATE INDEX staff_devices_venue ON staff_devices(venue_id);
+   CREATE TABLE staff_pairings (
+     id TEXT PRIMARY KEY,
+     venue_id TEXT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+     label TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     used_at TEXT
+   );
+   ALTER TABLE venues ADD COLUMN settings TEXT;
+   CREATE TABLE notification_prefs (
+     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     venue_id TEXT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+     weekly_digest INTEGER NOT NULL DEFAULT 1,
+     PRIMARY KEY (user_id, venue_id)
+   );
+   CREATE TABLE job_runs (
+     job TEXT NOT NULL,
+     key TEXT NOT NULL,
+     ran_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (job, key)
+   );`,
+  // AI quota, guest email automations, refer-a-friend.
+  `CREATE TABLE ai_usage (
+     venue_id TEXT NOT NULL,
+     day TEXT NOT NULL,
+     units INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (venue_id, day)
+   );
+   ALTER TABLE customers ADD COLUMN unsubscribe_token TEXT;
+   CREATE UNIQUE INDEX customers_unsubscribe ON customers(unsubscribe_token);
+   CREATE TABLE guest_emails (
+     customer_id TEXT NOT NULL,
+     kind TEXT NOT NULL,
+     key TEXT NOT NULL,
+     sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (customer_id, kind, key)
+   );
+   ALTER TABLE loyalty_cards ADD COLUMN referral_code TEXT;
+   ALTER TABLE loyalty_cards ADD COLUMN referred_by_card_id TEXT;
+   ALTER TABLE loyalty_cards ADD COLUMN referral_rewarded_at TEXT;
+   CREATE UNIQUE INDEX loyalty_cards_referral ON loyalty_cards(referral_code);`,
 ];
 
 function migrate(db: DatabaseSync) {

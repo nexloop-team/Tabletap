@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { CardLive } from "@/components/card/CardLive";
+import { InviteFriend } from "@/components/card/InviteFriend";
 import { FilledHeart } from "@/components/icons";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { createTranslator } from "@/lib/i18n";
 import { hasLoyaltyProgram, safeImageUrl } from "@/lib/venue/features";
-import type { LoyaltyProgram } from "@/lib/venue/types";
+import { programTiers, stampGoal } from "@/lib/venue/loyalty";
 import { findCardForViewer } from "@/server/repositories/loyalty-cards";
+import { ensureReferralCode } from "@/server/repositories/retention";
 import { findVenue } from "@/server/repositories/venues";
-import { firstParam, requestLocale } from "@/server/request";
+import { firstParam, requestLocale, serverOrigin } from "@/server/request";
+import { qrSvg } from "@/server/services/qr";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
 
@@ -19,11 +23,6 @@ export const metadata: Metadata = {
 
 /** Largest stamp grid drawn; bigger programmes show progress as text only. */
 const MAX_DRAWN_STAMPS = 20;
-
-function tiersOf(program: LoyaltyProgram) {
-  const tiers = program.rewardTiers?.length ? program.rewardTiers : [{ rewardName: program.rewardName, stampsRequired: program.stampsRequired }];
-  return [...tiers].filter((tier) => tier.stampsRequired > 0).sort((a, b) => a.stampsRequired - b.stampsRequired);
-}
 
 /** `/card/<id>?t=<token>` — the member's card, linked from their enrolment email. */
 export default async function CardPage({ params, searchParams }: PageProps<"/card/[id]">) {
@@ -47,8 +46,13 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
   const logo = safeImageUrl(venue.branding.logoUrl);
   const holder = card.first_name?.trim() || card.name?.trim() || "";
   const program = hasLoyaltyProgram(venue) ? venue.loyaltyProgram! : null;
-  const tiers = program ? tiersOf(program) : [];
-  const goal = tiers.length ? tiers[tiers.length - 1].stampsRequired : 0;
+  const tiers = programTiers(program);
+  const goal = stampGoal(tiers);
+  // Staff scan this on a paired till device; the device pairing is what authorises the stamp.
+  const origin = await serverOrigin();
+  const staffQr = program ? await qrSvg(`${origin}/staff/stamp?c=${card.id}`) : null;
+  const referral = program?.referral?.enabled ? program.referral : null;
+  const inviteUrl = referral ? `${origin}/s?i=${encodeURIComponent(venue.shortCode)}&ref=${ensureReferralCode(card.id)}&s=invite` : null;
   const nextTier = tiers.find((tier) => card.stamps < tier.stampsRequired);
   const readyTier = [...tiers].reverse().find((tier) => card.stamps >= tier.stampsRequired);
   const since = new Date(`${card.created_at.replace(" ", "T")}Z`);
@@ -107,6 +111,28 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
             sinceText && <p className="member-card-progress">{tf("card_member", { date: sinceText })}</p>
           )}
 
+          <CardLive
+            venueId={venue.id}
+            cardId={card.id}
+            token={token}
+            stamps={card.stamps}
+            qrSvg={staffQr}
+            labels={{ show: t("card_show_staff"), hide: t("card_hide_staff"), hint: t("card_staff_hint"), added: t("card_stamp_added"), redeemed: t("card_reward_used") }}
+          />
+          {referral && inviteUrl && (
+            <InviteFriend
+              url={inviteUrl}
+              venueName={venue.name}
+              labels={{
+                title: t("card_invite_title"),
+                body:
+                  tf("card_invite_body", { stamps: referral.referrerStamps }) +
+                  (referral.friendStamps > 0 ? ` ${tf("card_invite_friend", { stamps: referral.friendStamps })}` : ""),
+                share: t("card_invite_share"),
+                copied: t("copied"),
+              }}
+            />
+          )}
           <p className="member-card-foot">{program ? t("card_show") : t("card_show_rewards")}</p>
           <p className="member-card-number">{tf("card_number", { number: card.id.slice(-8).toUpperCase() })}</p>
         </article>

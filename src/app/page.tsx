@@ -17,8 +17,8 @@ const FEATURES = [
   { icon: UtensilsCrossed, title: "A menu you can change in seconds", text: "Prices, allergens, dietary tags and photos. Mark a dish sold out from your phone." },
   { icon: Wifi, title: "Wi-Fi without the questions", text: "Guests copy the password in one tap. Optionally ask for an email first." },
   { icon: Gift, title: "Loyalty that lives on their phone", text: "Digital stamp cards and reward tiers. No app to download, no paper cards to lose." },
-  { icon: MessageSquareText, title: "Hear it before Google does", text: "Unhappy guests tell you privately. Happy ones are nudged to leave a review." },
-  { icon: Star, title: "More five-star reviews", text: "Your Google review link, one tap away, at the moment guests are happiest." },
+  { icon: MessageSquareText, title: "Hear it first", text: "A private feedback box at every table, so small problems reach you while you can still fix them." },
+  { icon: Star, title: "More Google reviews, by the rules", text: "Every guest is asked for a review at the table, so you get more reviews without breaking Google's policies." },
   { icon: Users, title: "A guest list you own", text: "Emails, birthdays and marketing consent, collected properly with double opt-in." },
   { icon: QrCode, title: "QR codes for every table", text: "Download print-ready codes and table cards. See which table scans the most." },
   { icon: Palette, title: "Looks like your place", text: "Your logo, cover photo and colours. Text stays readable on any background." },
@@ -54,7 +54,7 @@ export default async function Home() {
         <section className="hero">
           <div>
             <h1>One QR code for everything your guests need at the table.</h1>
-            <p className="lede">Menu, Wi-Fi, a loyalty card that lives on their phone, and honest feedback that turns happy guests into Google reviews. Set it up yourself in ten minutes.</p>
+            <p className="lede">Menu, Wi-Fi, a loyalty card that lives on their phone, private feedback, and more Google reviews from the guests at your tables. Set it up yourself in ten minutes.</p>
             <div className="cta">
               <Link className="btn btn-primary" href={user ? "/dashboard" : "/signup"}>
                 {user ? "Go to your dashboard" : "Create your page free"}
@@ -66,7 +66,7 @@ export default async function Home() {
             <p className="hero-note">Free forever plan · {TRIAL_DAYS}-day Pro trial · No card needed</p>
           </div>
           <div className="phone" aria-hidden>
-            <iframe src="/s?i=demo&s=home" title="Example venue page" loading="lazy" tabIndex={-1} />
+            <iframe src="/s?i=demo&s=home&embed=1"title="Example venue page" loading="lazy" tabIndex={-1} />
           </div>
         </section>
 
