@@ -94,6 +94,8 @@ export const brandingSchema = z.object({
   showGoogleReviewButton: z.boolean().optional(),
   sudokuEnabled: z.boolean().optional(),
   featureOrder: z.array(z.string().max(60)).max(40).optional(),
+  hiddenFeatures: z.array(z.string().max(60)).max(40).optional(),
+  featureLabels: z.partialRecord(z.enum(["loyalty", "menu", "wifi", "sudoku", "feedback", "google_review"]), z.string().trim().max(40)).optional(),
 });
 
 export const socialLinksSchema = z.object({

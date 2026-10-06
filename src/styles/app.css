@@ -397,8 +397,11 @@ body:has(.app) {
 }
 .switch input {
   position: absolute;
+  /* Above the drawn track, so the click reaches the checkbox. */
+  z-index: 1;
   opacity: 0;
   inset: 0;
+  margin: 0;
   cursor: pointer;
 }
 .switch span {
@@ -3075,16 +3078,6 @@ body:has(.app) {
 .feature-row.off .feature-row-text {
   opacity: 0.65;
 }
-.feature-row-move {
-  display: flex;
-  flex: none;
-}
-.feature-row-move .btn {
-  min-height: 40px;
-  width: 32px;
-  padding: 0;
-  color: var(--a-text-3);
-}
 .feature-row-dot {
   width: 32px;
   height: 32px;
@@ -3240,7 +3233,7 @@ body:has(.app) {
 .item-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-height: 56px;
   padding: 0 4px 0 0;
   border: 1px solid var(--a-border);
@@ -3260,7 +3253,7 @@ body:has(.app) {
   align-items: center;
   gap: 10px;
   min-height: 54px;
-  padding: 6px 4px 6px 12px;
+  padding: 6px 8px 6px 2px;
   border: 0;
   background: none;
   color: var(--a-text);
@@ -3294,19 +3287,6 @@ body:has(.app) {
 .item-row-price {
   font-size: 14px;
   font-weight: 600;
-}
-.item-row-move {
-  display: flex;
-  flex-direction: column;
-}
-.item-row-move .btn-icon {
-  min-height: 24px;
-  width: 28px;
-  color: var(--a-text-3);
-}
-.item-row-move .btn-icon svg {
-  width: 15px;
-  height: 15px;
 }
 .span-all {
   grid-column: 1 / -1;
@@ -3432,6 +3412,49 @@ body:has(.app) {
   to {
     transform: translateX(290%);
   }
+}
+
+/* Drag handle: pointer drag (mouse and touch) or focus + arrow keys. */
+.drag-handle {
+  flex: none;
+  width: 32px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--a-text-3);
+  cursor: grab;
+  touch-action: none;
+}
+.drag-handle:hover {
+  color: var(--a-text);
+  background: var(--a-surface-2);
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.drag-handle svg {
+  width: 16px;
+  height: 16px;
+}
+.feature-row.dragging,
+.item-row.dragging {
+  border-color: var(--a-accent);
+  box-shadow: var(--a-shadow-lg);
+  position: relative;
+  z-index: 1;
+}
+.feature-row .btn-sm {
+  flex: none;
+  color: var(--a-text-2);
+}
+.feature-rename {
+  min-height: 34px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* ───────────────────────── Print (table tents) ───────────────────────── */

@@ -95,7 +95,16 @@ export function buildFeatures(venue: PublicVenue): FeatureKey[] {
   for (const link of venue.externalLinks) {
     if (link.id && sanitiseExternalUrl(link.url)) features.push(`link:${link.id}`);
   }
-  return applyFeatureOrder(features, venue.branding.featureOrder);
+  const hidden = new Set(venue.branding.hiddenFeatures ?? []);
+  return applyFeatureOrder(
+    features.filter((key) => !hidden.has(key)),
+    venue.branding.featureOrder,
+  );
+}
+
+/** The merchant's own label for a core card, or null to use the default wording. */
+export function customFeatureLabel(venue: PublicVenue, key: CoreFeature): string | null {
+  return venue.branding.featureLabels?.[key]?.trim() || null;
 }
 
 /**

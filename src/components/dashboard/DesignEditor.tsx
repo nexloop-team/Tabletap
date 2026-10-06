@@ -1,13 +1,14 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { LINK_ICON_TOKENS } from "@/components/icons";
 import { STYLE_FONT_HREF } from "@/lib/theme";
-import { buildFeatures, wifiView, type FeatureKey } from "@/lib/venue/features";
+import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { PublicVenue } from "@/lib/venue/types";
 import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
 const SWATCHES: [name: string, hex: string][] = [
@@ -78,13 +79,14 @@ const LINK_LABELS: Record<(typeof LINK_LABEL_TOKENS)[number], string> = {
   order_online: "Order online",
 };
 
-const CARD_LABELS: Record<string, string> = {
+/** What guests see on each card unless the owner renames it. */
+const CARD_LABELS: Record<CoreFeature, string> = {
   loyalty: "Stamp card",
   menu: "Menu",
   wifi: "Wi-Fi",
   sudoku: "Sudoku",
   feedback: "Suggestion box",
-  google_review: "Google review button",
+  google_review: "Leave a Google review",
 };
 
 type Draft = Pick<VenueConfig, "branding" | "wifi" | "socialLinks" | "externalLinks" | "announcement">;
@@ -119,24 +121,53 @@ export function DesignEditor({
   const previewVenue = { ...config, ...draft, id: venueId, shortCode, crm: config.crm } as unknown as PublicVenue;
   const features = buildFeatures(previewVenue);
   // The same list with the two switchable cards forced on, so a hidden one keeps its row and can be switched back.
-  const allFeatures = buildFeatures({ ...previewVenue, branding: { ...previewVenue.branding, sudokuEnabled: true, showGoogleReviewButton: true } } as PublicVenue);
+  // Every card the page could show, switched on or not, so a hidden one keeps its row and can come back.
+  const allFeatures = buildFeatures({ ...previewVenue, branding: { ...previewVenue.branding, sudokuEnabled: true, showGoogleReviewButton: true, hiddenFeatures: [] } } as PublicVenue);
+  const hidden = branding.hiddenFeatures ?? [];
+  const [renaming, setRenaming] = useState<FeatureKey | null>(null);
   const wifi = wifiView(previewVenue);
   const titleHidden = typeof branding.titleOverride === "string" && branding.titleOverride !== "" && branding.titleOverride.trim() === "";
 
-  function moveFeature(index: number, delta: number) {
-    const order = [...allFeatures];
-    const target = index + delta;
-    if (target < 0 || target >= order.length) return;
-    [order[index], order[target]] = [order[target], order[index]];
+  function setOrder(order: FeatureKey[]) {
     setBranding({ featureOrder: order.map((key) => (key === "google_review" ? "googleReview" : key)) });
   }
 
+  const drag = useDragReorder(allFeatures.length, (from, to) => setOrder(moveTo(allFeatures, from, to)));
+
+  function linkFor(key: FeatureKey) {
+    return key.startsWith("link:") ? links.find((l) => `link:${l.id}` === key) : undefined;
+  }
+
+  /** The label as guests will see it. */
   function featureLabel(key: FeatureKey): string {
-    if (key.startsWith("link:")) {
-      const link = links.find((l) => `link:${l.id}` === key);
-      return link ? `Link: ${link.labelCustom || (link.labelToken ? LINK_LABELS[link.labelToken] : link.url)}` : key;
+    const link = linkFor(key);
+    if (link) return link.labelCustom || (link.labelToken ? LINK_LABELS[link.labelToken] : link.url) || "Custom link";
+    const core = key as CoreFeature;
+    return branding.featureLabels?.[core]?.trim() || CARD_LABELS[core] || key;
+  }
+
+  /** The owner's own wording for a card ("" when they kept the default). */
+  function customLabel(key: FeatureKey): string {
+    const link = linkFor(key);
+    if (link) return link.labelCustom ?? "";
+    return branding.featureLabels?.[key as CoreFeature] ?? "";
+  }
+
+  function setLabel(key: FeatureKey, value: string) {
+    const link = linkFor(key);
+    if (link) {
+      setLinks(links.map((l) => (l === link ? { ...l, labelCustom: value, labelToken: value ? null : l.labelToken } : l)));
+      return;
     }
-    return CARD_LABELS[key] ?? key;
+    const next = { ...branding.featureLabels, [key]: value };
+    if (!value) delete next[key as CoreFeature];
+    setBranding({ featureLabels: next });
+  }
+
+  function defaultLabel(key: FeatureKey): string {
+    const link = linkFor(key);
+    if (link) return link.labelToken ? LINK_LABELS[link.labelToken] : "Label for this link";
+    return CARD_LABELS[key as CoreFeature] ?? key;
   }
 
   function featureNote(key: FeatureKey): string {
@@ -162,11 +193,14 @@ export function DesignEditor({
     }
   }
 
-  /** Cards with an on/off switch right in the list. */
-  function featureSwitch(key: FeatureKey): { checked: boolean; onChange: (on: boolean) => void } | null {
+  /** Every card can be switched off; Sudoku and the Google review card keep their own settings. */
+  function featureSwitch(key: FeatureKey): { checked: boolean; onChange: (on: boolean) => void } {
     if (key === "sudoku") return { checked: branding.sudokuEnabled !== false, onChange: (on) => setBranding({ sudokuEnabled: on }) };
     if (key === "google_review") return { checked: !!branding.showGoogleReviewButton, onChange: (on) => setBranding({ showGoogleReviewButton: on }) };
-    return null;
+    return {
+      checked: !hidden.includes(key),
+      onChange: (on) => setBranding({ hiddenFeatures: on ? hidden.filter((k) => k !== key) : [...hidden, key] }),
+    };
   }
 
   return (
@@ -310,30 +344,45 @@ export function DesignEditor({
           </div>
         </Card>
 
-        <Card title="Features" description="The order guests see them in. A card appears once it has something to show.">
+        <Card title="Features" description="Drag to reorder, switch cards off, or rename them in your own words. A card appears once it has something to show." actions={<span className="hint">{features.length} showing</span>}>
           <ul className="feature-rows">
             {allFeatures.map((key, index) => {
               const toggle = featureSwitch(key);
               const on = features.includes(key);
               const tint = key.startsWith("link:") ? "#9C27B0" : (CARD_TINTS[key] ?? "#5C6166");
+              const label = featureLabel(key);
               return (
-                <li key={key} className={`feature-row${on ? "" : " off"}`}>
-                  <span className="feature-row-move">
-                    <button type="button" className="btn btn-icon btn-ghost" aria-label={`Move ${featureLabel(key)} up`} disabled={index === 0} onClick={() => moveFeature(index, -1)}>
-                      <ArrowUp aria-hidden />
-                    </button>
-                    <button type="button" className="btn btn-icon btn-ghost" aria-label={`Move ${featureLabel(key)} down`} disabled={index === allFeatures.length - 1} onClick={() => moveFeature(index, 1)}>
-                      <ArrowDown aria-hidden />
-                    </button>
-                  </span>
+                <li key={key} ref={drag.rowRef(index)} className={`feature-row${on ? "" : " off"}${drag.dragging === index ? " dragging" : ""}`}>
+                  <button type="button" className="drag-handle" aria-label={`Reorder ${label}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
+                    <GripVertical aria-hidden />
+                  </button>
                   <span className="feature-row-dot" style={{ background: `${tint}22` }} aria-hidden>
                     <span style={{ background: tint }} />
                   </span>
                   <span className="feature-row-text">
-                    <strong>{featureLabel(key)}</strong>
-                    <span>{featureNote(key)}</span>
+                    {renaming === key ? (
+                      <input
+                        className="input feature-rename"
+                        aria-label={`Card label for ${label}`}
+                        value={customLabel(key)}
+                        placeholder={defaultLabel(key)}
+                        maxLength={40}
+                        autoFocus
+                        onChange={(event) => setLabel(key, event.target.value)}
+                        onBlur={() => setRenaming(null)}
+                        onKeyDown={(event) => (event.key === "Enter" || event.key === "Escape") && setRenaming(null)}
+                      />
+                    ) : (
+                      <strong>{label}</strong>
+                    )}
+                    <span>{on ? featureNote(key) : "Hidden from guests"}</span>
                   </span>
-                  {toggle && <Switch label={`Show ${featureLabel(key)}`} checked={toggle.checked} onChange={toggle.onChange} />}
+                  {renaming !== key && (
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setRenaming(key)}>
+                      Rename
+                    </button>
+                  )}
+                  <Switch label={`Show ${label}`} checked={toggle.checked} onChange={toggle.onChange} />
                 </li>
               );
             })}

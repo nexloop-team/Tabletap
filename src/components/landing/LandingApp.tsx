@@ -13,6 +13,7 @@ import { rememberReferral } from "@/lib/referral";
 import { computeTheme } from "@/lib/theme";
 import {
   buildFeatures,
+  customFeatureLabel,
   findExternalLink,
   isRewardsOnly,
   menuExternalUrl,
@@ -180,7 +181,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={t("feature_loyalty")}
+                label={customFeatureLabel(venue, "loyalty") ?? t("feature_loyalty")}
                 icon={<FilledHeart />}
                 tint={TINT.loyalty}
                 onToggle={(open) => {
@@ -202,7 +203,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ActionCard
                 key={feature}
                 feature={feature}
-                label={linkLabel(menu?.linkLabelToken, menu?.linkLabelCustom, t, "feature_menu")}
+                label={customFeatureLabel(venue, "menu") ?? linkLabel(menu?.linkLabelToken, menu?.linkLabelCustom, t, "feature_menu")}
                 icon={<MenuCardIcon token={menu?.linkLabelToken} custom={custom} />}
                 tint={TINT.menu}
                 onActivate={() => {
@@ -223,7 +224,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
 
           case "wifi":
             return (
-              <ExpandableCard key={feature} feature={feature} label={t("feature_wifi")} icon={<FeatureGlyphs.wifi aria-hidden strokeWidth={2} />} tint={TINT.wifi} onToggle={(open) => open && tapped()}>
+              <ExpandableCard key={feature} feature={feature} label={customFeatureLabel(venue, "wifi") ?? t("feature_wifi")} icon={<FeatureGlyphs.wifi aria-hidden strokeWidth={2} />} tint={TINT.wifi} onToggle={(open) => open && tapped()}>
                 <WifiSheet />
               </ExpandableCard>
             );
@@ -233,7 +234,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={t("feature_sudoku")}
+                label={customFeatureLabel(venue, "sudoku") ?? t("feature_sudoku")}
                 icon={<FeatureGlyphs.sudoku aria-hidden strokeWidth={2} />}
                 tint={theme.isLightCards ? "#7D59D9" : "#B79BFF"}
                 lazy
@@ -249,7 +250,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={t(feedbackVariant === "anon" ? "feature_feedback_anon" : "feature_feedback_box")}
+                label={customFeatureLabel(venue, "feedback") ?? t(feedbackVariant === "anon" ? "feature_feedback_anon" : "feature_feedback_box")}
                 icon={<Glyph aria-hidden strokeWidth={2} />}
                 tint={theme.accentBlue}
                 onToggle={(open) => {
@@ -270,7 +271,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ActionCard
                 key={feature}
                 feature={feature}
-                label={t("feature_google_review")}
+                label={customFeatureLabel(venue, "google_review") ?? t("feature_google_review")}
                 icon={<GoogleG />}
                 tint={null}
                 onActivate={() => {

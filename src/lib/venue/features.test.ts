@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_VENUES } from "@/server/seed";
 import type { PublicVenue } from "./types";
-import { applyFeatureOrder, buildFeatures, consentAgeThreshold, resolvedTitle, safeImageUrl, sanitiseExternalUrl, wifiView } from "./features";
+import { applyFeatureOrder, buildFeatures, consentAgeThreshold, customFeatureLabel, resolvedTitle, safeImageUrl, sanitiseExternalUrl, wifiView } from "./features";
 
 const [juniper, kettle, bloom] = DEMO_VENUES;
 
@@ -34,6 +34,32 @@ describe("buildFeatures", () => {
   it("hides the menu card when its external URL is not http(s)", () => {
     const badMenu = venue({ menus: [{ id: "m", name: "M", externalUrl: "ftp://x", sections: [] }] });
     expect(buildFeatures(badMenu)).not.toContain("menu");
+  });
+});
+
+describe("hidden and renamed cards", () => {
+  it("drops hidden cards and keeps the merchant's order for the rest", () => {
+    const v = venue({ branding: { hiddenFeatures: ["menu", "feedback"] } });
+    expect(buildFeatures(v)).toEqual(["loyalty", "google_review", "wifi", "sudoku"]);
+  });
+
+  it("hides a custom link by its link key", () => {
+    const v = venue({ externalLinks: bloom.externalLinks, branding: { hiddenFeatures: ["link:lnk_book"] } });
+    const features = buildFeatures(v);
+    expect(features).not.toContain("link:lnk_book");
+    expect(features).toContain("link:lnk_jobs");
+  });
+
+  it("ignores hidden keys for cards the venue can't show anyway", () => {
+    const v = venue({ wifi: null, branding: { hiddenFeatures: ["wifi", "not-a-card"] } });
+    expect(buildFeatures(v)).not.toContain("wifi");
+    expect(buildFeatures(v)).toContain("feedback");
+  });
+
+  it("uses the merchant's own label when set, ignoring blanks", () => {
+    expect(customFeatureLabel(venue({ branding: { featureLabels: { loyalty: "  Coffee club " } } }), "loyalty")).toBe("Coffee club");
+    expect(customFeatureLabel(venue({ branding: { featureLabels: { loyalty: "   " } } }), "loyalty")).toBeNull();
+    expect(customFeatureLabel(juniper, "wifi")).toBeNull();
   });
 });
 

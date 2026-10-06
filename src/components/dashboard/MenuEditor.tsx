@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
 import { useConfirm } from "./confirm";
 import { MenuAiTools } from "./MenuAiTools";
 import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField } from "./ui";
+import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
 const BADGE_LABELS: Record<(typeof MENU_BADGES)[number], string> = { popular: "Popular", new: "New", spicy: "Spicy", chef: "Chef's pick" };
@@ -257,6 +258,8 @@ function MenuPanes({
 
   const setSection = (next: Section) => onChange(sections.map((s) => (s.id === next.id ? next : s)));
   const setItems = (items: Item[]) => section && setSection({ ...section, items });
+  const itemCount = section?.items.length ?? 0;
+  const drag = useDragReorder(itemCount, (from, to) => section && setItems(moveTo(section.items, from, to)));
 
   function addSection() {
     const next: Section = { id: newClientId("sec"), name: "", sortOrder: sections.length, items: [] };
@@ -328,7 +331,10 @@ function MenuPanes({
             {section.items.map((it, index) => {
               const note = itemNote(it, toCheck.has(it.id));
               return (
-                <li key={it.id} className={`item-row${it === item ? " selected" : ""}${it.isAvailable ? "" : " sold-out"}`}>
+                <li key={it.id} ref={drag.rowRef(index)} className={`item-row${it === item ? " selected" : ""}${it.isAvailable ? "" : " sold-out"}${drag.dragging === index ? " dragging" : ""}`}>
+                  <button type="button" className="drag-handle" aria-label={`Reorder ${it.name || "this item"}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
+                    <GripVertical aria-hidden />
+                  </button>
                   <button type="button" className="item-row-main" aria-current={it === item ? "true" : undefined} onClick={() => setItemId(it.id)}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- merchant uploads, already sized */}
                     {it.imageUrl && <img className="item-thumb" src={it.imageUrl} alt="" />}
@@ -338,14 +344,6 @@ function MenuPanes({
                     </span>
                     <span className="num item-row-price">{money.format(it.priceInPence / 100)}</span>
                   </button>
-                  <span className="item-row-move">
-                    <button type="button" className="btn btn-icon btn-ghost" aria-label={`Move ${it.name || "item"} up`} disabled={index === 0} onClick={() => setItems(move(section.items, index, -1))}>
-                      <ArrowUp aria-hidden />
-                    </button>
-                    <button type="button" className="btn btn-icon btn-ghost" aria-label={`Move ${it.name || "item"} down`} disabled={index === section.items.length - 1} onClick={() => setItems(move(section.items, index, 1))}>
-                      <ArrowDown aria-hidden />
-                    </button>
-                  </span>
                 </li>
               );
             })}

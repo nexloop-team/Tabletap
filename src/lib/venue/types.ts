@@ -88,6 +88,10 @@ export interface VenueBranding {
   sudokuEnabled?: boolean;
   /** Feature keys (plus `link:<id>`) in the merchant's preferred order. */
   featureOrder?: string[];
+  /** Cards the merchant has switched off (feature keys or `link:<id>`). Sudoku and the Google review card use their own switches. */
+  hiddenFeatures?: string[];
+  /** The merchant's own wording for a core card, e.g. "Coffee club" for loyalty. */
+  featureLabels?: Partial<Record<"loyalty" | "menu" | "wifi" | "sudoku" | "feedback" | "google_review", string>>;
 }
 
 export interface SocialLinks {
