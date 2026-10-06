@@ -1,5 +1,6 @@
 "use client";
 
+import { QrCode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { InviteFriend } from "@/components/card/InviteFriend";
 import { api, ApiRequestError } from "@/lib/api/client";
@@ -16,10 +17,11 @@ const MAX_DRAWN_STAMPS = 20;
  * stamp added at the till shows up straight away.
  */
 export function MyCard({ credentials, active = true, onMissing }: { credentials: CardCredentials; active?: boolean; onMissing?: () => void }) {
-  const { venue, t, tf } = useLanding();
+  const { venue, t, tf, track } = useLanding();
   const [card, setCard] = useState<MemberCardView | null>(null);
   const [failed, setFailed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showCode, setShowCode] = useState(false);
   const known = useRef<number | null>(null);
 
   useEffect(() => {
@@ -105,9 +107,28 @@ export function MyCard({ credentials, active = true, onMissing }: { credentials:
 
       {card.staffQrSvg && (
         <div className="card-staff">
-          <span className="card-staff-label">{t("card_show_staff")}</span>
-          <div className="card-staff-qr" dangerouslySetInnerHTML={{ __html: card.staffQrSvg }} />
-          <p className="sheet-footnote">{t("card_staff_hint")}</p>
+          {showCode ? (
+            <>
+              <span className="card-staff-label">{t("card_show_staff")}</span>
+              <div className="card-staff-qr" dangerouslySetInnerHTML={{ __html: card.staffQrSvg }} />
+              <p className="sheet-footnote">{t("card_staff_hint")}</p>
+              <button type="button" className="card-staff-btn secondary" onClick={() => setShowCode(false)}>
+                {t("card_hide_staff")}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="card-staff-btn"
+              onClick={() => {
+                setShowCode(true);
+                track("card_staff_code_shown", { context: "landing" });
+              }}
+            >
+              <QrCode aria-hidden />
+              {t("card_show_staff")}
+            </button>
+          )}
         </div>
       )}
 
