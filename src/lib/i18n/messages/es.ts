@@ -84,4 +84,7 @@ export const es: Partial<Messages> = {
   menu_filter_count: "Alérgenos · {count}",
   menu_no_allergen: "Sin {allergen}",
   menu_filter_remove: "Quitar filtro: sin {allergen}",
+  menu_popular: "Lo más pedido",
+  menu_items_one: "1 plato",
+  menu_items: "{count} platos",
 };

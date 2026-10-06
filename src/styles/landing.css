@@ -17,6 +17,14 @@
 
 /* ───────────────────────── Header ───────────────────────── */
 
+.venue-header {
+  position: relative;
+}
+/* The menu's banner is shorter: guests came for the food. */
+.menu-page .cover {
+  height: 150px;
+}
+
 .cover {
   /* Full-bleed past the 500px column. 100vw includes a desktop scrollbar's
      width; body's overflow-x: clip stops that from adding a scrollbar. */
@@ -95,18 +103,33 @@
 /* Style presets: header text and card labels only. */
 .landing[data-style="classic"] .header-text h1,
 .landing[data-style="classic"] .header-text .tagline,
-.landing[data-style="classic"] .feature-label {
+.landing[data-style="classic"] .feature-label,
+.landing[data-style="classic"] .menu-title,
+.landing[data-style="classic"] .menu-section-head h2,
+.landing[data-style="classic"] .menu-item-name,
+.landing[data-style="classic"] .menu-special-name,
+.landing[data-style="classic"] .dish-sheet-head h2 {
   font-family: "Playfair Display SC", Georgia, serif;
   font-weight: 400;
 }
 .landing[data-style="editorial"] .header-text h1,
 .landing[data-style="editorial"] .header-text .tagline,
-.landing[data-style="editorial"] .feature-label {
+.landing[data-style="editorial"] .feature-label,
+.landing[data-style="editorial"] .menu-title,
+.landing[data-style="editorial"] .menu-section-head h2,
+.landing[data-style="editorial"] .menu-item-name,
+.landing[data-style="editorial"] .menu-special-name,
+.landing[data-style="editorial"] .dish-sheet-head h2 {
   font-family: Petrona, Georgia, serif;
 }
 .landing[data-style="modern"] .header-text h1,
 .landing[data-style="modern"] .header-text .tagline,
-.landing[data-style="modern"] .feature-label {
+.landing[data-style="modern"] .feature-label,
+.landing[data-style="modern"] .menu-title,
+.landing[data-style="modern"] .menu-section-head h2,
+.landing[data-style="modern"] .menu-item-name,
+.landing[data-style="modern"] .menu-special-name,
+.landing[data-style="modern"] .dish-sheet-head h2 {
   font-family: Outfit, system-ui, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.06em;

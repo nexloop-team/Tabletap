@@ -133,15 +133,10 @@
   height: 20px;
 }
 .menu-head {
-  padding: 8px 16px 0;
+  padding: 18px 16px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-.menu-head h1 {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
 }
 .menu-welcome {
   font-size: 15px;
@@ -376,51 +371,16 @@
   /* Clear the sticky section bar when jumped to. */
   scroll-margin-top: 60px;
 }
-.menu-section h2 {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-.menu-section ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .menu-item {
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--card-bg);
-  color: var(--card-text-primary, var(--text-primary));
-  box-shadow: var(--card-elevation);
-}
-.menu-item.unavailable {
-  opacity: 0.55;
-}
-.menu-item-img {
-  display: block;
-  width: 100%;
-  height: 170px;
-  object-fit: cover;
+  border-top: 0.5px solid var(--separator);
 }
 .menu-item-text {
-  padding: 14px 16px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-}
-.menu-item-head {
-  align-self: stretch;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-.menu-item-head h3 {
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1.3;
+  gap: 6px;
 }
 .menu-price {
   font-size: 16px;
@@ -432,6 +392,10 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--card-text-secondary, var(--text-secondary));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .menu-tags {
   display: flex;
@@ -439,51 +403,32 @@
   gap: 6px;
 }
 .menu-tag {
-  padding: 4px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 .menu-tag.sold-out {
   background: var(--card-text-primary, var(--text-primary));
   color: var(--card-bg);
 }
 .menu-tag.badge {
-  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 10%, transparent);
+  --badge: #8a8a8a;
+  background: color-mix(in srgb, var(--badge) 16%, transparent);
+  color: color-mix(in srgb, var(--badge) 70%, var(--card-text-primary, #1a1a1a));
 }
 .menu-tag.diet {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-text-primary, #1a1a1a) 25%, transparent);
+  box-shadow: none;
+  padding-inline: 2px 6px;
+  color: color-mix(in srgb, #2f9e44 65%, var(--card-text-primary, #1a1a1a));
 }
 .menu-allergens {
   font-size: 13px;
   color: var(--card-text-secondary, var(--text-secondary));
-}
-.menu-info-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px 0 8px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--input-bg);
-  color: var(--card-text-primary, var(--text-primary));
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.menu-info-btn svg {
-  width: 18px;
-  height: 18px;
-}
-.menu-explainer {
-  align-self: stretch;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--input-bg);
-  font-size: 14px;
-  line-height: 1.5;
 }
 .menu-explainer-note {
   margin-top: 6px;
@@ -680,4 +625,226 @@
 .my-card-status {
   text-align: center;
   padding: 12px 0;
+}
+
+/* Over the cover photo: a frosted pill so it reads on any image. */
+.menu-back.on-cover {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 4;
+  margin: 0;
+  min-height: 40px;
+  padding: 0 14px 0 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.menu-title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.menu-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.menu-section-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+.menu-section-head span {
+  flex: none;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.menu-section-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+/* One card per section; dishes are rows inside it. */
+.menu-list {
+  list-style: none;
+  margin-top: 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  box-shadow: var(--card-elevation);
+}
+.menu-item:first-child {
+  border-top: 0;
+}
+.menu-item.unavailable .menu-item-open {
+  opacity: 0.55;
+}
+.menu-item-open {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-item-open:active {
+  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 5%, transparent);
+}
+.menu-item-open:focus-visible {
+  outline: 2px solid var(--card-text-tertiary, var(--text-tertiary));
+  outline-offset: -2px;
+}
+.menu-item-name {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.menu-item-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.menu-item-thumb {
+  flex: none;
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--input-bg);
+}
+.menu-whats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.menu-whats svg {
+  width: 15px;
+  height: 15px;
+}
+.menu-tag svg {
+  width: 13px;
+  height: 13px;
+}
+.menu-tag.badge.popular {
+  --badge: #f59e0b;
+}
+.menu-tag.badge.new {
+  --badge: #16a34a;
+}
+.menu-tag.badge.spicy {
+  --badge: #e5484d;
+}
+.menu-tag.badge.chef {
+  --badge: #8b5cf6;
+}
+.menu-tag.diet.gluten_free {
+  color: color-mix(in srgb, #b7791f 65%, var(--card-text-primary, #1a1a1a));
+}
+.menu-tag.kcal {
+  padding-inline: 2px;
+  color: var(--card-text-tertiary, var(--text-tertiary));
+}
+/* Highlights strip: a missing photo gets a tinted panel with the dish's initial. */
+.menu-special-photo.placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 44px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 35%, transparent);
+  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 7%, var(--card-bg));
+}
+/* Dish detail sheet */
+.dish-sheet {
+  max-height: 88vh;
+  max-height: 88dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dish-sheet-photo {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+}
+.dish-sheet-close {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.dish-sheet-close svg {
+  width: 18px;
+  height: 18px;
+}
+.dish-sheet-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 20px 8px;
+}
+.dish-sheet-head {
+  align-self: stretch;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-inline-end: 36px;
+}
+.dish-sheet-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.dish-sheet-desc {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.dish-sheet-explainer {
+  align-self: stretch;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+.dish-sheet-explainer h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.dish-sheet-explainer h3 svg {
+  width: 16px;
+  height: 16px;
+}
+.dish-sheet-explainer p {
+  font-size: 14.5px;
+  line-height: 1.5;
 }

@@ -18,9 +18,6 @@ import {
   isRewardsOnly,
   menuExternalUrl,
   primaryMenu,
-  resolvedTagline,
-  resolvedTitle,
-  safeImageUrl,
   sanitiseExternalUrl,
   type FeatureKey,
   type LinkFeature,
@@ -37,6 +34,7 @@ import { RewardsSheet } from "./loyalty/RewardsJoinForm";
 import { SocialLinks } from "./SocialLinks";
 import { SudokuSheet } from "./sudoku/SudokuSheet";
 import { useGoogleReview } from "./useGoogleReview";
+import { VenueHeader } from "./VenueHeader";
 import { WifiSheet } from "./wifi/WifiSheet";
 
 export type FeedbackVariant = "box" | "anon";
@@ -73,42 +71,6 @@ function shortDate(isoDay: string, locale: Locale): string {
   const date = new Date(`${isoDay}T12:00:00`);
   if (Number.isNaN(date.getTime())) return isoDay;
   return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(date);
-}
-
-function Header({ venue }: { venue: PublicVenue }) {
-  const cover = safeImageUrl(venue.branding.coverImageUrl);
-  const logo = safeImageUrl(venue.branding.logoUrl);
-  const title = resolvedTitle(venue.branding, venue.name);
-  const tagline = resolvedTagline(venue.branding);
-  const showRow = !!(logo || title || tagline);
-  const rowClass = ["header-row", logo ? "" : "no-logo", cover ? "" : "no-cover"].filter(Boolean).join(" ");
-
-  return (
-    <header>
-      {cover && (
-        <div className="cover">
-          {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-          <img src={cover} alt="" fetchPriority="high" />
-        </div>
-      )}
-      {showRow && (
-        <div className={rowClass}>
-          {logo && (
-            <div className={`logo-circle${cover ? "" : " no-cover"}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-              <img src={logo} alt="" />
-            </div>
-          )}
-          {(title || tagline) && (
-            <div className="header-text">
-              {title && <h1>{title}</h1>}
-              {tagline && <p className="tagline">{tagline}</p>}
-            </div>
-          )}
-        </div>
-      )}
-    </header>
-  );
 }
 
 function linkIconToken(icon: string | null | undefined): LinkIconToken {
@@ -376,7 +338,7 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
     <LandingContext.Provider value={session}>
       <div className="landing" data-style={theme.style ?? undefined}>
         <main className="page-wrapper">
-          <Header venue={venue} />
+          <VenueHeader branding={venue.branding} name={venue.name} />
           {venue.announcement?.text && (
             <p className="announcement" role="note">
               <Megaphone aria-hidden />

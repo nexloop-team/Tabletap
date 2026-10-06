@@ -46,6 +46,8 @@ export interface MenuItem {
 export interface MenuSection {
   id: string;
   name: string;
+  /** A short line under the section title, e.g. "Served until 11:30". */
+  description?: string | null;
   sortOrder: number;
   items: MenuItem[];
 }

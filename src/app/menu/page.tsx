@@ -31,7 +31,7 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
     <>
       <ThemeStyle branding={venue.branding} />
       <EmbedStyle embed={firstParam(params.embed)} />
-      <MenuView venueId={venue.id} venueName={venue.name} currencyCode={venue.currencyCode} menus={menus} locale={locale} source={source} backHref={`/s${queryString(params)}`} showPoweredBy={venue.showPoweredBy !== false} />
+      <MenuView venueId={venue.id} venueName={venue.name} branding={venue.branding} currencyCode={venue.currencyCode} menus={menus} locale={locale} source={source} backHref={`/s${queryString(params)}`} showPoweredBy={venue.showPoweredBy !== false} />
     </>
   );
 }

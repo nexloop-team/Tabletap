@@ -327,6 +327,14 @@ function MenuPanes({
               <Trash2 aria-hidden />
             </button>
           </div>
+          <input
+            className="input pane-desc"
+            aria-label="Section description"
+            placeholder="Optional note, e.g. Served until 11:30"
+            value={section.description ?? ""}
+            maxLength={140}
+            onChange={(event) => setSection({ ...section, description: event.target.value || null })}
+          />
           <ul className="pane-list">
             {section.items.map((it, index) => {
               const note = itemNote(it, toCheck.has(it.id));

@@ -59,6 +59,7 @@ export const menuItemSchema = z.object({
 export const menuSectionSchema = z.object({
   id,
   name: text(120).min(1, "Every section needs a name"),
+  description: optionalText(140),
   sortOrder: z.number().int().min(0).max(1000),
   items: z.array(menuItemSchema).max(300),
 });

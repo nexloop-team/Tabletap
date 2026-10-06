@@ -1,24 +1,29 @@
 "use client";
 
-import { ChevronLeft, Info, Search, SlidersHorizontal, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Sparkles, Sprout, Star, WheatOff, X, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { VenueHeader } from "@/components/landing/VenueHeader";
 import { BRAND } from "@/config/brand";
 import { createTracker } from "@/lib/analytics";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
+import { computeTheme } from "@/lib/theme";
 import { safeImageUrl } from "@/lib/venue/features";
-import type { Menu, MenuItem } from "@/lib/venue/types";
+import type { Menu, MenuItem, VenueBranding } from "@/lib/venue/types";
+import { DishSheet } from "./DishSheet";
 
-const DIETARY_KEYS: Record<string, MessageKey> = {
-  vegan: "dietary_vegan",
-  vegetarian: "dietary_vegetarian",
-  gluten_free: "dietary_gluten_free",
+type Badge = NonNullable<MenuItem["badges"]>[number];
+
+const BADGES: Record<Badge, { key: MessageKey; icon: LucideIcon }> = {
+  popular: { key: "badge_popular", icon: Star },
+  new: { key: "badge_new", icon: Sparkles },
+  spicy: { key: "badge_spicy", icon: Flame },
+  chef: { key: "badge_chef", icon: ChefHat },
 };
 
-const BADGE_KEYS: Record<NonNullable<MenuItem["badges"]>[number], MessageKey> = {
-  popular: "badge_popular",
-  new: "badge_new",
-  spicy: "badge_spicy",
-  chef: "badge_chef",
+const DIETS: Record<string, { key: MessageKey; icon: LucideIcon }> = {
+  vegan: { key: "dietary_vegan", icon: Leaf },
+  vegetarian: { key: "dietary_vegetarian", icon: Sprout },
+  gluten_free: { key: "dietary_gluten_free", icon: WheatOff },
 };
 
 /** Filter chips offered when at least one dish carries the tag, in this order. */
@@ -57,6 +62,7 @@ function fitsDiets(item: MenuItem, diets: string[]): boolean {
 interface MenuViewProps {
   venueId: string;
   venueName: string;
+  branding: VenueBranding;
   currencyCode: string;
   menus: Menu[];
   locale: Locale;
@@ -66,17 +72,20 @@ interface MenuViewProps {
   showPoweredBy: boolean;
 }
 
-export function MenuView({ venueId, venueName, currencyCode, menus, locale, source, backHref, showPoweredBy }: MenuViewProps) {
+export function MenuView({ venueId, venueName, branding, currencyCode, menus, locale, source, backHref, showPoweredBy }: MenuViewProps) {
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
   const track = useMemo(() => createTracker({ venueId, source, page: "menu" }), [venueId, source]);
   const formatPrice = useMemo(() => priceFormatter(locale, currencyCode), [locale, currencyCode]);
+  const style = useMemo(() => computeTheme(branding).style, [branding]);
+  const hasCover = !!safeImageUrl(branding.coverImageUrl);
   const [menuIndex, setMenuIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]);
   const [diets, setDiets] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [openExplainer, setOpenExplainer] = useState<string | null>(null);
+  const [openDish, setOpenDish] = useState<MenuItem | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const closeDish = useCallback(() => setOpenDish(null), []);
 
   const menu = menus[menuIndex] ?? null;
   const sections = useMemo(() => (menu ? [...menu.sections].sort((a, b) => a.sortOrder - b.sortOrder).filter((s) => s.items.length > 0) : []), [menu]);
@@ -101,11 +110,14 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
     };
   }, [sections, needle, excluded, diets]);
 
-  /** Available specials that pass the filters, in menu order. */
-  const specials = useMemo(
-    () => sections.flatMap((s) => s.items).filter((item) => item.featured && item.isAvailable && !item.allergens.some((a) => excluded.includes(a.toLowerCase())) && fitsDiets(item, diets)),
-    [sections, excluded, diets],
-  );
+  /** Today's specials, or the most popular dishes when nothing is marked special. Both respect the filters. */
+  const highlights = useMemo(() => {
+    const allowed = (item: MenuItem) => item.isAvailable && !item.allergens.some((a) => excluded.includes(a.toLowerCase())) && fitsDiets(item, diets);
+    const all = sections.flatMap((s) => s.items).filter(allowed);
+    const specials = all.filter((item) => item.featured);
+    if (specials.length > 0) return { title: t("menu_specials"), items: specials };
+    return { title: t("menu_popular"), items: all.filter((item) => item.badges?.includes("popular")) };
+  }, [sections, excluded, diets, t]);
 
   // Highlight the section chip for whichever section is at the top of the screen.
   useEffect(() => {
@@ -134,9 +146,9 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
     track("menu_diet_filter_changed", { diets: next.join(",") });
   }
 
-  function jumpToItem(itemId: string) {
-    document.getElementById(`item-${itemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    track("menu_special_tapped", { item_id: itemId });
+  function showDish(item: MenuItem, from: string) {
+    setOpenDish(item);
+    track("menu_item_opened", { item_id: item.id, from, has_explainer: !!item.explainer?.trim() });
   }
 
   function jumpTo(sectionId: string) {
@@ -145,16 +157,52 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
     track("menu_section_jump", { section_id: sectionId });
   }
 
+  /** Badges, dietary tags and kcal for a dish, in the card colours. */
+  function tagList(item: MenuItem) {
+    const showKcal = !!menu?.showCalories && typeof item.calories === "number";
+    if (!(item.badges ?? []).length && !item.dietaryTags.length && !showKcal) return null;
+    return (
+      <span className="menu-tags">
+        {(item.badges ?? []).map((badge) => {
+          const { key, icon: Icon } = BADGES[badge];
+          return (
+            <span key={badge} className={`menu-tag badge ${badge}`}>
+              <Icon aria-hidden />
+              {t(key)}
+            </span>
+          );
+        })}
+        {item.dietaryTags.map((tag) => {
+          const diet = DIETS[dietKey(tag)];
+          const Icon = diet?.icon;
+          return (
+            <span key={tag} className={`menu-tag diet ${dietKey(tag)}`}>
+              {Icon && <Icon aria-hidden />}
+              {diet ? t(diet.key) : titleCase(tag)}
+            </span>
+          );
+        })}
+        {showKcal && <span className="menu-tag kcal">{tf("menu_kcal", { kcal: item.calories as number })}</span>}
+      </span>
+    );
+  }
+
   const current = activeSection ?? visibleSections[0]?.id ?? null;
 
   return (
-    <div className="menu-page">
+    <div className="menu-page landing" data-style={style ?? undefined}>
       <main className="page-wrapper menu-body">
-        <a className="menu-back" href={backHref}>
-          <ChevronLeft aria-hidden />
-          <span>{venueName}</span>
-          <span className="visually-hidden">{t("menu_back")}</span>
-        </a>
+        <VenueHeader
+          branding={branding}
+          name={venueName}
+          tagline={false}
+          overlay={
+            <a className={`menu-back${hasCover ? " on-cover" : ""}`} href={backHref}>
+              <ChevronLeft aria-hidden />
+              <span>{t("menu_back")}</span>
+            </a>
+          }
+        />
 
         {!menu ? (
           <div className="error-container">
@@ -162,10 +210,10 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
           </div>
         ) : (
           <>
-            <header className="menu-head">
-              <h1>{menus.length > 1 ? menu.name : t("menu_title")}</h1>
+            <div className="menu-head">
+              <h2 className="menu-title">{menus.length > 1 ? menu.name : t("menu_title")}</h2>
               {menu.welcomeText?.trim() && <p className="menu-welcome">{menu.welcomeText.trim()}</p>}
-            </header>
+            </div>
 
             {menus.length > 1 && (
               <div className="menu-chip-row menu-tabs" role="tablist">
@@ -202,13 +250,13 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
                 )}
                 {excluded.map((allergen) => (
                   <button key={allergen} type="button" className="menu-pill on" aria-label={tf("menu_filter_remove", { allergen: titleCase(allergen) })} onClick={() => toggleAllergen(allergen)}>
-                    {tf("menu_no_allergen", { allergen: allergen })}
+                    {tf("menu_no_allergen", { allergen })}
                     <X aria-hidden />
                   </button>
                 ))}
                 {dietOptions.map((diet) => (
                   <button key={diet} type="button" className={`menu-pill${diets.includes(diet) ? " on" : ""}`} aria-pressed={diets.includes(diet)} onClick={() => toggleDiet(diet)}>
-                    {t(DIETARY_KEYS[diet])}
+                    {t(DIETS[diet].key)}
                   </button>
                 ))}
               </div>
@@ -232,17 +280,17 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
               </section>
             )}
 
-            {specials.length > 0 && !needle && (
-              <section className="menu-specials" aria-label={t("menu_specials")}>
-                <h2>{t("menu_specials")}</h2>
+            {highlights.items.length > 0 && !needle && (
+              <section className="menu-specials" aria-label={highlights.title}>
+                <h2>{highlights.title}</h2>
                 <div className="menu-specials-row">
-                  {specials.map((item) => {
+                  {highlights.items.map((item) => {
                     const image = safeImageUrl(item.imageUrl);
                     return (
-                      <button key={item.id} type="button" className="menu-special" onClick={() => jumpToItem(item.id)}>
-                        <span className="menu-special-photo">
+                      <button key={item.id} type="button" className="menu-special" onClick={() => showDish(item, "highlights")}>
+                        <span className={`menu-special-photo${image ? "" : " placeholder"}`} aria-hidden>
                           {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-                          {image && <img src={image} alt="" loading="lazy" />}
+                          {image ? <img src={image} alt="" loading="lazy" /> : item.name.trim().charAt(0)}
                         </span>
                         <span className="menu-special-text">
                           <span className="menu-special-name">{item.name}</span>
@@ -262,66 +310,35 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
             ) : (
               visibleSections.map((section) => (
                 <section key={section.id} id={`section-${section.id}`} className="menu-section">
-                  <h2>{section.name}</h2>
-                  <ul>
+                  <div className="menu-section-head">
+                    <h2>{section.name}</h2>
+                    <span>{section.items.length === 1 ? t("menu_items_one") : tf("menu_items", { count: section.items.length })}</span>
+                  </div>
+                  {section.description?.trim() && <p className="menu-section-desc">{section.description.trim()}</p>}
+                  <ul className="menu-list">
                     {section.items.map((item) => {
                       const image = safeImageUrl(item.imageUrl);
-                      const explainer = item.explainer?.trim();
-                      const explained = openExplainer === item.id;
-                      const hasTags = !item.isAvailable || (item.badges ?? []).length > 0 || item.dietaryTags.length > 0 || (menu.showCalories && typeof item.calories === "number");
                       return (
                         <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
-                          {image && (
-                            // eslint-disable-next-line @next/next/no-img-element -- merchant image on any host
-                            <img className="menu-item-img" src={image} alt="" loading="lazy" />
-                          )}
-                          <div className="menu-item-text">
-                            <div className="menu-item-head">
-                              <h3>{item.name}</h3>
-                              <span className="menu-price">{formatPrice(item.priceInPence)}</span>
-                            </div>
-                            {item.description && <p className="menu-desc">{item.description}</p>}
-                            {hasTags && (
-                              <div className="menu-tags">
+                          <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
+                            <span className="menu-item-text">
+                              <span className="menu-item-name">{item.name}</span>
+                              {item.description && <span className="menu-desc">{item.description}</span>}
+                              <span className="menu-item-foot">
+                                <span className="menu-price">{formatPrice(item.priceInPence)}</span>
                                 {!item.isAvailable && <span className="menu-tag sold-out">{t("menu_unavailable")}</span>}
-                                {(item.badges ?? []).map((badge) => (
-                                  <span key={badge} className="menu-tag badge">
-                                    {t(BADGE_KEYS[badge])}
-                                  </span>
-                                ))}
-                                {item.dietaryTags.map((tag) => (
-                                  <span key={tag} className="menu-tag diet">
-                                    {DIETARY_KEYS[dietKey(tag)] ? t(DIETARY_KEYS[dietKey(tag)]) : titleCase(tag)}
-                                  </span>
-                                ))}
-                                {menu.showCalories && typeof item.calories === "number" && <span className="menu-tag diet">{tf("menu_kcal", { kcal: item.calories })}</span>}
-                              </div>
-                            )}
-                            {item.allergens.length > 0 && <p className="menu-allergens">{tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })}</p>}
-                            {explainer && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="menu-info-btn"
-                                  aria-expanded={explained}
-                                  aria-controls={`explainer-${item.id}`}
-                                  onClick={() => {
-                                    setOpenExplainer(explained ? null : item.id);
-                                    if (!explained) track("menu_explainer_opened", { item_id: item.id });
-                                  }}
-                                >
-                                  <Info aria-hidden />
-                                  {t("menu_whats_this")}
-                                </button>
-                                {explained && (
-                                  <div id={`explainer-${item.id}`} className="menu-explainer">
-                                    <p>{explainer}</p>
-                                    <p className="menu-explainer-note">{t("menu_explainer_allergens")}</p>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
+                              </span>
+                              {tagList(item)}
+                              {item.allergens.length > 0 && <span className="menu-allergens">{tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })}</span>}
+                              {item.explainer?.trim() && (
+                                <span className="menu-whats">
+                                  <Info aria-hidden /> {t("menu_whats_this")}
+                                </span>
+                              )}
+                            </span>
+                            {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
+                            {image && <img className="menu-item-thumb" src={image} alt="" loading="lazy" />}
+                          </button>
                         </li>
                       );
                     })}
@@ -342,6 +359,15 @@ export function MenuView({ venueId, venueName, currencyCode, menus, locale, sour
           </>
         )}
       </main>
+
+      <DishSheet
+        item={openDish}
+        price={openDish ? formatPrice(openDish.priceInPence) : ""}
+        tags={openDish ? tagList(openDish) : null}
+        details={openDish && openDish.allergens.length > 0 ? [tf("menu_contains", { allergens: openDish.allergens.map(titleCase).join(", ") })] : []}
+        labels={{ close: t("close"), whatsThis: t("menu_whats_this"), explainerNote: t("menu_explainer_allergens"), soldOut: t("menu_unavailable") }}
+        onClose={closeDish}
+      />
     </div>
   );
 }

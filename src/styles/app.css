@@ -3457,6 +3457,13 @@ body:has(.app) {
   font-weight: 600;
 }
 
+.pane-desc {
+  min-height: 36px;
+  font-size: 13px;
+  color: var(--a-text-2);
+  margin: -6px 0 4px;
+}
+
 /* ───────────────────────── Print (table tents) ───────────────────────── */
 
 /* A4 sheets of four A6 cards. On screen each sheet is a white page that

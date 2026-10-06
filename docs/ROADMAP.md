@@ -8,7 +8,7 @@ The working plan for Tabletap: what's done, what's next, why things were decided
 - New idea? Put it in [Ideas parking lot](#ideas-parking-lot) first and move it into a section once you decide to do it.
 - Changing a big decision (market, price, hosting)? Add it to the [Decisions](#decisions) table with the reason.
 
-_Last updated: 2026-10-02_
+_Last updated: 2026-10-07_
 
 ---
 
@@ -40,7 +40,8 @@ These are must-haves. Without them the product is not ready to demo or sell.
 - [ ] Instant email when unhappy feedback arrives (deferred by decision on 2026-10-04).
 - [x] **Captcha on signup** (Cloudflare Turnstile). Off until `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` are set.
 - [x] **Pin the Node version** (`>=22.5`).
-- [ ] **Commit all code to git** and push to GitHub.
+- [x] **Commit all code to git** (branch `redesign-and-customisation`; not pushed yet).
+- [x] **Security patch:** Next.js 16.3.8 (September 2026 security release).
 
 ---
 
@@ -161,6 +162,8 @@ Do these when there's a reason, not before.
 | 2026-10-01 | Own login code (scrypt and database sessions), not an auth service | No extra cost or dependency; fully tested |
 | 2026-10-01 | Billing per venue, Free and Pro plans, 14-day Pro trial with no card | Matches how cafés think ("per shop") and lowers the barrier to trying it |
 | 2026-10-02 | UK first at £19/month, then US at $29, India at ₹999 + GST only with WhatsApp | The UK pays about 2.5 times more per café and the product already fits it |
+| 2026-10-07 | Owner layout: presets plus per-card controls, no page builder | Keeps every guest page fast and readable on any colour; café owners want a few good choices, not a blank canvas |
+| 2026-10-07 | Hide/rename/reorder cards and the new menu look on every plan; layout presets, header styles and button shapes Pro only | Basic control shouldn't be paywalled; layouts are a visible reason to upgrade |
 
 ---
 
@@ -185,6 +188,15 @@ Newest first. One line per change: what changed and why.
 ### YYYY-MM-DD
 - Added / Changed / Fixed: what, and why
 ```
+
+### 2026-10-07
+- Changed: full redesign to the Claude Design mockups (brand, marketing home, guest page, menu, dashboard, editors, onboarding, staff till, A4 table cards).
+- Added: owners can hide any card, rename cards in their own words, and drag to reorder cards and menu items (keyboard arrows work too).
+- Changed: the hosted menu now shows the venue's cover, logo and font; dishes are rows with photo thumbnails inside one card per section; coloured badges; tap a dish for a detail sheet; a "Most popular" strip when nothing is marked special; optional section descriptions.
+- Changed: demo venues refresh from code on every start, with dish illustrations, badges, specials and explainers.
+- Fixed: dashboard switches ignored clicks (the drawn track sat above the checkbox).
+- Fixed: ngrok tunnels can load the dev server's scripts (`allowedDevOrigins`).
+- Security: Next.js 16.3.8.
 
 ### 2026-10-04 (later)
 - Added: Groq as the AI provider (`GROQ_API_KEY`), using gpt-oss for dish notes and Qwen for menu photos, with strict JSON schemas. Photos are shrunk in the browser before upload. Claude remains an option.
