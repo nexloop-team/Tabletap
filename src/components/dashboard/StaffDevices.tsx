@@ -4,6 +4,7 @@ import { Loader2, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
+import { useConfirm } from "./confirm";
 import { Card, CopyButton, Field } from "./ui";
 
 const COOLDOWNS = [
@@ -28,6 +29,7 @@ export function StaffDevices({
   enabled: boolean;
 }) {
   const router = useRouter();
+  const ask = useConfirm();
   const [label, setLabel] = useState("Front till");
   const [pairing, setPairing] = useState<{ url: string; qrSvg: string; expiresAt: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,7 +49,7 @@ export function StaffDevices({
   }
 
   async function revoke(id: string, name: string) {
-    if (!window.confirm(`Unpair “${name}”? It will stop being able to stamp cards straight away.`)) return;
+    if (!(await ask({ title: `Unpair “${name}”?`, body: "It stops being able to stamp cards straight away.", confirmLabel: "Unpair device", danger: true }))) return;
     try {
       await dashboardApi.revokeStaffDevice(venueId, id);
       router.refresh();

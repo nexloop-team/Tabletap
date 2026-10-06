@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { CURRENCIES, VENUE_TYPES, type VenueConfig } from "@/lib/venue/schema";
+import { useConfirm } from "./confirm";
 import { Card, Field, SaveBar, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -69,11 +70,12 @@ export function ShortCodeForm({ venueId, shortCode, origin }: { venueId: string;
   const router = useRouter();
   const [value, setValue] = useState(shortCode);
   const action = useAction();
+  const ask = useConfirm();
   const changed = value.trim().toLowerCase() !== shortCode;
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!window.confirm("Changing your code breaks every QR code you've already printed. Continue?")) return;
+    if (!(await ask({ title: "Change your page address?", body: "Every QR code you've already printed stops working. You'll need to print new ones.", confirmLabel: "Change address", danger: true }))) return;
     void action.run(async () => {
       await dashboardApi.updateVenue(venueId, { shortCode: value.trim().toLowerCase() });
       router.refresh();
@@ -160,6 +162,7 @@ export function AccountForms({ name, email }: { name: string; email: string }) {
   const profile = useAction();
   const password = useAction();
   const removal = useAction();
+  const ask = useConfirm();
   const [displayName, setDisplayName] = useState(name);
 
   return (
@@ -224,10 +227,10 @@ export function AccountForms({ name, email }: { name: string; email: string }) {
 
       <Card title="Delete account" description="Deletes your account and every venue you own alone, with all of their guest data. This can't be undone." className="danger-zone">
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            if (!window.confirm("Delete your account and all your venues for good?")) return;
+            if (!(await ask({ title: "Delete your account?", body: "Your account and every venue you own alone are deleted for good, with all their guest data.", confirmLabel: "Delete account", danger: true }))) return;
             void removal.run(async () => {
               await dashboardApi.deleteAccount({ password: String(form.get("password")) });
               router.replace("/");

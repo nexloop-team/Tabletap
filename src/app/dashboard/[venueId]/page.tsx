@@ -1,5 +1,6 @@
-import { Check, Download, ExternalLink } from "lucide-react";
+import { BookOpen, Check, Download, ExternalLink, Link2, MessageSquareText, ScanLine, Stamp, Star, Users } from "lucide-react";
 import Link from "next/link";
+import { DailyBars, PageHeader, Stat } from "@/components/dashboard/blocks";
 import { CopyButton } from "@/components/dashboard/ui";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { venueStats } from "@/server/repositories/insights";
@@ -32,72 +33,51 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
     { done: stats.scans > 0, label: "Print your QR codes and get a first scan", href: `${base}/qr` },
   ];
   const remaining = checklist.filter((item) => !item.done).length;
-  const maxDaily = Math.max(1, ...stats.daily.map((d) => d.scans));
   const maxSource = Math.max(1, ...stats.sources.map((s) => s.scans));
 
   return (
     <>
       {firstParam(query.welcome) && (
-        <div className="notice notice-ok" style={{ marginBottom: 16 }}>
+        <div className="notice notice-ok">
           Your page is live. Open it on your phone, then work through the checklist below.
         </div>
       )}
-      {firstParam(query.verified) === "1" && <div className="notice notice-ok" style={{ marginBottom: 16 }}>Your email is confirmed. Thanks!</div>}
-      {firstParam(query.verified) === "0" && <div className="notice notice-error" style={{ marginBottom: 16 }}>That confirmation link has expired or was already used.</div>}
+      {firstParam(query.verified) === "1" && <div className="notice notice-ok">Your email is confirmed. Thanks!</div>}
+      {firstParam(query.verified) === "0" && <div className="notice notice-error">That confirmation link has expired or was already used.</div>}
 
-      <div className="page-head">
-        <div>
-          <h1>{config.name}</h1>
-          <p>Last 30 days</p>
-        </div>
-        <div className="inline">
-          <a className="btn" href={url} target="_blank" rel="noreferrer">
-            <ExternalLink aria-hidden /> View page
-          </a>
-          <Link className="btn btn-primary" href={`${base}/qr`}>
-            <Download aria-hidden /> QR codes
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={config.name}
+        description={
+          <>
+            Performance over the last 30 days ·{" "}
+            <span className={`badge ${plan === "pro" ? "badge-pro" : ""}`}>{plan === "pro" ? "Pro" : "Free"} plan</span>
+          </>
+        }
+        actions={
+          <>
+            <a className="btn" href={url} target="_blank" rel="noreferrer">
+              <ExternalLink aria-hidden /> View page
+            </a>
+            <Link className="btn btn-primary" href={`${base}/qr`}>
+              <Download aria-hidden /> QR codes
+            </Link>
+          </>
+        }
+      />
 
-      <div className="share-link" style={{ marginBottom: 16 }}>
+      <div className="share-link">
+        <Link2 aria-hidden />
         <code>{url}</code>
         <CopyButton text={url} label="Copy link" />
       </div>
 
       <div className="stats">
-        <div className="card stat">
-          <div className="label">Scans</div>
-          <div className="value">{stats.scans}</div>
-          <div className="sub">{stats.visitors} unique visits</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Menu views</div>
-          <div className="value">{stats.menuViews}</div>
-          <div className="sub">{stats.wifiOpens} Wi-Fi opens</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Feedback</div>
-          <div className="value">{stats.feedbackCount}</div>
-          <div className="sub">Mood: {formatSentiment(stats.averageSentiment)}</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Review taps</div>
-          <div className="value">{stats.reviewTaps}</div>
-          <div className="sub">to Google</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Stamps given</div>
-          <div className="value">{stats.stampsGiven}</div>
-          <div className="sub">
-            {stats.rewardsRedeemed} reward{stats.rewardsRedeemed === 1 ? "" : "s"} redeemed
-          </div>
-        </div>
-        <div className="card stat">
-          <div className="label">Guests</div>
-          <div className="value">{stats.totalGuests}</div>
-          <div className="sub">+{stats.newGuests} this month · {stats.members} members</div>
-        </div>
+        <Stat label="Scans" value={stats.scans} icon={ScanLine} sub={`${stats.visitors.toLocaleString("en-GB")} unique visits`} />
+        <Stat label="Menu views" value={stats.menuViews} icon={BookOpen} sub={`${stats.wifiOpens.toLocaleString("en-GB")} Wi-Fi opens`} />
+        <Stat label="Feedback" value={stats.feedbackCount} icon={MessageSquareText} sub={`Mood: ${formatSentiment(stats.averageSentiment)}`} href={`${base}/feedback`} />
+        <Stat label="Review taps" value={stats.reviewTaps} icon={Star} sub="Sent to Google" />
+        <Stat label="Stamps given" value={stats.stampsGiven} icon={Stamp} sub={`${stats.rewardsRedeemed} reward${stats.rewardsRedeemed === 1 ? "" : "s"} redeemed`} />
+        <Stat label="Guests" value={stats.totalGuests} icon={Users} sub={`+${stats.newGuests} this month · ${stats.members} members`} href={`${base}/guests`} />
       </div>
 
       <div className="overview-grid">
@@ -105,26 +85,18 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
           <div className="card-head">
             <div>
               <h2>Scans per day</h2>
-              <p>Your own dashboard previews aren&apos;t counted.</p>
+              <p>Your own dashboard previews aren&apos;t counted. Hover a day for its total.</p>
             </div>
           </div>
-          <div className="bars" role="img" aria-label={`Scans over the last ${stats.days} days, peak ${maxDaily}`}>
-            {stats.daily.map((day) => (
-              <div key={day.day} style={{ height: `${(day.scans / maxDaily) * 100}%` }} title={`${day.day}: ${day.scans}`} />
-            ))}
-          </div>
-          <div className="bars-axis">
-            <span>{stats.daily[0]?.day}</span>
-            <span>Today</span>
-          </div>
+          <DailyBars data={stats.daily.map((d) => ({ day: d.day, value: d.scans }))} label="Scans per day" unit={["scan", "scans"]} />
           {stats.sources.length > 0 && (
             <>
-              <h3 style={{ fontSize: 14, margin: "20px 0 10px" }}>Where scans came from</h3>
+              <h3 className="subhead">Where scans came from</h3>
               <ul className="source-list">
                 {stats.sources.map((source) => (
                   <li key={source.source}>
                     <span>{source.source === "unknown" ? "Main QR code" : source.source}</span>
-                    <span className="muted">{source.scans}</span>
+                    <span className="muted num">{source.scans.toLocaleString("en-GB")}</span>
                     <span className="meter">
                       <div style={{ width: `${(source.scans / maxSource) * 100}%` }} />
                     </span>
@@ -141,6 +113,12 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               <h2>Get set up</h2>
               <p>{remaining === 0 ? "All done. Nice work!" : `${remaining} thing${remaining === 1 ? "" : "s"} left`}</p>
             </div>
+            <span className="muted num">
+              {checklist.length - remaining}/{checklist.length}
+            </span>
+          </div>
+          <div className="progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={checklist.length} aria-valuenow={checklist.length - remaining}>
+            <div style={{ width: `${((checklist.length - remaining) / checklist.length) * 100}%` }} />
           </div>
           <ul className="checklist">
             {checklist.map((item) => (

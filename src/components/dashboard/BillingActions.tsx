@@ -3,14 +3,16 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
+import { useConfirm } from "./confirm";
 
 /** Upgrade (Checkout) or manage (Customer Portal); both hand off to a URL the server returns. */
 export function BillingActions({ venueId, action, label, devMode }: { venueId: string; action: "checkout" | "portal"; label: string; devMode: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ask = useConfirm();
 
   async function go() {
-    if (devMode && action === "portal" && !window.confirm("Dev mode: cancel Pro and go back to Free now?")) return;
+    if (devMode && action === "portal" && !(await ask({ title: "Cancel Pro now?", body: "Dev mode: this venue goes straight back to the Free plan.", confirmLabel: "Cancel Pro", danger: true }))) return;
     setPending(true);
     setError(null);
     try {

@@ -7,6 +7,7 @@ import { BRAND } from "@/config/brand";
 import { CURRENCIES } from "@/lib/venue/schema";
 import { requireUser } from "@/server/auth/session";
 import { listVenuesForUser } from "@/server/repositories/venues";
+import { uiFont } from "@/app/fonts";
 import { firstParam } from "@/server/request";
 import "@/styles/app.css";
 
@@ -24,7 +25,7 @@ export default async function OnboardingPage({ searchParams }: PageProps<"/onboa
   const hasVenues = listVenuesForUser(user.id).length > 0;
   const region = /-([A-Z]{2})\b/.exec((await headers()).get("accept-language") ?? "")?.[1] ?? "";
   return (
-    <div className="app auth-shell">
+    <div className={`app auth-shell ${uiFont.variable}`}>
       <div style={{ width: "min(640px, 100%)" }}>
         <div className="spread" style={{ marginBottom: 8 }}>
           <Link className="wordmark" href="/">

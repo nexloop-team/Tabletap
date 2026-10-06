@@ -1,139 +1,171 @@
 import type { Metadata } from "next";
+import { AlertTriangle, ArrowRight, Ban, Building2, CheckCircle2, Clock, Crown, Users, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
-import { AdminVenueActions } from "@/components/dashboard/AdminActions";
-import { TopbarLinks } from "@/components/dashboard/Shell";
-import { BrandMark } from "@/components/icons";
-import { BRAND } from "@/config/brand";
-import { effectivePlan, type SubscriptionStatus } from "@/lib/plans";
+import { SegmentBadge } from "@/components/dashboard/admin-blocks";
+import { DailyBars, PageHeader, Stat } from "@/components/dashboard/blocks";
+import { VenueAvatar } from "@/components/dashboard/Shell";
+import { dailyCounts, formatAgo } from "@/lib/format";
+import { adminUsers, adminVenues, isRecent } from "@/server/admin";
 import { requireAdminPage } from "@/server/dashboard";
-import { listUsersForAdmin } from "@/server/repositories/users";
-import { listVenuesForAdmin } from "@/server/repositories/venues";
-import "@/styles/app.css";
 
-export const metadata: Metadata = { title: "Admin", robots: { index: false } };
+export const metadata: Metadata = { title: "Overview" };
 
-/** Operator view: every account and venue, with suspend and comp controls. Gated by ADMIN_EMAILS. */
-export default async function AdminPage() {
+/** Operator home: platform health at a glance, and the venues that need a human. */
+export default async function AdminOverview() {
   await requireAdminPage();
-  const users = listUsersForAdmin();
-  const venues = listVenuesForAdmin().map((venue) => ({
-    ...venue,
-    effective: effectivePlan({
-      plan: venue.plan,
-      status: (venue.subscriptionStatus ?? "active") as SubscriptionStatus,
-      trialEndsAt: venue.trialEndsAt,
-      currentPeriodEnd: null,
-    }),
-  }));
-  const paying = venues.filter((venue) => venue.plan === "pro" && venue.subscriptionStatus !== "canceled").length;
-  const trialing = venues.filter((venue) => venue.effective === "pro" && venue.plan !== "pro").length;
+  const users = adminUsers();
+  const venues = adminVenues();
+
+  const count = (segment: string) => venues.filter((venue) => venue.segment === segment).length;
+  const paying = count("paying");
+  const trialing = count("trial");
+  const unverified = users.filter((user) => !user.emailVerified).length;
+  const guests = venues.reduce((sum, venue) => sum + venue.guests, 0);
+  const active = venues.length - count("suspended");
+  const signups = dailyCounts(
+    users.map((user) => user.createdAt),
+    30,
+  );
+  const signupTotal = signups.reduce((sum, day) => sum + day.count, 0);
+
+  const attention = [
+    ...venues.filter((venue) => venue.pastDue).map((venue) => ({ venue, icon: AlertTriangle, reason: "Renewal payment failing" })),
+    ...venues
+      .filter((venue) => venue.segment === "trial" && venue.trialDays !== null && venue.trialDays <= 3)
+      .map((venue) => ({ venue, icon: Clock, reason: `Trial ends in ${venue.trialDays} day${venue.trialDays === 1 ? "" : "s"}` })),
+    ...venues.filter((venue) => venue.segment === "suspended").map((venue) => ({ venue, icon: Ban, reason: "Suspended: guest page offline" })),
+  ].slice(0, 8);
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <Link className="wordmark" href="/dashboard">
-          <BrandMark />
-          {BRAND.name}
-        </Link>
-        <span className="badge badge-danger">Admin</span>
-        <span className="topbar-spacer" />
-        <TopbarLinks isAdmin />
-      </header>
-      <main className="dash-main" style={{ maxWidth: 1240, margin: "0 auto" }}>
-        <div className="stats" style={{ marginBottom: 16 }}>
-          <div className="card stat">
-            <div className="label">Accounts</div>
-            <div className="value">{users.length}</div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Platform admin"
+        title="Overview"
+        description="Every venue and account on the platform, as of right now."
+        actions={
+          <Link className="btn" href="/admin/venues">
+            <Building2 aria-hidden /> Manage venues
+          </Link>
+        }
+      />
+
+      <div className="stats">
+        <Stat label="Venues" value={venues.length} icon={Building2} sub={`${venues.filter((v) => isRecent(v.createdAt)).length} new this week · ${active} live`} href="/admin/venues" />
+        <Stat label="Accounts" value={users.length} icon={Users} sub={`${users.filter((u) => isRecent(u.createdAt)).length} new this week · ${unverified} unverified`} href="/admin/accounts" />
+        <Stat
+          label="Paying Pro"
+          value={paying}
+          icon={Crown}
+          sub={venues.length ? `${Math.round((paying / venues.length) * 100)}% of venues` : "No venues yet"}
+          href="/admin/venues?segment=paying"
+        />
+        <Stat label="On trial" value={trialing} icon={Clock} sub="Pro features, not yet paying" href="/admin/venues?segment=trial" />
+        <Stat label="Guests captured" value={guests} icon={UserRoundPlus} sub="Across all venues" />
+      </div>
+
+      <div className="overview-grid">
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h2>New accounts</h2>
+              <p>
+                {signupTotal.toLocaleString("en-GB")} sign-up{signupTotal === 1 ? "" : "s"} in the last 30 days
+              </p>
+            </div>
           </div>
-          <div className="card stat">
-            <div className="label">Venues</div>
-            <div className="value">{venues.length}</div>
-          </div>
-          <div className="card stat">
-            <div className="label">Paying Pro</div>
-            <div className="value">{paying}</div>
-          </div>
-          <div className="card stat">
-            <div className="label">On trial</div>
-            <div className="value">{trialing}</div>
-          </div>
-        </div>
+          <DailyBars data={signups.map((d) => ({ day: d.day, value: d.count }))} label="New accounts per day" unit={["sign-up", "sign-ups"]} />
+        </section>
 
         <section className="card">
           <div className="card-head">
-            <h2>Venues</h2>
+            <div>
+              <h2>Needs attention</h2>
+              <p>Failing payments, ending trials and suspensions</p>
+            </div>
           </div>
+          {attention.length === 0 ? (
+            <div className="empty empty-compact">
+              <span className="empty-icon ok">
+                <CheckCircle2 aria-hidden />
+              </span>
+              <strong>All clear</strong>
+              <p>No venue needs action right now.</p>
+            </div>
+          ) : (
+            <ul className="attention-list">
+              {attention.map(({ venue, icon: Icon, reason }) => (
+                <li key={`${venue.id}-${reason}`}>
+                  <Link href={`/dashboard/${venue.id}`}>
+                    <Icon className="attention-icon" aria-hidden />
+                    <span className="attention-text">
+                      <strong>{venue.name}</strong>
+                      <span>{reason}</span>
+                    </span>
+                    <ArrowRight className="attention-go" aria-hidden />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="card card-flush">
+        <div className="card-head">
+          <div>
+            <h2>Latest venues</h2>
+            <p>The six most recent sign-ups</p>
+          </div>
+          <Link className="btn btn-sm" href="/admin/venues">
+            View all <ArrowRight aria-hidden />
+          </Link>
+        </div>
+        {venues.length === 0 ? (
+          <div className="empty empty-compact">
+            <span className="empty-icon">
+              <Building2 aria-hidden />
+            </span>
+            <strong>No venues yet</strong>
+          </div>
+        ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Venue</th>
-                  <th>Owner</th>
-                  <th>Plan</th>
-                  <th>Guests</th>
-                  <th>Created</th>
-                  <th />
+                  <th scope="col">Venue</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Plan</th>
+                  <th scope="col" className="num">
+                    Guests
+                  </th>
+                  <th scope="col">Created</th>
                 </tr>
               </thead>
               <tbody>
-                {venues.map((venue) => (
+                {venues.slice(0, 6).map((venue) => (
                   <tr key={venue.id}>
                     <td>
-                      <Link href={`/dashboard/${venue.id}`}>
-                        <strong>{venue.name}</strong>
+                      <Link className="cell-venue" href={`/dashboard/${venue.id}`}>
+                        <VenueAvatar venue={{ name: venue.name, logoUrl: null }} />
+                        <span>
+                          <strong>{venue.name}</strong>
+                          <span className="mono muted">/{venue.shortCode}</span>
+                        </span>
                       </Link>
-                      <span className="muted mono" style={{ display: "block" }}>
-                        {venue.shortCode}
-                      </span>
-                      {venue.status === "suspended" && <span className="badge badge-danger">Suspended</span>}
                     </td>
-                    <td>{venue.ownerEmail ?? <span className="muted">demo</span>}</td>
+                    <td className="truncate">{venue.ownerEmail ?? <span className="muted">Demo venue</span>}</td>
                     <td>
-                      <span className={`badge ${venue.effective === "pro" ? "badge-pro" : ""}`}>{venue.effective === "pro" ? "Pro" : "Free"}</span>{" "}
-                      <span className="muted">{venue.plan === "pro" ? venue.subscriptionStatus : venue.effective === "pro" ? "trial" : ""}</span>
+                      <SegmentBadge venue={venue} />
                     </td>
-                    <td>{venue.guests}</td>
-                    <td className="muted">{venue.createdAt.slice(0, 10)}</td>
-                    <td>
-                      <AdminVenueActions venueId={venue.id} status={venue.status} plan={venue.plan === "pro" && venue.subscriptionStatus !== "canceled" ? "pro" : "free"} />
-                    </td>
+                    <td className="num">{venue.guests.toLocaleString("en-GB")}</td>
+                    <td className="muted nowrap">{formatAgo(venue.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <h2>Accounts</h2>
-          </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Venues</th>
-                  <th>Signed up</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.name}</td>
-                    <td>
-                      {user.email} {!user.emailVerified && <span className="badge badge-warn">unverified</span>}
-                    </td>
-                    <td>{user.venueCount}</td>
-                    <td className="muted">{user.createdAt.slice(0, 10)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+        )}
+      </section>
     </div>
   );
 }

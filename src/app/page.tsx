@@ -4,6 +4,7 @@ import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
 import { PLANS, TRIAL_DAYS } from "@/lib/plans";
 import { currentUser } from "@/server/auth/session";
+import { uiFont } from "@/app/fonts";
 import { DEMO_VENUES } from "@/server/seed";
 import "@/styles/app.css";
 
@@ -27,7 +28,7 @@ const FEATURES = [
 export default async function Home() {
   const user = await currentUser();
   return (
-    <div className="app">
+    <div className={`app ${uiFont.variable}`}>
       <header className="site-nav">
         <Link className="wordmark" href="/">
           <BrandMark />

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { compressImage } from "@/lib/browser";
 import type { VenueConfig } from "@/lib/venue/schema";
+import { useConfirm } from "./confirm";
 import { Card, UpgradeHint } from "./ui";
 
 type Section = VenueConfig["menus"][number]["sections"][number];
@@ -43,6 +44,7 @@ export function MenuAiTools({
   onExplanations: (byItemId: Record<string, string>) => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const ask = useConfirm();
   const [busy, setBusy] = useState<"import" | "explain" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<{ sections: Section[]; flaggedItemIds: string[] } | null>(null);
@@ -161,8 +163,8 @@ export function MenuAiTools({
               <button
                 type="button"
                 className="btn btn-sm"
-                onClick={() => {
-                  if (!window.confirm("Replace every section of this menu with the imported one?")) return;
+                onClick={async () => {
+                  if (!(await ask({ title: "Replace this menu?", body: "Every section of this menu is swapped for the imported one.", confirmLabel: "Replace menu", danger: true }))) return;
                   onImport(imported.sections, "replace", imported.flaggedItemIds);
                   setImported(null);
                 }}

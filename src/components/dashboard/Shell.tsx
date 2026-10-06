@@ -1,106 +1,311 @@
 "use client";
 
 import {
+  Building2,
+  ChevronsUpDown,
   CreditCard,
   Gift,
   LayoutDashboard,
   LogOut,
+  Menu,
   MessageSquareText,
   Palette,
+  Plus,
   QrCode,
   Settings,
   Shield,
+  Store,
   UserRound,
   Users,
   UtensilsCrossed,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { BrandMark } from "@/components/icons";
+import { BRAND } from "@/config/brand";
 import { dashboardApi } from "@/lib/api/dashboard-client";
+import { initials } from "@/lib/format";
+import { ConfirmProvider } from "./confirm";
 
-export function VenueSwitcher({ venues }: { venues: { id: string; name: string }[] }) {
-  const router = useRouter();
-  const params = useParams<{ venueId?: string }>();
-  const current = params.venueId ?? "";
-  if (venues.length === 0) return null;
-  return (
-    <select
-      className="select venue-switch"
-      aria-label="Switch venue"
-      value={venues.some((venue) => venue.id === current) ? current : ""}
-      onChange={(event) => router.push(event.target.value === "__new" ? "/onboarding" : `/dashboard/${event.target.value}`)}
-    >
-      {!venues.some((venue) => venue.id === current) && <option value="">All venues</option>}
-      {venues.map((venue) => (
-        <option key={venue.id} value={venue.id}>
-          {venue.name}
-        </option>
-      ))}
-      <option value="__new">+ Add a venue</option>
-    </select>
-  );
+export interface ShellVenue {
+  id: string;
+  name: string;
+  isPro: boolean;
+  logoUrl: string | null;
 }
 
-export function TopbarLinks({ isAdmin }: { isAdmin: boolean }) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  async function signOut() {
-    setPending(true);
-    try {
-      await dashboardApi.logout();
-    } finally {
-      router.replace("/login");
-      router.refresh();
-    }
-  }
-  return (
-    <>
-      {isAdmin && (
-        <Link className="account-link inline" href="/admin">
-          <Shield size={16} aria-hidden /> <span>Admin</span>
-        </Link>
-      )}
-      <Link className="account-link inline" href="/dashboard/account">
-        <UserRound size={16} aria-hidden /> <span>Account</span>
-      </Link>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={signOut} disabled={pending} aria-label="Sign out">
-        <LogOut aria-hidden />
-      </button>
-    </>
-  );
+export interface ShellUser {
+  name: string;
+  email: string;
+  isAdmin: boolean;
 }
 
-const NAV = [
-  { href: "", label: "Overview", icon: LayoutDashboard },
-  { href: "/design", label: "Guest page", icon: Palette },
-  { href: "/menu", label: "Menu", icon: UtensilsCrossed },
-  { href: "/loyalty", label: "Loyalty & capture", icon: Gift, pro: true },
-  { href: "/guests", label: "Guests", icon: Users },
-  { href: "/feedback", label: "Feedback", icon: MessageSquareText },
-  { href: "/qr", label: "QR codes", icon: QrCode },
-  { href: "/billing", label: "Plan & billing", icon: CreditCard },
-  { href: "/settings", label: "Settings", icon: Settings },
+interface NavItem {
+  href: string;
+  label: string;
+  icon?: LucideIcon;
+  venue?: ShellVenue;
+  /** Match the path exactly rather than as a prefix (section roots). */
+  exact?: boolean;
+  badge?: string;
+}
+
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+function venueNav(base: string, isPro: boolean | null): NavGroup[] {
+  const pro = isPro === false ? "Pro" : undefined;
+  return [
+    { items: [{ href: base, label: "Overview", icon: LayoutDashboard, exact: true }] },
+    {
+      label: "Guest experience",
+      items: [
+        { href: `${base}/design`, label: "Guest page", icon: Palette },
+        { href: `${base}/menu`, label: "Menu", icon: UtensilsCrossed },
+        { href: `${base}/loyalty`, label: "Loyalty & capture", icon: Gift, badge: pro },
+        { href: `${base}/qr`, label: "QR codes", icon: QrCode },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        { href: `${base}/guests`, label: "Guests", icon: Users },
+        { href: `${base}/feedback`, label: "Feedback", icon: MessageSquareText },
+      ],
+    },
+    {
+      label: "Venue",
+      items: [
+        { href: `${base}/billing`, label: "Plan & billing", icon: CreditCard },
+        { href: `${base}/settings`, label: "Settings", icon: Settings },
+      ],
+    },
+  ];
+}
+
+const ADMIN_NAV: NavGroup[] = [
+  {
+    label: "Platform",
+    items: [
+      { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
+      { href: "/admin/venues", label: "Venues", icon: Building2 },
+      { href: "/admin/accounts", label: "Accounts", icon: Users },
+    ],
+  },
 ];
 
-export function SideNav({ venueId, isPro }: { venueId: string; isPro: boolean }) {
-  const pathname = usePathname();
-  const base = `/dashboard/${venueId}`;
+function isActive(pathname: string, item: NavItem): boolean {
+  return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+export function VenueAvatar({ venue, name }: { venue?: { name: string; logoUrl: string | null }; name?: string }) {
+  const logo = venue?.logoUrl;
   return (
-    <nav className="sidenav" aria-label="Venue">
-      {NAV.map((item) => {
-        const href = base + item.href;
-        const active = item.href === "" ? pathname === base : pathname === href || pathname.startsWith(`${href}/`);
-        const Icon = item.icon;
-        return (
-          <Link key={item.href} href={href} aria-current={active ? "page" : undefined}>
-            <Icon aria-hidden />
-            {item.label}
-            {item.pro && !isPro && <span className="badge badge-pro nav-pro">Pro</span>}
-          </Link>
-        );
-      })}
-    </nav>
+    <span className="venue-avatar" style={logo ? { backgroundImage: `url("${logo.replace(/"/g, "")}")` } : undefined} aria-hidden>
+      {!logo && initials(venue?.name ?? name, "·")}
+    </span>
+  );
+}
+
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const Icon = item.icon;
+  return (
+    <li>
+      <Link className="nav-link" href={item.href} aria-current={isActive(pathname, item) ? "page" : undefined}>
+        {item.venue ? <VenueAvatar venue={item.venue} /> : Icon && <Icon aria-hidden />}
+        <span className="nav-label">{item.label}</span>
+        {item.badge && <span className="badge badge-pro">{item.badge}</span>}
+      </Link>
+    </li>
+  );
+}
+
+function VenueSwitcher({ venues, current }: { venues: ShellVenue[]; current: string }) {
+  const router = useRouter();
+  const active = venues.find((venue) => venue.id === current);
+  if (venues.length === 0) return null;
+  return (
+    <div className="venue-switch">
+      <VenueAvatar venue={active} name={active ? undefined : "All venues"} />
+      <select
+        aria-label="Switch venue"
+        value={active ? active.id : ""}
+        onChange={(event) => router.push(event.target.value === "__new" ? "/onboarding" : `/dashboard/${event.target.value}`)}
+      >
+        {!active && <option value="">{current ? "Another venue" : "All venues"}</option>}
+        {venues.map((venue) => (
+          <option key={venue.id} value={venue.id}>
+            {venue.name}
+          </option>
+        ))}
+        <option value="__new">+ Add a venue</option>
+      </select>
+      <ChevronsUpDown aria-hidden />
+    </div>
+  );
+}
+
+function SignOutButton() {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  return (
+    <li>
+      <button
+        type="button"
+        className="nav-link"
+        disabled={pending}
+        onClick={async () => {
+          setPending(true);
+          try {
+            await dashboardApi.logout();
+          } finally {
+            router.replace("/login");
+            router.refresh();
+          }
+        }}
+      >
+        <LogOut aria-hidden />
+        <span className="nav-label">{pending ? "Signing out…" : "Sign out"}</span>
+      </button>
+    </li>
+  );
+}
+
+function Brand({ mode }: { mode: "venue" | "admin" }) {
+  return (
+    <span className="shell-brand">
+      <Link className="wordmark" href={mode === "admin" ? "/admin" : "/dashboard"}>
+        <BrandMark />
+        {BRAND.name}
+      </Link>
+      {mode === "admin" && <span className="badge badge-admin">Admin</span>}
+    </span>
+  );
+}
+
+/**
+ * Sidebar app frame for the merchant dashboard and the operator console.
+ * The sidebar is static from 1024px up and an off-canvas drawer below.
+ */
+export function AppShell({ mode, venues, user, children }: { mode: "venue" | "admin"; venues: ShellVenue[]; user: ShellUser; children: ReactNode }) {
+  const pathname = usePathname();
+  const params = useParams<{ venueId?: string }>();
+  // Remembering which path the drawer was opened on closes it on navigation without an effect.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    closeButton.current?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpenOn(null);
+      menuButton.current?.focus();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const venueId = mode === "venue" ? (params.venueId ?? "") : "";
+  const current = venues.find((venue) => venue.id === venueId);
+  const groups: NavGroup[] =
+    mode === "admin"
+      ? ADMIN_NAV
+      : venueId
+        ? venueNav(`/dashboard/${venueId}`, current ? current.isPro : null)
+        : [
+            {
+              label: "Your venues",
+              items: [
+                ...venues.map((venue) => ({ href: `/dashboard/${venue.id}`, label: venue.name, venue })),
+                { href: "/onboarding", label: "Add a venue", icon: Plus },
+              ],
+            },
+          ];
+
+  return (
+    <div className={`shell ${mode === "admin" ? "shell-admin" : ""}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+
+      <header className="mobilebar">
+        <button
+          ref={menuButton}
+          type="button"
+          className="btn btn-ghost btn-icon"
+          aria-label="Open navigation"
+          aria-expanded={open}
+          aria-controls="app-sidebar"
+          onClick={() => setOpenOn(pathname)}
+        >
+          <Menu aria-hidden />
+        </button>
+        <Brand mode={mode} />
+      </header>
+
+      {open && <div className="sidebar-scrim" aria-hidden onClick={() => setOpenOn(null)} />}
+
+      <aside id="app-sidebar" className="sidebar" data-open={open} aria-label="Main navigation">
+        <div className="sidebar-head">
+          <Brand mode={mode} />
+          <button ref={closeButton} type="button" className="btn btn-ghost btn-icon sidebar-close" aria-label="Close navigation" onClick={() => setOpenOn(null)}>
+            <X aria-hidden />
+          </button>
+        </div>
+
+        {mode === "venue" && <VenueSwitcher venues={venues} current={venueId} />}
+
+        <nav className="sidebar-body" aria-label={mode === "admin" ? "Platform" : "Venue"}>
+          {groups.map((group, index) => (
+            <div key={group.label ?? index} className="nav-group">
+              {group.label && <div className="nav-group-label">{group.label}</div>}
+              <ul className="nav-list">
+                {group.items.map((item) => (
+                  <NavLink key={item.href} item={item} pathname={pathname} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-foot">
+          <ul className="nav-list">
+            {mode === "admin" ? (
+              <NavLink item={{ href: "/dashboard", label: "My venues", icon: Store, exact: true }} pathname={pathname} />
+            ) : (
+              user.isAdmin && <NavLink item={{ href: "/admin", label: "Platform admin", icon: Shield }} pathname={pathname} />
+            )}
+            <NavLink item={{ href: "/dashboard/account", label: "Account", icon: UserRound }} pathname={pathname} />
+            <SignOutButton />
+          </ul>
+          <div className="user-card">
+            <span className="avatar" aria-hidden>
+              {initials(user.name || user.email)}
+            </span>
+            <span className="user-card-text">
+              <strong>{user.name || "Your account"}</strong>
+              <span>{user.email}</span>
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      <div className="shell-main">
+        <ConfirmProvider>
+          <main id="main" tabIndex={-1}>
+            {children}
+          </main>
+        </ConfirmProvider>
+      </div>
+    </div>
   );
 }
 

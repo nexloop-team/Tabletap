@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Plus, Sparkles,
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
+import { useConfirm } from "./confirm";
 import { MenuAiTools } from "./MenuAiTools";
 import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
@@ -51,6 +52,7 @@ export function MenuEditor({
   importLimits: { maxImages: number; pdf: boolean };
 }) {
   const editor = useVenueDraft<{ menus: VenueConfig["menus"] }>(venueId, { menus });
+  const ask = useConfirm();
   const list = editor.draft.menus;
   const [selected, setSelected] = useState(0);
   // Imported items whose allergens came from the AI, until the owner opens them.
@@ -67,8 +69,9 @@ export function MenuEditor({
     setSelected(list.length);
   }
 
-  function removeMenu() {
-    if (!menu || !window.confirm(`Delete “${menu.name}” and everything on it?`)) return;
+  async function removeMenu() {
+    if (!menu) return;
+    if (!(await ask({ title: `Delete “${menu.name}”?`, body: "Every section and item on this menu goes too. Nothing is saved until you press Save changes.", confirmLabel: "Delete menu", danger: true }))) return;
     setMenus(list.filter((m) => m !== menu));
     setSelected(0);
   }
@@ -191,8 +194,16 @@ export function MenuEditor({
                   last={sectionIndex === menu.sections.length - 1}
                   onChange={(next) => setSections(menu.sections.map((s) => (s.id === section.id ? next : s)))}
                   onMove={(delta) => setSections(move(menu.sections, sectionIndex, delta))}
-                  onRemove={() => {
-                    if (section.items.length === 0 || window.confirm(`Delete “${section.name}” and its ${section.items.length} item(s)?`)) {
+                  onRemove={async () => {
+                    if (
+                      section.items.length === 0 ||
+                      (await ask({
+                        title: `Delete “${section.name}”?`,
+                        body: `Its ${section.items.length} item${section.items.length === 1 ? "" : "s"} go too.`,
+                        confirmLabel: "Delete section",
+                        danger: true,
+                      }))
+                    ) {
                       setSections(menu.sections.filter((s) => s.id !== section.id));
                     }
                   }}
