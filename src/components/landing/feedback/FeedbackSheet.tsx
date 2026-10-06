@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { api } from "@/lib/api/client";
+import { Field } from "../forms";
 import { useLanding } from "../LandingContext";
 import { FeedbackThankYou } from "./FeedbackThankYou";
 import { PhotoAttach, type AttachedPhoto } from "./PhotoAttach";
@@ -57,29 +58,32 @@ export function FeedbackSheet() {
 
   return (
     <div className="sheet-inner">
-      <p className="feedback-intro">{t("share_thoughts")}</p>
+      <p className="sheet-intro">{t("share_thoughts")}</p>
       <div className="form-stack">
-        <textarea
-          id={FEEDBACK_TEXTAREA_ID}
-          className="feedback-textarea"
-          placeholder={t("what_went_well")}
-          aria-label={t("what_went_well")}
-          rows={4}
-          value={text}
-          maxLength={5000}
-          onChange={(e) => setText(e.target.value)}
-          onFocus={() => {
-            if (!startedTracked.current) {
-              startedTracked.current = true;
-              track("feedback_started");
-            }
-          }}
-        />
-        <PhotoAttach photo={photo} onChange={setPhoto} />
-        <button type="button" className={`feedback-submit-btn${sending ? " loading" : ""}`} disabled={!trimmed || sending} onClick={submit} aria-busy={sending}>
-          {t("send_feedback")}
-          {sending && <span className="spinner" aria-hidden />}
-        </button>
+        <Field label={t("your_message")}>
+          <textarea
+            id={FEEDBACK_TEXTAREA_ID}
+            className="feedback-textarea"
+            placeholder={t("what_went_well")}
+            rows={4}
+            value={text}
+            maxLength={5000}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={() => {
+              if (!startedTracked.current) {
+                startedTracked.current = true;
+                track("feedback_started");
+              }
+            }}
+          />
+        </Field>
+        <div className="feedback-actions">
+          <PhotoAttach photo={photo} onChange={setPhoto} />
+          <button type="button" className={`feedback-submit-btn${sending ? " loading" : ""}`} disabled={!trimmed || sending} onClick={submit} aria-busy={sending}>
+            {t("send_feedback")}
+            {sending && <span className="spinner" aria-hidden />}
+          </button>
+        </div>
       </div>
       {error && (
         <p className="form-error" role="alert" style={{ marginTop: 10 }}>

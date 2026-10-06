@@ -6,7 +6,7 @@ import { deviceMemory } from "@/lib/browser";
 import { rewardsPassLine } from "@/lib/landing-copy";
 import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
 import { hasLoyaltyProgram, isRewardsOnly } from "@/lib/venue/features";
-import { ConsentLine, RewardsConsent } from "../forms";
+import { ConsentLine, Field, RewardsConsent } from "../forms";
 import { useLanding } from "../LandingContext";
 import { useRewardsJoin, useStampJoin } from "../useJoin";
 
@@ -97,9 +97,13 @@ export function WifiGate({ onComplete }: { onComplete: (completion: GateCompleti
 
   return (
     <div className="form-stack">
-      <p className="sub-text">{t("wifi_gate_sub")}</p>
-      <input className="text-input" type="email" placeholder={t("email_address")} autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("email_address")} />
-      <input className="text-input" type="text" placeholder={t("first_name")} autoComplete="given-name" autoCorrect="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label={t("first_name")} />
+      <p className="sheet-intro">{t("wifi_gate_sub")}</p>
+      <Field label={t("email_address")}>
+        <input className="text-input" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      </Field>
+      <Field label={t("first_name")}>
+        <input className="text-input" type="text" autoComplete="given-name" autoCorrect="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+      </Field>
       {rewardsOnly ? <RewardsConsent checked={consent} onChange={setConsent} /> : <ConsentLine checked={consent} onChange={setConsent} />}
       {error && (
         <p className="form-error" role="alert">

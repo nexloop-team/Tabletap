@@ -1,16 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import { BRAND } from "@/config/brand";
 import { isRtl } from "@/lib/i18n";
 import { requestLocale } from "@/server/request";
 import "./globals.css";
 
-/** Footer wordmark only; the UI itself uses the system font stack. */
-const wordmark = Fraunces({
+/**
+ * Wordmark face, one weight. Guest pages only use it for the footer lockup;
+ * merchant pages also use it for headings and stat numbers.
+ */
+const wordmark = Bricolage_Grotesque({
   variable: "--font-wordmark",
   subsets: ["latin"],
-  weight: "variable",
-  axes: ["opsz"],
+  weight: "700",
   display: "swap",
 });
 

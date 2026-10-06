@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { rewardsPassLine } from "@/lib/landing-copy";
 import { birthdayAskOn } from "@/lib/venue/features";
-import { FilledHeart } from "../../icons";
-import { BirthdayFields, EMPTY_BIRTHDAY, RewardsConsent, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
+import { BirthdayFields, EMPTY_BIRTHDAY, Field, RewardsConsent, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
 import { useLanding, type Membership } from "../LandingContext";
 import { useRewardsJoin } from "../useJoin";
 
@@ -54,11 +53,15 @@ export function RewardsJoinForm({ door, withBirthday }: { door: "home" | "feedba
           void submit();
         }}
       >
-        <input className="text-input" type="text" placeholder={t("first_name")} autoComplete="given-name" autoCorrect="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label={t("first_name")} />
-        <input className="text-input" type="email" placeholder={t("email_address")} autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("email_address")} />
+        <Field label={t("first_name")}>
+          <input className="text-input" type="text" autoComplete="given-name" autoCorrect="off" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+        </Field>
+        <Field label={t("email_address")}>
+          <input className="text-input" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
         {showBirthday && (
           <div className="birthday-block">
-            <p className="sub-text">{t("birthday_join_label")}</p>
+            <p className="g-field-label">{t("birthday_optional")}</p>
             <BirthdayFields value={birthday} onChange={setBirthday} />
           </div>
         )}
@@ -78,20 +81,14 @@ export function RewardsJoinForm({ door, withBirthday }: { door: "home" | "feedba
 
 /** Home-card sheet for a rewards-only venue. */
 export function RewardsSheet() {
-  const { venue, t, membership } = useLanding();
+  const { t, membership } = useLanding();
   return (
     <div className="sheet-inner">
       {membership ? (
         <RewardsJoinedPanel membership={membership} />
       ) : (
         <>
-          <div className="loyalty-header">
-            <div className="loyalty-icon">
-              <FilledHeart />
-            </div>
-            <h3>{venue.name || t("feature_loyalty")}</h3>
-            <p>{t("rewards_sub")}</p>
-          </div>
+          <p className="sheet-intro">{t("rewards_sub")}</p>
           <RewardsJoinForm door="home" withBirthday />
         </>
       )}

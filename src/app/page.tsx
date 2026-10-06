@@ -1,49 +1,64 @@
-import { Check, Gift, MessageSquareText, Palette, QrCode, Star, Users, UtensilsCrossed, Wifi } from "lucide-react";
+import { Check, Heart, MessageCircle, Palette, QrCode, Star, Users, BookOpen, Wifi } from "lucide-react";
 import Link from "next/link";
 import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
 import { PLANS, TRIAL_DAYS } from "@/lib/plans";
+import { isLightColor } from "@/lib/theme";
 import { currentUser } from "@/server/auth/session";
 import { uiFont } from "@/app/fonts";
 import { DEMO_VENUES } from "@/server/seed";
 import "@/styles/app.css";
 
 const DEMO_NOTES: Record<string, string> = {
-  demo: "Stamp card with reward tiers, hosted menu, Wi-Fi, Sudoku",
-  "demo-crm": "Dark pub theme, Wi-Fi email gate, marketing consent, birthdays",
-  "demo-rewards": "Members club, online ordering link, custom link cards",
+  demo: "Café · stamp card, menu, Sudoku",
+  "demo-crm": "Pub · Wi-Fi email gate, birthdays",
+  "demo-rewards": "Bakery · members club, order online",
 };
 
 const FEATURES = [
-  { icon: UtensilsCrossed, title: "A menu you can change in seconds", text: "Prices, allergens, dietary tags and photos. Mark a dish sold out from your phone." },
-  { icon: Wifi, title: "Wi-Fi without the questions", text: "Guests copy the password in one tap. Optionally ask for an email first." },
-  { icon: Gift, title: "Loyalty that lives on their phone", text: "Digital stamp cards and reward tiers. No app to download, no paper cards to lose." },
-  { icon: MessageSquareText, title: "Hear it first", text: "A private feedback box at every table, so small problems reach you while you can still fix them." },
-  { icon: Star, title: "More Google reviews, by the rules", text: "Every guest is asked for a review at the table, so you get more reviews without breaking Google's policies." },
-  { icon: Users, title: "A guest list you own", text: "Emails, birthdays and marketing consent, collected properly with double opt-in." },
-  { icon: QrCode, title: "QR codes for every table", text: "Download print-ready codes and table cards. See which table scans the most." },
-  { icon: Palette, title: "Looks like your place", text: "Your logo, cover photo and colours. Text stays readable on any background." },
+  { icon: BookOpen, title: "Your menu, with allergens", text: "Search, the UK 14 allergens and dietary tags. Or link to the menu you already have." },
+  { icon: Wifi, title: "Wi-Fi without the questions", text: "Network and password, one tap to copy. On Pro, ask for an email first." },
+  { icon: Heart, title: "A stamp card on their phone", text: "Staff stamp it at the till. No paper cards, no app to download." },
+  { icon: MessageCircle, title: "Hear it first", text: "A private feedback box, so problems reach you before they reach the internet." },
+  { icon: Star, title: "More Google reviews", text: "Every guest gets a friendly nudge to review you on Google." },
+  { icon: Users, title: "A guest list you own", text: "Names, emails and birthdays, with consent done properly. Export any time." },
+  { icon: QrCode, title: "QR codes for every table", text: "Print-ready table cards. See which tables get scanned most." },
+  { icon: Palette, title: "Looks like your place", text: `Your colours, logo and cover photo. ${BRAND.name} stays quietly in the footer.` },
 ];
+
+const STEPS = [
+  { title: "Sign up and answer four questions", text: "Your venue, your colours, your Wi-Fi and your Google review link." },
+  { title: "Add your menu and logo", text: "Type it in, or snap a photo of your printed menu and we'll read it for you." },
+  { title: "Print your QR codes", text: "A sheet of table cards, one per table, so you can see which ones get scanned." },
+];
+
+/** "£19 / month per venue" → ["£19", "/ month per venue"]; the free plan reads "£0 forever". */
+function splitPrice(id: string, label: string): [string, string] {
+  if (id === "free") return ["£0", "forever"];
+  const space = label.indexOf(" ");
+  return space < 0 ? [label, ""] : [label.slice(0, space), label.slice(space + 1)];
+}
 
 export default async function Home() {
   const user = await currentUser();
+  const startHref = user ? "/dashboard" : "/signup";
   return (
-    <div className={`app ${uiFont.variable}`}>
+    <div className={`app mk ${uiFont.variable}`}>
       <header className="site-nav">
         <Link className="wordmark" href="/">
           <BrandMark />
           {BRAND.name}
         </Link>
-        <nav>
+        <nav aria-label="Main">
           <a href="#pricing">Pricing</a>
           {user ? (
-            <Link className="btn btn-primary" href="/dashboard">
+            <Link className="mk-btn mk-btn-ink" href="/dashboard">
               Dashboard
             </Link>
           ) : (
             <>
               <Link href="/login">Sign in</Link>
-              <Link className="btn btn-primary" href="/signup">
+              <Link className="mk-btn mk-btn-ink" href="/signup">
                 Start free
               </Link>
             </>
@@ -51,104 +66,138 @@ export default async function Home() {
         </nav>
       </header>
 
-      <main className="site-main">
-        <section className="hero">
-          <div>
+      <main>
+        <section className="mk-wrap hero">
+          <div className="hero-copy">
+            <span className="mk-eyebrow">For independent cafés, pubs and bakeries</span>
             <h1>One QR code for everything your guests need at the table.</h1>
-            <p className="lede">Menu, Wi-Fi, a loyalty card that lives on their phone, private feedback, and more Google reviews from the guests at your tables. Set it up yourself in ten minutes.</p>
+            <p className="lede">Menu, Wi-Fi, a stamp card and a private feedback box on one page that looks like your place. Set it up yourself in ten minutes. No designer, no developer, no waiting on us.</p>
             <div className="cta">
-              <Link className="btn btn-primary" href={user ? "/dashboard" : "/signup"}>
+              <Link className="mk-btn mk-btn-lg mk-btn-accent" href={startHref}>
                 {user ? "Go to your dashboard" : "Create your page free"}
               </Link>
-              <a className="btn" href="#demos">
+              <a className="mk-btn mk-btn-lg mk-btn-outline" href="#demos">
                 See live examples
               </a>
             </div>
             <p className="hero-note">Free forever plan · {TRIAL_DAYS}-day Pro trial · No card needed</p>
           </div>
           <div className="phone" aria-hidden>
-            <iframe src="/s?i=demo&s=home&embed=1"title="Example venue page" loading="lazy" tabIndex={-1} />
+            <div className="phone-screen">
+              <iframe src="/s?i=demo&s=home&embed=1" title="Example venue page" loading="lazy" tabIndex={-1} />
+            </div>
           </div>
         </section>
 
-        <h2 className="section-title">Everything on one page</h2>
-        <p className="section-sub">Turn on what you need. Guests never download an app.</p>
-        <div className="feature-grid">
-          {FEATURES.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="card">
-              <span className="feature-icon">
-                <Icon aria-hidden />
-              </span>
-              <h3>{title}</h3>
-              <p>{text}</p>
+        <section className="mk-band">
+          <div className="mk-wrap">
+            <div className="mk-head">
+              <h2>Everything on one page</h2>
+              <p>Guests scan, tap and get on with their coffee. You get regulars, reviews and the odd quiet word before it becomes a public one.</p>
             </div>
-          ))}
-        </div>
+            <div className="feature-grid">
+              {FEATURES.map(({ icon: Icon, title, text }) => (
+                <div key={title} className="feature">
+                  <span className="feature-icon">
+                    <Icon aria-hidden />
+                  </span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <h2 className="section-title">Live in three steps</h2>
-        <p className="section-sub">No designer, no developer, no waiting on us.</p>
-        <ol className="steps">
-          <li className="card">
-            <strong>Sign up and answer four questions</strong>
-            <span>Name, colours, Wi-Fi, Google review link. Your page is created instantly.</span>
-          </li>
-          <li className="card">
-            <strong>Add your menu and logo</strong>
-            <span>Edit everything from the dashboard and watch the preview update.</span>
-          </li>
-          <li className="card">
-            <strong>Print your QR codes</strong>
-            <span>Download table cards, pop them on tables and watch the scans come in.</span>
-          </li>
-        </ol>
+        <section className="mk-wrap mk-section">
+          <h2>Live in three steps</h2>
+          <ol className="steps">
+            {STEPS.map((step, i) => (
+              <li key={step.title}>
+                <span className="step-num" aria-hidden>
+                  {i + 1}
+                </span>
+                <strong>{step.title}</strong>
+                <span>{step.text}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-        <h2 className="section-title" id="pricing">
-          Simple pricing
-        </h2>
-        <p className="section-sub">Per venue. Cancel any time and keep the Free plan.</p>
-        <div className="pricing">
-          {PLANS.map((plan) => (
-            <section key={plan.id} className={`card price-card ${plan.id === "pro" ? "featured" : ""}`}>
-              <h3>{plan.name}</h3>
-              <div className="price">{plan.price}</div>
-              <p className="muted">{plan.blurb}</p>
-              <ul>
-                {plan.features.map((feature) => (
-                  <li key={feature}>
-                    <Check aria-hidden /> {feature}
-                  </li>
-                ))}
-              </ul>
-              <Link className={`btn btn-block ${plan.id === "pro" ? "btn-primary" : ""}`} href={user ? "/dashboard" : "/signup"}>
-                {plan.id === "pro" ? `Start ${TRIAL_DAYS}-day trial` : "Start free"}
-              </Link>
-            </section>
-          ))}
-        </div>
+        <section className="mk-band" id="pricing">
+          <div className="mk-wrap mk-narrow">
+            <div className="mk-head mk-center">
+              <h2>Simple pricing, per venue</h2>
+              <p>Start on Pro for {TRIAL_DAYS} days. Drop to Free whenever you like.</p>
+            </div>
+            <div className="pricing">
+              {PLANS.map((plan) => {
+                const pro = plan.id === "pro";
+                const [amount, per] = splitPrice(plan.id, plan.price);
+                return (
+                  <section key={plan.id} className={`price-card ${pro ? "featured" : ""}`}>
+                    <div className="price-top">
+                      <h3>{plan.name}</h3>
+                      {pro && <span className="price-flag">{TRIAL_DAYS} days free</span>}
+                    </div>
+                    <div className="price">
+                      {amount}
+                      {per && <span> {per}</span>}
+                    </div>
+                    <ul>
+                      {plan.features.map((feature) => (
+                        <li key={feature}>
+                          <Check aria-hidden /> {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link className={`mk-btn mk-btn-lg ${pro ? "mk-btn-light" : "mk-btn-outline"}`} href={startHref}>
+                      {pro ? "Start your free trial" : "Create your page free"}
+                    </Link>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-        <h2 className="section-title" id="demos">
-          Try a demo venue
-        </h2>
-        <p className="section-sub">Open one on your phone. This is exactly what your guests see.</p>
-        <div className="demo-strip">
-          {DEMO_VENUES.map((venue) => (
-            <a key={venue.id} className="card" href={`/s?i=${venue.shortCode}&s=home`}>
-              <strong>{venue.name}</strong>
-              <span>{DEMO_NOTES[venue.shortCode] ?? venue.branding.tagline}</span>
-            </a>
-          ))}
-        </div>
+        <section className="mk-wrap mk-section" id="demos">
+          <h2>Try a demo venue</h2>
+          <div className="demo-strip">
+            {DEMO_VENUES.map((venue) => {
+              const bg = venue.branding.backgroundColorHex || "#FFFFFF";
+              const light = isLightColor(bg);
+              return (
+                <a key={venue.id} className={`demo-card ${light ? "is-light" : "is-dark"}`} style={{ background: bg }} href={`/s?i=${venue.shortCode}&s=home`}>
+                  {venue.branding.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="demo-logo" src={venue.branding.logoUrl} alt="" width={56} height={56} />
+                  ) : (
+                    <span className="demo-logo" />
+                  )}
+                  <span className="demo-name">
+                    <strong>{venue.name}</strong>
+                    <span>{venue.branding.tagline}</span>
+                  </span>
+                  <span className="demo-note">{DEMO_NOTES[venue.shortCode] ?? "Open the demo"} →</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
       </main>
 
       <footer className="site-footer">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name}
-        </span>
-        <nav>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/login">Sign in</Link>
-        </nav>
+        <div className="mk-wrap">
+          <span>
+            © {new Date().getFullYear()} {BRAND.name} · Made for UK hospitality
+          </span>
+          <nav aria-label="Footer">
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/login">Sign in</Link>
+          </nav>
+        </div>
       </footer>
     </div>
   );

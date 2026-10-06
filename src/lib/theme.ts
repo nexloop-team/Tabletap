@@ -31,11 +31,15 @@ function textVars(prefix: "text" | "card-text", isLight: boolean): Record<string
     [`--${prefix}-primary`]: isLight ? "#1A1A1A" : "#FFFFFF",
     [`--${prefix}-secondary`]: `rgba(${rgb},0.7)`,
     [`--${prefix}-tertiary`]: `rgba(${rgb},0.5)`,
+    // A faint wash of the text colour: announcement and social chips sit on it.
+    [`--${prefix}-tint`]: `rgba(${rgb},0.08)`,
   };
 }
 
 const LIGHT_CARDS: Record<string, string> = {
   "--card-bg": "#FFFFFF",
+  "--card-elevation": "0 1px 2px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.07)",
+  "--icon-soft": "14%",
   "--card-shadow": "rgba(0,0,0,0.1)",
   "--card-border": "rgba(0,0,0,0.06)",
   "--input-bg": "#F2F2F7",
@@ -53,6 +57,8 @@ const LIGHT_CARDS: Record<string, string> = {
 
 const DARK_CARDS: Record<string, string> = {
   "--card-bg": "#262626",
+  "--card-elevation": "0 1px 2px rgba(0,0,0,0.3)",
+  "--icon-soft": "22%",
   "--card-shadow": "rgba(0,0,0,0.1)",
   "--card-border": "rgba(255,255,255,0.15)",
   "--input-bg": "#3A3A3C",

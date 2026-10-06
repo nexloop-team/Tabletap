@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import { Clock, Shield } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ResendVerification } from "@/components/dashboard/Shell";
@@ -44,13 +44,17 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
           <ResendVerification />
         </div>
       )}
-      {trialDays !== null && trialDays <= 5 && !operatorView && (
-        <div className="notice notice-info">
+      {trialDays !== null && !operatorView && (
+        <div className="trial-banner">
+          <Clock aria-hidden />
           <span>
-            Your Pro trial ends in {trialDays} day{trialDays === 1 ? "" : "s"}. Loyalty and guest capture switch off when it does.
+            <strong>
+              Pro trial · {trialDays} day{trialDays === 1 ? "" : "s"} left.
+            </strong>{" "}
+            Keep loyalty, Wi-Fi capture and guest emails after it ends.
           </span>
           <Link className="btn btn-primary btn-sm" href={`/dashboard/${venue.id}/billing`}>
-            Keep Pro
+            Choose a plan
           </Link>
         </div>
       )}

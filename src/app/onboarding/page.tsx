@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
-import { BrandMark } from "@/components/icons";
-import { BRAND } from "@/config/brand";
 import { CURRENCIES } from "@/lib/venue/schema";
 import { requireUser } from "@/server/auth/session";
 import { listVenuesForUser } from "@/server/repositories/venues";
@@ -25,19 +22,17 @@ export default async function OnboardingPage({ searchParams }: PageProps<"/onboa
   const hasVenues = listVenuesForUser(user.id).length > 0;
   const region = /-([A-Z]{2})\b/.exec((await headers()).get("accept-language") ?? "")?.[1] ?? "";
   return (
-    <div className={`app auth-shell ${uiFont.variable}`}>
-      <div style={{ width: "min(640px, 100%)" }}>
-        <div className="spread" style={{ marginBottom: 8 }}>
-          <Link className="wordmark" href="/">
-            <BrandMark />
-            {BRAND.name}
-          </Link>
-          {hasVenues && <Link href="/dashboard">Back to dashboard</Link>}
-        </div>
-        {verified === "1" && <div className="notice notice-ok" style={{ marginBottom: 12 }}>Your email is confirmed. Thanks! Now let&apos;s set up your venue.</div>}
-        {verified === "0" && <div className="notice notice-error" style={{ marginBottom: 12 }}>That confirmation link has expired or was already used.</div>}
-        <OnboardingWizard defaultCurrency={REGION_CURRENCY[region] ?? "GBP"} />
-      </div>
+    <div className={`app ${uiFont.variable}`}>
+      <OnboardingWizard
+        defaultCurrency={REGION_CURRENCY[region] ?? "GBP"}
+        exitHref={hasVenues ? "/dashboard" : null}
+        notice={
+          <>
+            {verified === "1" && <div className="notice notice-ok">Your email is confirmed. Thanks! Now let&apos;s set up your venue.</div>}
+            {verified === "0" && <div className="notice notice-error">That confirmation link has expired or was already used.</div>}
+          </>
+        }
+      />
     </div>
   );
 }

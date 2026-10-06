@@ -93,67 +93,30 @@ export function GoogleG() {
 }
 
 /** Product brand mark for the footer lockup: a steaming cup. */
-export function BrandMark() {
+/**
+ * A bistro table seen side on (which also reads as a T) with the tap as a dot.
+ * The tile takes currentColor; the table and dot read --mark-ink / --mark-dot
+ * so each surface can recolour them. Below 32px the dot and foot are dropped.
+ */
+export function BrandMark({ size }: { size?: number }) {
+  if (size !== undefined && size < 32) {
+    return (
+      <svg viewBox="0 0 72 72" width={size} height={size} aria-hidden>
+        <rect width="72" height="72" rx="18" fill="currentColor" />
+        <path d="M16 25h40M36 25v24" stroke="var(--mark-ink, #fff)" strokeWidth="9" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M5 11h12v4a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5v-4z" fill="currentColor" fillOpacity="0.15" />
-      <path d="M17 12h1.5a2.5 2.5 0 0 1 0 5H17" />
-      <path d="M9 3.5c0 1.5 1.5 1.5 1.5 3S9 8 9 8M13 3.5c0 1.5 1.5 1.5 1.5 3S13 8 13 8" />
+    <svg viewBox="0 0 72 72" width={size} height={size} aria-hidden>
+      <rect width="72" height="72" rx="20" fill="currentColor" />
+      <path d="M18 25h36M36 25v22M27 49h18" stroke="var(--mark-ink, #fff)" strokeWidth="6" strokeLinecap="round" fill="none" />
+      <circle cx="53" cy="13.5" r="4.5" fill="var(--mark-dot, #F2B48A)" />
     </svg>
   );
 }
 
 export type SocialPlatform = "facebook" | "instagram" | "tripadvisor" | "youtube";
-
-/** 56px rounded tiles; drawn locally rather than hot-linking brand PNGs. */
-export function SocialTile({ platform }: { platform: SocialPlatform }) {
-  switch (platform) {
-    case "facebook":
-      return (
-        <svg viewBox="0 0 56 56" aria-hidden>
-          <rect width="56" height="56" rx="12" fill="#1877F2" />
-          <path d="M31.2 45V30.6h4.8l.7-5.6h-5.5v-3.6c0-1.6.5-2.7 2.8-2.7h3V13.7c-.5-.1-2.3-.2-4.3-.2-4.3 0-7.2 2.6-7.2 7.4V25h-4.8v5.6h4.8V45h5.5z" fill="#fff" />
-        </svg>
-      );
-    case "instagram":
-      return (
-        <svg viewBox="0 0 56 56" aria-hidden>
-          <defs>
-            <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
-              <stop offset="0" stopColor="#FDF497" />
-              <stop offset="0.05" stopColor="#FDF497" />
-              <stop offset="0.45" stopColor="#FD5949" />
-              <stop offset="0.6" stopColor="#D6249F" />
-              <stop offset="0.9" stopColor="#285AEB" />
-            </radialGradient>
-          </defs>
-          <rect width="56" height="56" rx="12" fill="url(#ig-grad)" />
-          <rect x="14" y="14" width="28" height="28" rx="8" fill="none" stroke="#fff" strokeWidth="3" />
-          <circle cx="28" cy="28" r="6.5" fill="none" stroke="#fff" strokeWidth="3" />
-          <circle cx="36" cy="20" r="1.8" fill="#fff" />
-        </svg>
-      );
-    case "tripadvisor":
-      return (
-        <svg viewBox="0 0 56 56" aria-hidden>
-          <rect width="56" height="56" rx="12" fill="#fff" stroke="rgba(0,0,0,0.08)" />
-          <circle cx="20" cy="30" r="7.5" fill="none" stroke="#000" strokeWidth="2.6" />
-          <circle cx="36" cy="30" r="7.5" fill="none" stroke="#000" strokeWidth="2.6" />
-          <circle cx="20" cy="30" r="2.6" fill="#34E0A1" />
-          <circle cx="36" cy="30" r="2.6" fill="#34E0A1" />
-          <path d="M11 22.5c4.5-4 10.5-5.5 17-5.5s12.5 1.5 17 5.5" fill="none" stroke="#000" strokeWidth="2.6" strokeLinecap="round" />
-        </svg>
-      );
-    case "youtube":
-      return (
-        <svg viewBox="0 0 56 56" aria-hidden>
-          <rect width="56" height="56" rx="12" fill="#fff" stroke="rgba(0,0,0,0.08)" />
-          <rect x="11" y="16" width="34" height="24" rx="7" fill="#FF0000" />
-          <path d="M25 22.5v11l9-5.5z" fill="#fff" />
-        </svg>
-      );
-  }
-}
 
 export const FeatureGlyphs = {
   wifi: Wifi,

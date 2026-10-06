@@ -1,7 +1,7 @@
 "use client";
 
 import jsQR from "jsqr";
-import { Camera, X } from "lucide-react";
+import { Camera, ScanLine, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,7 +24,7 @@ const SCAN_EVERY_MS = 150;
  * so staff never leave it for the camera app. Opens the stamp screen for
  * the card it finds.
  */
-export function ScanCardButton({ label = "Scan a card", primary = true }: { label?: string; primary?: boolean }) {
+export function ScanCardButton({ label = "Scan a card", variant = "primary" }: { label?: string; variant?: "hero" | "primary" | "secondary" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -107,8 +107,9 @@ export function ScanCardButton({ label = "Scan a card", primary = true }: { labe
 
   return (
     <>
-      <button type="button" className={`btn btn-block staff-big ${primary ? "btn-primary" : ""}`} onClick={() => setOpen(true)}>
-        <Camera aria-hidden /> {label}
+      <button type="button" className={`staff-btn staff-btn-${variant}`} onClick={() => setOpen(true)}>
+        {variant === "hero" ? <ScanLine aria-hidden strokeWidth={1.7} /> : <Camera aria-hidden />}
+        <span>{label}</span>
       </button>
       {open && (
         <div className="scanner" role="dialog" aria-modal="true" aria-label="Scan a card">

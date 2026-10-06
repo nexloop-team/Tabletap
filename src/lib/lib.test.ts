@@ -62,7 +62,7 @@ describe("i18n", () => {
     const { t } = createTranslator("en");
     expect(linkLabel("book_now", " Reserve ", t, "feature_menu")).toBe("Reserve");
     expect(linkLabel("book_now", null, t, "feature_menu")).toBe("Book Now");
-    expect(linkLabel("toString", null, t, "feature_menu")).toBe("View Menu");
+    expect(linkLabel("toString", null, t, "feature_menu")).toBe("Menu");
   });
 });
 

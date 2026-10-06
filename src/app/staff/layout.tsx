@@ -4,20 +4,34 @@ import type { ReactNode } from "react";
 import { BrandMark } from "@/components/icons";
 import { uiFont } from "@/app/fonts";
 import { BRAND } from "@/config/brand";
+import { getVenueRecord } from "@/server/repositories/venues";
+import { currentStaffDevice } from "@/server/services/staff";
 import "@/styles/app.css";
 
 export const metadata: Metadata = { title: { default: "Staff", template: `%s · ${BRAND.name} staff` }, robots: { index: false, follow: false } };
 
-/** Till screens for paired staff devices: big buttons, nothing else. */
-export default function StaffLayout({ children }: { children: ReactNode }) {
+/**
+ * Till screens for paired staff devices: big buttons, nothing else. Always
+ * dark, so the screen doesn't glare behind a counter and the green actions pop.
+ */
+export default async function StaffLayout({ children }: { children: ReactNode }) {
+  const device = await currentStaffDevice();
+  const venue = device ? getVenueRecord(device.venueId) : null;
   return (
-    <div className={`app ${uiFont.variable}`}>
-      <header className="topbar">
-        <Link className="wordmark" href="/staff">
-          <BrandMark />
-          {BRAND.name}
+    <div className={`app till ${uiFont.variable}`}>
+      <header className="till-bar">
+        <Link className="till-brand" href="/staff">
+          <BrandMark size={32} />
+          <span>
+            {device ? <span className="till-device">Till · {device.label}</span> : null}
+            <strong>{venue?.config.name ?? BRAND.name}</strong>
+          </span>
         </Link>
-        <span className="badge">Staff</span>
+        {device && (
+          <span className="till-paired">
+            <span aria-hidden /> Paired
+          </span>
+        )}
       </header>
       <main className="staff-main">{children}</main>
     </div>

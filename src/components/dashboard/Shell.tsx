@@ -34,6 +34,8 @@ export interface ShellVenue {
   id: string;
   name: string;
   isPro: boolean;
+  /** "Free", "Pro" or "Pro trial", shown under the name in the switcher. */
+  planLabel?: string;
   logoUrl: string | null;
 }
 
@@ -58,8 +60,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-function venueNav(base: string, isPro: boolean | null): NavGroup[] {
-  const pro = isPro === false ? "Pro" : undefined;
+function venueNav(base: string): NavGroup[] {
   return [
     { items: [{ href: base, label: "Overview", icon: LayoutDashboard, exact: true }] },
     {
@@ -67,7 +68,7 @@ function venueNav(base: string, isPro: boolean | null): NavGroup[] {
       items: [
         { href: `${base}/design`, label: "Guest page", icon: Palette },
         { href: `${base}/menu`, label: "Menu", icon: UtensilsCrossed },
-        { href: `${base}/loyalty`, label: "Loyalty & capture", icon: Gift, badge: pro },
+        { href: `${base}/loyalty`, label: "Loyalty & capture", icon: Gift, badge: "Pro" },
         { href: `${base}/qr`, label: "QR codes", icon: QrCode },
       ],
     },
@@ -119,7 +120,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Link className="nav-link" href={item.href} aria-current={isActive(pathname, item) ? "page" : undefined}>
         {item.venue ? <VenueAvatar venue={item.venue} /> : Icon && <Icon aria-hidden />}
         <span className="nav-label">{item.label}</span>
-        {item.badge && <span className="badge badge-pro">{item.badge}</span>}
+        {item.badge && <span className="nav-pro">{item.badge}</span>}
       </Link>
     </li>
   );
@@ -132,6 +133,10 @@ function VenueSwitcher({ venues, current }: { venues: ShellVenue[]; current: str
   return (
     <div className="venue-switch">
       <VenueAvatar venue={active} name={active ? undefined : "All venues"} />
+      <span className="venue-switch-text" aria-hidden>
+        <strong>{active ? active.name : current ? "Another venue" : "All venues"}</strong>
+        {active?.planLabel && <span>{active.planLabel}</span>}
+      </span>
       <select
         aria-label="Switch venue"
         value={active ? active.id : ""}
@@ -214,12 +219,11 @@ export function AppShell({ mode, venues, user, children }: { mode: "venue" | "ad
   }, [open]);
 
   const venueId = mode === "venue" ? (params.venueId ?? "") : "";
-  const current = venues.find((venue) => venue.id === venueId);
   const groups: NavGroup[] =
     mode === "admin"
       ? ADMIN_NAV
       : venueId
-        ? venueNav(`/dashboard/${venueId}`, current ? current.isPro : null)
+        ? venueNav(`/dashboard/${venueId}`)
         : [
             {
               label: "Your venues",

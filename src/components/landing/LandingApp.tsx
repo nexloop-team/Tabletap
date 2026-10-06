@@ -67,6 +67,13 @@ function focusFeedbackKeepingKeyboard() {
   }, 500);
 }
 
+/** "2026-10-12" → "12 Oct" in the guest's language. */
+function shortDate(isoDay: string, locale: Locale): string {
+  const date = new Date(`${isoDay}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDay;
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(date);
+}
+
 function Header({ venue }: { venue: PublicVenue }) {
   const cover = safeImageUrl(venue.branding.coverImageUrl);
   const logo = safeImageUrl(venue.branding.logoUrl);
@@ -372,15 +379,16 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
           {venue.announcement?.text && (
             <p className="announcement" role="note">
               <Megaphone aria-hidden />
-              <span>{venue.announcement.text}</span>
+              <span className="announcement-text">{venue.announcement.text}</span>
+              {venue.announcement.until && <span className="announcement-until">{tf("announcement_until", { date: shortDate(venue.announcement.until, locale) })}</span>}
             </p>
           )}
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
           {venue.showPoweredBy !== false && (
-            <Link className="powered-by" href="/" aria-label={tf("powered_by", { brand: BRAND.name })}>
+            <Link className="powered-by" href="/">
               <BrandMark />
-              {BRAND.name}
+              {tf("powered_by", { brand: BRAND.name })}
             </Link>
           )}
         </main>

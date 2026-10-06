@@ -7,7 +7,7 @@ import { wifiView } from "@/lib/venue/features";
 import { useLanding } from "../LandingContext";
 
 /** A button whose label flashes "Copied!" / "Failed" for 1.5s after a tap. */
-function CopyButton({ label, value, event, disabled }: { label: string; value: string; event: string; disabled?: boolean }) {
+function CopyButton({ label, value, event, disabled, primary }: { label: string; value: string; event: string; disabled?: boolean; primary?: boolean }) {
   const { t, track } = useLanding();
   const [flash, setFlash] = useState<MessageKey | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -27,8 +27,8 @@ function CopyButton({ label, value, event, disabled }: { label: string; value: s
   }
 
   return (
-    <button type="button" className="sheet-btn" onClick={copy} disabled={disabled} aria-live="polite">
-      {flash ? t(flash) : label}
+    <button type="button" className={`copy-btn${primary ? " primary" : ""}`} onClick={copy} disabled={disabled} aria-label={flash ? undefined : label} aria-live="polite">
+      {flash ? t(flash) : t("copy")}
     </button>
   );
 }
@@ -71,26 +71,27 @@ export function WifiCredentials() {
 
   return (
     <>
-      <div className="field">
-        <span className="field-label">{t("network_ssid")}</span>
-        <span className="field-value">{wifi.ssid}</span>
-      </div>
-      <div className="field">
-        <span className="field-label">{t("security")}</span>
-        <span className="field-value">{securityDisplay}</span>
-      </div>
-      <div className="field">
-        <span className="field-label">{t("password")}</span>
-        <span className="field-value">{passwordDisplay}</span>
-      </div>
-      <div className="sheet-actions">
+      <div className="copy-row">
+        <span className="copy-row-text">
+          <span className="copy-row-label">{t("network_ssid")}</span>
+          <span className="copy-row-value">{wifi.ssid}</span>
+        </span>
         <CopyButton label={t("copy_ssid")} value={wifi.ssid} event="wifi_copy_ssid" />
-        <CopyButton label={t("copy_password")} value={wifi.password} event="wifi_copy_password" disabled={!wifi.canCopyPassword} />
-        <button type="button" className="sheet-btn" onClick={openSettings}>
-          {t("open_wifi_settings")}
-        </button>
       </div>
-      <div className="hint-box">{wifi.isOpen ? t("wifi_open_hint") : t("wifi_password_hint")}</div>
+      <div className="copy-row">
+        <span className="copy-row-text">
+          <span className="copy-row-label">
+            {t("password")}
+            {wifi.security && ` · ${securityDisplay}`}
+          </span>
+          <span className={`copy-row-value${wifi.canCopyPassword ? " mono" : ""}`}>{passwordDisplay}</span>
+        </span>
+        {wifi.canCopyPassword && <CopyButton label={t("copy_password")} value={wifi.password} event="wifi_copy_password" primary />}
+      </div>
+      <button type="button" className="sheet-btn wifi-settings-btn" onClick={openSettings}>
+        {t("open_wifi_settings")}
+      </button>
+      <p className="sheet-footnote">{wifi.isOpen ? t("wifi_open_hint") : t("wifi_password_hint")}</p>
     </>
   );
 }

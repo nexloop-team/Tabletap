@@ -1,9 +1,7 @@
 "use client";
 
-import { QrCode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { InviteFriend } from "@/components/card/InviteFriend";
-import { FilledHeart } from "@/components/icons";
 import { api, ApiRequestError } from "@/lib/api/client";
 import type { MemberCardView } from "@/lib/api/contracts";
 import { deviceMemory, type CardCredentials } from "@/lib/browser";
@@ -18,10 +16,9 @@ const MAX_DRAWN_STAMPS = 20;
  * stamp added at the till shows up straight away.
  */
 export function MyCard({ credentials, active = true, onMissing }: { credentials: CardCredentials; active?: boolean; onMissing?: () => void }) {
-  const { venue, t, tf, track } = useLanding();
+  const { venue, t, tf } = useLanding();
   const [card, setCard] = useState<MemberCardView | null>(null);
   const [failed, setFailed] = useState(false);
-  const [showCode, setShowCode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const known = useRef<number | null>(null);
 
@@ -60,8 +57,9 @@ export function MyCard({ credentials, active = true, onMissing }: { credentials:
 
   if (!card) return <p className="sub-text my-card-status">{failed ? t("card_not_found") : t("loading")}</p>;
 
-  const next = card.tiers.find((tier) => !tier.unlocked);
   const ready = [...card.tiers].reverse().find((tier) => tier.unlocked);
+  const stamped = Math.min(card.stamps, card.goal);
+  const left = card.goal - stamped;
 
   return (
     <div className="my-card">
@@ -70,61 +68,46 @@ export function MyCard({ credentials, active = true, onMissing }: { credentials:
           {toast}
         </div>
       )}
-      <p className="my-card-holder">{card.holder ? tf("card_greeting", { name: card.holder }) : t("card_title")}</p>
+      <div className="my-card-head">
+        <span className="my-card-holder">
+          {card.holder ? tf("card_greeting", { name: card.holder }) : t("card_title")}
+          {card.goal > 0 && ` · ${tf("card_progress", { stamps: stamped, required: card.goal })}`}
+        </span>
+        {card.goal > 0 && left > 0 && <span className="my-card-left">{tf("card_to_go", { count: left })}</span>}
+      </div>
 
-      {card.goal > 0 && (
-        <>
-          {card.goal <= MAX_DRAWN_STAMPS && (
-            <ol
-              className="stamp-grid"
-              style={{ gridTemplateColumns: `repeat(${Math.min(card.goal, 5)}, minmax(0, 56px))`, justifyContent: "center" }}
-              aria-label={tf("card_progress", { stamps: Math.min(card.stamps, card.goal), required: card.goal })}>
-              {Array.from({ length: card.goal }, (_, i) => (
-                <li key={i} className={i < card.stamps ? "filled" : ""}>
-                  {i < card.stamps ? <FilledHeart /> : i + 1}
-                </li>
-              ))}
-            </ol>
-          )}
-          <p className="member-card-progress">{tf("card_progress", { stamps: Math.min(card.stamps, card.goal), required: card.goal })}</p>
-          {ready && <p className="member-card-ready">{tf("card_reward_ready", { reward: ready.rewardName })}</p>}
-          {next && !ready && <p className="sub-text">{tf("card_next_reward", { count: next.stampsRequired - card.stamps, reward: next.rewardName })}</p>}
-          {card.tiers.length > 1 && (
-            <ul className="tier-list">
-              {card.tiers.map((tier) => (
-                <li key={`${tier.rewardName}-${tier.stampsRequired}`} className={tier.unlocked ? "unlocked" : ""}>
-                  <span>{tier.rewardName}</span>
-                  <span>{tier.unlocked ? t("card_unlocked") : `${tier.stampsRequired}`}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+      {card.goal > 0 && card.goal <= MAX_DRAWN_STAMPS && (
+        <ol className="stamp-dots" aria-label={tf("card_progress", { stamps: stamped, required: card.goal })}>
+          {Array.from({ length: card.goal }, (_, i) => (
+            <li key={i} className={i < card.stamps ? "on" : ""}>
+              {i < card.stamps && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {ready && <p className="member-card-ready">{tf("card_reward_ready", { reward: ready.rewardName })}</p>}
+
+      {card.tiers.length > 0 && card.goal > 0 && (
+        <ul className="tier-ladder">
+          {card.tiers.map((tier) => (
+            <li key={`${tier.rewardName}-${tier.stampsRequired}`} className={tier.unlocked ? "ready" : ""}>
+              <span className="tier-dot">{tier.stampsRequired}</span>
+              <span className="tier-name">{tier.rewardName}</span>
+              <span className="tier-state">{tier.unlocked ? t("card_tier_ready") : tf("card_tier_to_go", { count: tier.stampsRequired - card.stamps })}</span>
+            </li>
+          ))}
+        </ul>
       )}
 
       {card.staffQrSvg && (
         <div className="card-staff">
-          {showCode ? (
-            <>
-              <div className="card-staff-qr" dangerouslySetInnerHTML={{ __html: card.staffQrSvg }} />
-              <p className="sub-text">{t("card_staff_hint")}</p>
-              <button type="button" className="card-staff-btn secondary" onClick={() => setShowCode(false)}>
-                {t("card_hide_staff")}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="card-staff-btn"
-              onClick={() => {
-                setShowCode(true);
-                track("card_staff_code_shown", { context: "landing" });
-              }}
-            >
-              <QrCode aria-hidden />
-              {t("card_show_staff")}
-            </button>
-          )}
+          <span className="card-staff-label">{t("card_show_staff")}</span>
+          <div className="card-staff-qr" dangerouslySetInnerHTML={{ __html: card.staffQrSvg }} />
+          <p className="sheet-footnote">{t("card_staff_hint")}</p>
         </div>
       )}
 

@@ -5,45 +5,37 @@ import { enrolEmailCopy } from "@/lib/landing-copy";
 import { isPlausibleEmail } from "@/lib/validation";
 import { birthdayAskOn, consentAskOn } from "@/lib/venue/features";
 import type { LoyaltyProgram } from "@/lib/venue/types";
-import { FilledHeart } from "../../icons";
 import { useSheet } from "../FeatureCard";
-import { BirthdayFields, ConsentLine, EMPTY_BIRTHDAY, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
+import { BirthdayFields, ConsentLine, EMPTY_BIRTHDAY, Field, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
 import { useLanding } from "../LandingContext";
 import { useStampJoin } from "../useJoin";
 
-const TIER_COLORS = ["#FF9F0A", "#D94D66", "#5B8DEF", "#34C759", "#AF52DE"];
-
-function lowerFirst(value: string) {
-  return value.charAt(0).toLowerCase() + value.slice(1);
+/** "Free hot drink" → "hot drink", so the sentence reads "your hot drink is on us". */
+function rewardNoun(value: string) {
+  const noun = value.replace(/^free\s+/i, "");
+  return noun.charAt(0).toLowerCase() + noun.slice(1);
 }
 
+/** One line on how the card works, then the reward ladder when there's more than one reward. */
 export function RewardsSummary({ program }: { program: LoyaltyProgram }) {
-  const { t, tf } = useLanding();
+  const { tf } = useLanding();
   const tiers = program.rewardTiers ?? [];
-  if (tiers.length > 1) {
-    const count = tiers.length;
-    return (
-      <>
-        <p>{t("collect_stamps_rewards")}</p>
-        <div className={`rewards-grid count-${count}`}>
-          {tiers.map((tier, i) => {
-            const color = TIER_COLORS[i % TIER_COLORS.length];
-            // With an odd count the last (biggest) reward spans the full row.
-            const featured = count % 2 === 1 && count > 1 && i === count - 1;
-            return (
-              <div key={`${tier.rewardName}-${i}`} className={`reward-card${featured ? " featured" : ""}`}>
-                <div className="reward-card-num" style={{ background: `${color}22`, color }}>
-                  {tier.stampsRequired}
-                </div>
-                <div className="reward-card-name">{tier.rewardName}</div>
-              </div>
-            );
-          })}
-        </div>
-      </>
-    );
-  }
-  return <p>{tf("collect_stamps_single", { stamps: program.stampsRequired, reward: lowerFirst(program.rewardName) })}</p>;
+  const top = tiers.length > 0 ? tiers[tiers.length - 1] : { stampsRequired: program.stampsRequired, rewardName: program.rewardName };
+  return (
+    <>
+      <p className="sheet-intro">{tf("loyalty_join_intro", { stamps: top.stampsRequired, reward: rewardNoun(top.rewardName) })}</p>
+      {tiers.length > 1 && (
+        <ul className="tier-ladder">
+          {tiers.map((tier, i) => (
+            <li key={`${tier.rewardName}-${i}`}>
+              <span className="tier-dot">{tier.stampsRequired}</span>
+              <span className="tier-name">{tier.rewardName}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
 }
 
 /** The stamp-card join on the home card. */
@@ -103,13 +95,7 @@ export function LoyaltySheet() {
 
   return (
     <div className="sheet-inner">
-      <div className="loyalty-header">
-        <div className="loyalty-icon">
-          <FilledHeart />
-        </div>
-        <h3>{venue.name || t("loyalty_program")}</h3>
-        <RewardsSummary program={program} />
-      </div>
+      <RewardsSummary program={program} />
       <form
         className="form-stack"
         noValidate
@@ -118,11 +104,15 @@ export function LoyaltySheet() {
           void submit();
         }}
       >
-        <input className="text-input" type="text" placeholder={t("your_name")} autoComplete="name" autoCorrect="off" value={name} onChange={(e) => setName(e.target.value)} aria-label={t("your_name")} />
-        <input className="text-input" type="email" placeholder={t("email_address")} autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("email_address")} />
+        <Field label={t("your_name")}>
+          <input className="text-input" type="text" autoComplete="name" autoCorrect="off" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={t("email_address")}>
+          <input className="text-input" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
         {showBirthday && (
           <div className="birthday-block">
-            <p className="sub-text">{t("birthday_join_label")}</p>
+            <p className="g-field-label">{t("birthday_optional")}</p>
             <BirthdayFields value={birthday} onChange={setBirthday} />
           </div>
         )}
@@ -130,6 +120,7 @@ export function LoyaltySheet() {
         <button type="submit" className={`primary-btn${busy ? " busy" : ""}`} disabled={!valid || busy}>
           {busy ? t("enrolling") : t("join_loyalty")}
         </button>
+        <p className="sheet-footnote">{t("loyalty_member_hint")}</p>
       </form>
       {error && (
         <p className="form-error" role="alert" style={{ marginTop: 10 }}>

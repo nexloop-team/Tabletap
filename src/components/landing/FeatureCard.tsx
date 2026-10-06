@@ -1,14 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { createContext, useCallback, useContext, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 
-/** 44px tinted circle: the feature colour at ~15% behind the glyph in full colour. */
+/**
+ * 44px tinted circle: the feature colour behind the glyph in full colour. The
+ * wash is stronger on dark cards (--icon-soft, set by the theme) so it still reads.
+ */
 export function IconCircle({ tint, children }: { tint: string | null; children: ReactNode }) {
-  const style = tint
-    ? { background: `${tint}26`, color: tint }
-    : { background: "var(--card-bg, #fff)", border: "1px solid rgba(128,128,128,0.15)" };
   return (
-    <span className="icon-circle" style={style}>
+    <span className={`icon-circle${tint ? "" : " neutral"}`} style={tint ? ({ "--tint": tint } as CSSProperties) : undefined}>
       {children}
     </span>
   );
@@ -18,19 +19,17 @@ interface RowProps {
   label: string;
   icon: ReactNode;
   tint: string | null;
-  chevron?: boolean;
+  /** "down" for cards that expand in place, "right" for cards that go somewhere. */
+  chevron?: "down" | "right" | false;
 }
 
-function RowContent({ label, icon, tint, chevron = true }: RowProps) {
+function RowContent({ label, icon, tint, chevron = "right" }: RowProps) {
+  const Chevron = chevron === "down" ? ChevronDown : ChevronRight;
   return (
     <>
       <IconCircle tint={tint}>{icon}</IconCircle>
       <span className="feature-label">{label}</span>
-      {chevron && (
-        <span className="chevron" aria-hidden>
-          ›
-        </span>
-      )}
+      {chevron && <Chevron className={`chevron chevron-${chevron}`} aria-hidden strokeWidth={2} />}
     </>
   );
 }
@@ -82,7 +81,7 @@ export function ExpandableCard({ feature, label, icon, tint, onToggle, lazy = fa
   return (
     <div className="feature-wrapper" ref={wrapperRef} data-feature={feature}>
       <button type="button" className="feature-card" aria-expanded={isOpen} aria-controls={sheetId} onClick={toggle}>
-        <RowContent label={label} icon={icon} tint={tint} />
+        <RowContent label={label} icon={icon} tint={tint} chevron="down" />
       </button>
       <section id={sheetId} className={`sheet${isOpen ? " open" : ""}`} aria-label={label} inert={!isOpen}>
         <div className="sheet-clip">

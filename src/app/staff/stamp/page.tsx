@@ -14,11 +14,9 @@ export default async function StaffStampPage({ searchParams }: PageProps<"/staff
   const device = await currentStaffDevice();
   if (!device) {
     return (
-      <section className="card">
-        <h1 style={{ fontSize: 22 }}>This isn&apos;t a staff device</h1>
-        <p className="muted" style={{ marginTop: 8 }}>
-          Only the venue&apos;s paired till devices can add stamps. If you&apos;re a guest, show this code to a member of staff.
-        </p>
+      <section className="till-message">
+        <h1>This isn&apos;t a staff device</h1>
+        <p>Only the venue&apos;s paired till devices can add stamps. If you&apos;re a guest, show this code to a member of staff.</p>
       </section>
     );
   }
@@ -29,25 +27,16 @@ export default async function StaffStampPage({ searchParams }: PageProps<"/staff
   } catch (error) {
     if (!(error instanceof ServiceError)) throw error;
     return (
-      <section className="card">
-        <h1 style={{ fontSize: 22 }}>Can&apos;t open this card</h1>
-        <p className="muted" style={{ marginTop: 8 }}>{error.message}</p>
-        <Link className="btn" href="/staff" style={{ marginTop: 16 }}>
+      <section className="till-message">
+        <h1>Can&apos;t open this card</h1>
+        <p>{error.message}</p>
+        <ScanCardButton label="Scan another card" />
+        <Link className="staff-btn staff-btn-secondary" href="/staff">
           Back
         </Link>
       </section>
     );
   }
 
-  return (
-    <>
-      <StaffCardPanel key={view.cardId} initial={view} />
-      <div className="stack" style={{ marginTop: 14 }}>
-        <ScanCardButton label="Scan the next card" primary={false} />
-        <Link className="btn btn-ghost btn-block" href="/staff">
-          Done
-        </Link>
-      </div>
-    </>
-  );
+  return <StaffCardPanel key={view.cardId} initial={view} />;
 }

@@ -5,7 +5,7 @@ import { api } from "@/lib/api/client";
 import { cardCredentialsFromUrl, type CardCredentials } from "@/lib/browser";
 import { enrolEmailCopy } from "@/lib/landing-copy";
 import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
-import { SuccessPanel, WalletActions } from "../forms";
+import { Field, SuccessPanel, WalletActions } from "../forms";
 import { useLanding } from "../LandingContext";
 import { MyCard } from "../loyalty/MyCard";
 import { useStampJoin } from "../useJoin";
@@ -107,8 +107,12 @@ export function FreeStampJoin() {
           void submit();
         }}
       >
-        <input className="text-input" type="text" placeholder={t("your_name")} autoComplete="name" autoCorrect="off" value={name} onChange={(e) => setName(e.target.value)} aria-label={t("your_name")} />
-        <input className="text-input" type="email" placeholder={t("email_address")} autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("email_address")} />
+        <Field label={t("your_name")}>
+          <input className="text-input" type="text" autoComplete="name" autoCorrect="off" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={t("email_address")}>
+          <input className="text-input" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
         <button type="submit" className={`primary-btn${busy ? " busy" : ""}`} disabled={!valid || busy}>
           {busy ? t("enrolling") : t("join_free_stamp")}
         </button>

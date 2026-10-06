@@ -6,7 +6,7 @@ import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { compressImage } from "@/lib/browser";
 import type { VenueConfig } from "@/lib/venue/schema";
 import { useConfirm } from "./confirm";
-import { Card, UpgradeHint } from "./ui";
+import { UpgradeHint } from "./ui";
 
 type Section = VenueConfig["menus"][number]["sections"][number];
 
@@ -48,16 +48,34 @@ export function MenuAiTools({
   const [busy, setBusy] = useState<"import" | "explain" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<{ sections: Section[]; flaggedItemIds: string[] } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [drafts, setDrafts] = useState<{ itemId: string; name: string; explainer: string; keep: boolean }[] | null>(null);
 
   const items = sections.flatMap((section) => section.items);
   const unexplained = items.filter((item) => item.name.trim() && !item.explainer);
 
+  const intro = (
+    <div className="ai-intro">
+      <span className="ai-icon" aria-hidden>
+        <Sparkles />
+      </span>
+      <div>
+        <strong className="ai-title">
+          Import from a photo{importLimits.pdf ? " or PDF" : ""} <span className="nav-pro">Pro</span>
+        </strong>
+        <p>Snap your printed menu. We&apos;ll read the dishes, prices and allergens, and you check them before anything goes live.</p>
+      </div>
+    </div>
+  );
+
   if (ai === "upgrade") {
     return (
-      <Card title="AI helpers" description="Photograph your paper menu and we'll type it in for you, and explain dishes guests might not know.">
-        <UpgradeHint venueId={venueId}>AI menu import and dish explanations are part of Pro.</UpgradeHint>
-      </Card>
+      <section className="card ai-card">
+        {intro}
+        <div className="ai-drop">
+          <UpgradeHint venueId={venueId}>AI menu import and dish explanations are part of Pro.</UpgradeHint>
+        </div>
+      </section>
     );
   }
 
@@ -106,16 +124,43 @@ export function MenuAiTools({
   const importedCount = imported?.sections.reduce((n, s) => n + s.items.length, 0) ?? 0;
 
   return (
-    <Card title="AI helpers" description="Drafts only: nothing reaches guests until you review it and save.">
-      <div className="inline">
-        <button type="button" className="btn" disabled={!!busy} onClick={() => fileInput.current?.click()}>
-          {busy === "import" ? <Loader2 className="spin" aria-hidden /> : <FileUp aria-hidden />}
-          {busy === "import" ? "Reading your menu…" : importLimits.pdf ? "Import from photo or PDF" : "Import from photos"}
-        </button>
-        <button type="button" className="btn" disabled={!!busy || unexplained.length === 0} onClick={runExplain}>
-          {busy === "explain" ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />}
-          {busy === "explain" ? "Thinking…" : "Explain unusual dishes"}
-        </button>
+    <section className="card ai-card">
+      {intro}
+      <div
+        className={`ai-drop${dragging ? " dragging" : ""}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!busy) setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const files = Array.from(event.dataTransfer.files);
+          if (files.length && !busy) void runImport(files);
+        }}
+      >
+        {busy === "import" ? (
+          <>
+            <div className="spread">
+              <strong>Reading your menu…</strong>
+              <Loader2 className="spin" aria-hidden />
+            </div>
+            <div className="progress indeterminate" role="progressbar" aria-label="Reading your menu">
+              <div />
+            </div>
+            <span className="hint">This usually takes under a minute. Keep this page open.</span>
+          </>
+        ) : (
+          <>
+            <button type="button" className="btn" disabled={!!busy} onClick={() => fileInput.current?.click()}>
+              <FileUp aria-hidden /> {importLimits.pdf ? "Choose photos or a PDF" : "Choose photos"}
+            </button>
+            <span className="hint">
+              Or drop them here. Up to {importLimits.maxImages} clear, straight-on photos per import{importLimits.pdf ? ", or one PDF" : ""}.
+            </span>
+          </>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -128,14 +173,14 @@ export function MenuAiTools({
           }}
         />
       </div>
-      {busy === "import" ? (
-        <p className="hint" style={{ marginTop: 8 }}>This usually takes under a minute. Keep this page open.</p>
-      ) : (
-        <p className="hint" style={{ marginTop: 8 }}>
-          Up to {importLimits.maxImages} clear, straight-on photos per import{importLimits.pdf ? ", or one PDF" : ""}.
-        </p>
-      )}
-      {error && <p className="field-error" style={{ marginTop: 10 }}>{error}</p>}
+      <div className="ai-explain">
+        <span className="hint">Drafts only: nothing reaches guests until you review it and save.</span>
+        <button type="button" className="btn btn-sm" disabled={!!busy || unexplained.length === 0} onClick={runExplain}>
+          {busy === "explain" ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />}
+          {busy === "explain" ? "Thinking…" : "Explain unusual dishes"}
+        </button>
+      </div>
+      {error && <p className="field-error ai-wide">{error}</p>}
 
       {imported && (
         <div className="notice notice-info" style={{ display: "block", marginTop: 14 }}>
@@ -235,6 +280,6 @@ export function MenuAiTools({
           )}
         </div>
       )}
-    </Card>
+    </section>
   );
 }

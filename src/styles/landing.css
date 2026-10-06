@@ -36,9 +36,9 @@
 
 .header-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 14px;
-  padding: 4px 16px 0;
+  padding: 0 16px;
   position: relative;
   z-index: 2;
 }
@@ -49,7 +49,8 @@
   text-align: center;
 }
 .header-row.no-cover {
-  padding-top: 16px;
+  padding-top: 28px;
+  align-items: center;
 }
 .logo-circle {
   width: 100px;
@@ -58,8 +59,8 @@
   overflow: hidden;
   flex-shrink: 0;
   margin-top: -55px;
-  border: 3px solid var(--logo-border-color, var(--page-bg));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 4px solid var(--logo-border-color, var(--page-bg));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   background: var(--card-bg);
   position: relative;
   z-index: 3;
@@ -75,17 +76,19 @@
 }
 .header-text {
   min-width: 0;
+  padding-bottom: 8px;
 }
 .header-text h1 {
   font-size: 22px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
   word-wrap: break-word;
 }
 .header-text .tagline {
   font-size: 15px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 3px;
   line-height: 1.3;
 }
 
@@ -114,22 +117,22 @@
 .feature-grid {
   display: grid;
   grid-template-columns: 1fr;
-  padding: 20px 16px 16px;
+  gap: 12px;
+  padding: 18px 16px 0;
 }
 .feature-wrapper {
   border-radius: 16px;
   background: var(--card-bg);
-  box-shadow: 0 3px 6px var(--card-shadow);
-  border: 0.5px solid var(--card-border);
+  box-shadow: var(--card-elevation, 0 3px 6px var(--card-shadow));
   overflow: hidden;
-  margin-bottom: 12px;
   color: var(--card-text-primary, var(--text-primary));
 }
 .feature-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
+  min-height: 72px;
   padding: 14px 16px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -152,27 +155,29 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--tint);
+  background: color-mix(in srgb, var(--tint) var(--icon-soft, 14%), transparent);
 }
 .icon-circle svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 .feature-label {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.3;
   flex: 1;
   min-width: 0;
 }
 .chevron {
+  width: 18px;
+  height: 18px;
   color: var(--card-text-tertiary, var(--text-tertiary));
-  font-size: 16px;
-  font-weight: 600;
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
 .feature-card[aria-expanded="true"] .chevron {
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 [dir="rtl"] .chevron {
   transform: scaleX(-1);
@@ -192,21 +197,22 @@
   min-height: 0;
 }
 .sheet.open > .sheet-clip {
-  border-top: 0.5px solid var(--separator);
+  border-top: 0;
 }
 .sheet-inner {
-  padding: 16px;
+  padding: 2px 16px 18px;
 }
 
 /* ───────────────────────── Shared controls ───────────────────────── */
 
 .sheet-btn {
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--separator);
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 0;
   background: var(--input-bg);
   color: var(--card-text-primary, var(--text-primary));
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -217,11 +223,13 @@
 }
 .primary-btn {
   width: 100%;
-  padding: 15px;
+  min-height: 52px;
+  padding: 14px;
   border-radius: 12px;
   border: 0;
-  background: var(--loyalty-rose);
-  color: #fff;
+  /* Inverted card colours: readable on any venue colour, never a fixed accent. */
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
   font-size: 17px;
   font-weight: 600;
   cursor: pointer;
@@ -239,13 +247,14 @@
 .form-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 .text-input {
   width: 100%;
-  padding: 14px;
+  height: 48px;
+  padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid var(--input-border);
+  border: 0;
   background: var(--input-bg);
   color: var(--card-text-primary, var(--text-primary));
   font-size: 16px;
@@ -254,7 +263,7 @@
   appearance: none;
 }
 .text-input:focus {
-  border-color: var(--loyalty-rose);
+  box-shadow: 0 0 0 2px var(--card-text-tertiary, var(--text-tertiary));
 }
 .text-input::placeholder {
   color: var(--card-text-tertiary, var(--text-tertiary));
@@ -277,7 +286,8 @@
 .consent-line {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
+  min-height: 44px;
   font-size: 14px;
   line-height: 1.4;
   text-align: start;
@@ -285,11 +295,11 @@
   cursor: pointer;
 }
 .consent-line input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  margin: 1px 0 0;
-  accent-color: var(--loyalty-rose);
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin: 0;
+  accent-color: var(--card-text-primary, var(--text-primary));
 }
 .consent-line a {
   color: inherit;
@@ -320,10 +330,12 @@
 }
 .birthday-row select {
   width: 100%;
-  padding: 12px;
+  height: 48px;
+  padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.12));
-  background: var(--card-bg, #fff);
+  border: 0;
+  background: var(--input-bg);
+  color: var(--card-text-primary, var(--text-primary));
   font-size: 16px;
 }
 .birthday-card h3 {
@@ -334,8 +346,12 @@
 /* ───────────────────────── Success panels ───────────────────────── */
 
 .success-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   text-align: center;
-  padding: 8px 0;
+  padding: 6px 0 2px;
   position: relative;
 }
 .success-panel .check-icon {
@@ -354,12 +370,13 @@
 .success-panel h3 {
   font-size: 18px;
   font-weight: 700;
-  margin: 0 0 6px;
+  margin: 8px 0 2px;
 }
 .success-panel p {
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--card-text-secondary, var(--text-secondary));
-  margin: 0 0 4px;
+  margin: 0;
 }
 .close-x {
   position: absolute;
@@ -383,12 +400,13 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 14px;
+  min-height: 48px;
+  padding: 12px;
   border-radius: 12px;
   border: 0;
-  background: #000;
-  color: #fff;
-  font-size: 16px;
+  background: var(--input-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 12px;
@@ -530,31 +548,33 @@
 }
 .feedback-textarea {
   width: 100%;
-  min-height: 120px;
-  padding: 14px;
+  min-height: 112px;
+  padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid var(--input-border);
+  border: 0;
   background: var(--input-bg);
   color: var(--card-text-primary, var(--text-primary));
   font-size: 16px;
+  line-height: 1.4;
   resize: vertical;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
 }
 .feedback-textarea:focus {
-  border-color: #5b8def;
+  box-shadow: 0 0 0 2px var(--card-text-tertiary, var(--text-tertiary));
 }
 .feedback-textarea::placeholder {
   color: var(--card-text-tertiary, var(--text-tertiary));
 }
 .feedback-submit-btn {
-  width: 100%;
-  padding: 15px;
+  flex: 1;
+  min-height: 52px;
+  padding: 14px;
   border-radius: 12px;
   border: 0;
-  background: var(--accent-blue);
-  color: #fff;
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
   font-size: 17px;
   font-weight: 600;
   cursor: pointer;
@@ -562,20 +582,20 @@
   -webkit-tap-highlight-color: transparent;
 }
 .feedback-submit-btn:disabled {
-  background: var(--card-text-tertiary, var(--text-tertiary));
+  opacity: 0.45;
   cursor: default;
 }
 .feedback-submit-btn.loading,
 .feedback-submit-btn.loading:disabled {
   color: transparent;
-  background: var(--accent-blue);
+  opacity: 1;
 }
 .spinner {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 3px solid color-mix(in srgb, var(--card-bg) 30%, transparent);
+  border-top-color: var(--card-bg);
   animation: spin 0.8s linear infinite;
   position: absolute;
   top: 50%;
@@ -597,34 +617,31 @@
   pointer-events: none;
 }
 .photo-trigger {
-  align-self: flex-start;
-  background: transparent;
-  border: 1px solid var(--input-border);
-  border-radius: 100px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--card-text-secondary, var(--text-secondary));
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .photo-trigger:hover {
-  border-color: #5b8def;
-  color: var(--card-text-primary, var(--text-primary));
+  background: color-mix(in srgb, var(--input-bg) 85%, var(--card-text-primary, #000));
 }
 .photo-trigger svg {
-  width: 18px;
-  height: 18px;
-  opacity: 0.85;
+  width: 20px;
+  height: 20px;
 }
 .photo-preview {
   position: relative;
+  flex-basis: 100%;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--input-border);
   background: var(--input-bg);
 }
 .photo-preview img {
@@ -662,13 +679,15 @@
   }
 }
 .review-prompt {
-  margin-top: 20px;
+  align-self: stretch;
+  margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--separator);
+  border-top: 0.5px solid var(--separator);
   text-align: start;
 }
 .review-prompt > p {
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--card-text-secondary, var(--text-secondary));
   margin: 0 0 12px;
 }
@@ -678,18 +697,19 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
+  min-height: 52px;
   padding: 14px;
   border-radius: 12px;
   border: 0;
-  background: #4285f4;
-  color: #fff;
-  font-size: 16px;
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .google-btn:hover {
-  background: #3367d6;
+  opacity: 0.9;
 }
 
 /* ───────────────────────── Social + footer ───────────────────────── */
@@ -697,40 +717,45 @@
 .social-links {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 10px;
   flex-wrap: wrap;
   margin-top: 14px;
 }
 .social-links.landing-row {
-  margin-top: -10px;
+  margin-top: 28px;
 }
 .social-links a {
-  display: block;
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--text-tint);
+  color: var(--text-primary);
 }
 .social-links svg {
-  width: 56px;
-  height: 56px;
-  display: block;
+  width: 22px;
+  height: 22px;
 }
 .powered-by {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 24px 16px 20px;
-  font-family: var(--font-wordmark), Georgia, serif;
-  font-size: 17px;
-  font-weight: 630;
-  letter-spacing: -0.006em;
-  color: var(--text-secondary);
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 16px 16px;
+  font-size: 13px;
+  color: var(--text-tertiary);
   text-decoration: none;
+  /* Monochrome mark: the venue colour shows through the tile. */
+  --mark-ink: var(--page-bg);
+  --mark-dot: var(--page-bg);
 }
 .powered-by svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ───────────────────────── Error view ───────────────────────── */
@@ -1087,23 +1112,361 @@
 /* Owner's announcement under the header, e.g. today's special */
 .announcement {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  margin: 4px 0 14px;
+  margin: 18px 16px 0;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--card-bg);
-  color: var(--card-text-primary, var(--text-primary));
-  border: 0.5px solid var(--card-border);
-  box-shadow: 0 3px 6px var(--card-shadow);
+  border-radius: 12px;
+  background: var(--text-tint);
+  color: var(--text-primary);
   font-size: 15px;
   line-height: 1.4;
-  font-weight: 500;
 }
 .announcement svg {
   flex: none;
   width: 20px;
   height: 20px;
-  margin-top: 1px;
-  color: var(--loyalty-rose);
+}
+
+.announcement-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.announcement-until {
+  flex: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ───────────────────────── Guest form pieces ───────────────────────── */
+
+.icon-circle.neutral {
+  color: var(--card-text-primary, var(--text-primary));
+  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 10%, transparent);
+}
+.sheet-intro {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--card-text-secondary, var(--text-secondary));
+  margin-bottom: 14px;
+}
+.form-stack .sheet-intro {
+  margin-bottom: 0;
+}
+.sheet-footnote {
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--card-text-tertiary, var(--text-tertiary));
+}
+.g-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.g-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.check-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--success-green);
+  color: #fff;
+}
+.check-badge svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Reward ladder: join sheet and the member's card */
+.tier-ladder {
+  list-style: none;
+  border-radius: 12px;
+  background: var(--input-bg);
+  margin-bottom: 14px;
+}
+.tier-ladder li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.tier-dot {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 12%, transparent);
+}
+.tier-ladder li.ready .tier-dot {
+  background: var(--success-green);
+  color: #fff;
+}
+.tier-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.tier-state {
+  font-size: 13px;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+
+/* Wi-Fi: one row per value, copy on the right */
+.copy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  margin-bottom: 10px;
+}
+.copy-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.copy-row-label {
+  font-size: 12px;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.copy-row-value {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.copy-row-value.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.copy-btn {
+  flex: none;
+  min-width: 72px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--card-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.copy-btn.primary {
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
+}
+.copy-btn:disabled {
+  opacity: 0.4;
+}
+.wifi-settings-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* Feedback: photo and send side by side */
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Member card on the guest page */
+.my-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.my-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.my-card-holder {
+  font-size: 15px;
+  font-weight: 700;
+}
+.my-card-left {
+  flex: none;
+  font-size: 13px;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.stamp-dots {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.stamp-dots li {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed color-mix(in srgb, var(--card-text-primary, #1a1a1a) 35%, transparent);
+}
+.stamp-dots li.on {
+  border: 0;
+  background: var(--card-text-primary, var(--text-primary));
+  color: var(--card-bg);
+}
+.stamp-dots svg {
+  width: 40%;
+  height: 40%;
+}
+.my-card .tier-ladder {
+  margin-bottom: 0;
+}
+.my-card .member-card-ready {
+  margin-top: 0;
+}
+.my-card .card-staff {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.card-staff-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.my-card .card-staff-qr {
+  width: 174px;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.my-card .card-invite {
+  margin-top: 0;
+}
+
+/* ───────────────────────── Page states ───────────────────────── */
+
+.page-unavailable {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+.page-unavailable-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+}
+.page-unavailable-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.page-unavailable h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+.page-unavailable p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.page-unavailable p.page-unavailable-foot {
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.skeleton > * {
+  animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+.skeleton-cover {
+  height: 200px;
+  background: #f2f2f2;
+}
+.skeleton-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 16px;
+}
+.skeleton-logo {
+  width: 100px;
+  height: 100px;
+  flex: none;
+  margin-top: -55px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: #e6e6e6;
+}
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.skeleton-lines div {
+  height: 16px;
+  width: 70%;
+  border-radius: 6px;
+  background: #ebebeb;
+}
+.skeleton-lines div + div {
+  height: 12px;
+  width: 50%;
+  background: #f0f0f0;
+}
+.skeleton-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 16px;
+}
+.skeleton-cards div {
+  height: 72px;
+  border-radius: 16px;
+  background: #f4f4f4;
+}
+@keyframes skeleton-pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton > * {
+    animation: none;
+  }
+}
+
+/* "Check your inbox" after a join that needs email confirmation */
+.confirm-notice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--success-green) 14%, transparent);
+  color: var(--card-text-primary, var(--text-primary));
 }
