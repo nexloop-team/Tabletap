@@ -190,7 +190,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
   const current = activeSection ?? visibleSections[0]?.id ?? null;
 
   return (
-    <div className="menu-page landing" data-style={style ?? undefined}>
+    <div className="menu-page landing" data-style={style ?? undefined} data-layout={menu?.layout ?? "list"} data-header={branding.headerStyle ?? "cover"} data-shape={branding.buttonShape ?? "rounded"}>
       <main className="page-wrapper menu-body">
         <VenueHeader
           branding={branding}
@@ -322,10 +322,15 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
                         <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
                           <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
                             <span className="menu-item-text">
-                              <span className="menu-item-name">{item.name}</span>
+                              <span className="menu-item-head">
+                                <span className="menu-item-name">{item.name}</span>
+                                {/* The classic layout prints the price on the name line, with dotted leaders. */}
+                                <span className="menu-leader" aria-hidden />
+                                <span className="menu-price head-price">{formatPrice(item.priceInPence)}</span>
+                              </span>
                               {item.description && <span className="menu-desc">{item.description}</span>}
                               <span className="menu-item-foot">
-                                <span className="menu-price">{formatPrice(item.priceInPence)}</span>
+                                <span className="menu-price foot-price">{formatPrice(item.priceInPence)}</span>
                                 {!item.isAvailable && <span className="menu-tag sold-out">{t("menu_unavailable")}</span>}
                               </span>
                               {tagList(item)}

@@ -73,6 +73,7 @@ export const menuSchema = z.object({
   welcomeText: optionalText(200),
   primaryColorHex: hexColor,
   showCalories: z.boolean().nullish(),
+  layout: z.enum(["list", "photo", "classic"]).nullish(),
   sections: z.array(menuSectionSchema).max(50),
 });
 
@@ -97,6 +98,9 @@ export const brandingSchema = z.object({
   featureOrder: z.array(z.string().max(60)).max(40).optional(),
   hiddenFeatures: z.array(z.string().max(60)).max(40).optional(),
   featureLabels: z.partialRecord(z.enum(["loyalty", "menu", "wifi", "sudoku", "feedback", "google_review"]), z.string().trim().max(40)).optional(),
+  layout: z.enum(["list", "grid", "compact"]).nullish(),
+  headerStyle: z.enum(["cover", "centered", "minimal"]).nullish(),
+  buttonShape: z.enum(["rounded", "pill", "square"]).nullish(),
 });
 
 export const socialLinksSchema = z.object({

@@ -22,7 +22,7 @@ export default async function DesignPage({ params }: PageProps<"/dashboard/[venu
           </a>
         }
       />
-      <DesignEditor venueId={venue.id} shortCode={venue.shortCode} config={venue.config} canUseStyles={can.stylePresets} />
+      <DesignEditor venueId={venue.id} shortCode={venue.shortCode} config={venue.config} canUseStyles={can.stylePresets} canUseLayouts={can.layouts} />
     </>
   );
 }

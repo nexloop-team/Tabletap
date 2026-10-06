@@ -848,3 +848,124 @@
   font-size: 14.5px;
   line-height: 1.5;
 }
+
+/* ───────────────────────── Menu layouts (Pro) ─────────────────────────
+   data-layout on .menu-page: "list" (default), "photo" or "classic". */
+
+.menu-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+/* Only the classic layout prints the price on the name line. */
+.menu-leader,
+.menu-price.head-price {
+  display: none;
+}
+
+/* Photo: one card per dish, the photo full width on top. */
+.menu-page[data-layout="photo"] .menu-list {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+.menu-page[data-layout="photo"] .menu-item {
+  border-top: 0;
+  border-radius: var(--shape-card, 16px);
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: var(--card-elevation);
+}
+.menu-page[data-layout="photo"] .menu-item-open {
+  flex-direction: column-reverse;
+  gap: 0;
+  padding: 0;
+}
+.menu-page[data-layout="photo"] .menu-item-thumb {
+  width: 100%;
+  height: 190px;
+  border-radius: 0;
+}
+.menu-page[data-layout="photo"] .menu-item-text {
+  align-self: stretch;
+  padding: 14px 16px;
+}
+.menu-page[data-layout="photo"] .menu-desc {
+  -webkit-line-clamp: 3;
+}
+
+/* Classic: a printed menu. No cards or photos, centred section titles,
+   dotted leaders from each dish to its price. The list sits on the page
+   colour, so it borrows the page's text colours. */
+.menu-page[data-layout="classic"] .menu-list {
+  --card-bg: var(--page-bg);
+  --card-text-primary: var(--text-primary);
+  --card-text-secondary: var(--text-secondary);
+  --card-text-tertiary: var(--text-tertiary);
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+.menu-page[data-layout="classic"] .menu-section {
+  padding-top: 34px;
+}
+.menu-page[data-layout="classic"] .menu-section-head {
+  justify-content: center;
+  text-align: center;
+}
+.menu-page[data-layout="classic"] .menu-section-head h2 {
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.menu-page[data-layout="classic"] .menu-section-head h2::after {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 1px;
+  margin: 10px auto 0;
+  background: currentColor;
+  opacity: 0.4;
+}
+.menu-page[data-layout="classic"] .menu-section-head span {
+  display: none;
+}
+.menu-page[data-layout="classic"] .menu-section-desc {
+  text-align: center;
+  font-style: italic;
+}
+.menu-page[data-layout="classic"] .menu-item {
+  border-top: 0;
+}
+.menu-page[data-layout="classic"] .menu-item-open {
+  padding: 10px 0;
+}
+.menu-page[data-layout="classic"] .menu-item-thumb {
+  display: none;
+}
+.menu-page[data-layout="classic"] .menu-item-text {
+  align-items: stretch;
+  gap: 4px;
+}
+.menu-page[data-layout="classic"] .menu-leader {
+  display: block;
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 2px dotted color-mix(in srgb, var(--text-primary) 35%, transparent);
+  transform: translateY(-4px);
+}
+.menu-page[data-layout="classic"] .menu-price.head-price {
+  display: inline;
+}
+.menu-page[data-layout="classic"] .foot-price {
+  display: none;
+}
+.menu-page[data-layout="classic"] .menu-item-foot:not(:has(.sold-out)) {
+  display: none;
+}
+.menu-page[data-layout="classic"] .menu-desc {
+  display: block;
+  font-style: italic;
+}

@@ -14,7 +14,12 @@ export function applyEntitlements(venue: PublicVenue, can: Entitlements): Public
         ? venue.loyaltyProgram
         : { ...venue.loyaltyProgram, referral: { ...venue.loyaltyProgram.referral, enabled: false } },
     crm: can.crm ? venue.crm : { enabled: false, consentAsk: false, wifiCapture: false, feedbackCapture: false, birthdayAsk: false },
-    branding: can.stylePresets ? venue.branding : { ...venue.branding, style: null },
+    branding: {
+      ...venue.branding,
+      style: can.stylePresets ? venue.branding.style : null,
+      ...(can.layouts ? {} : { layout: null, headerStyle: null, buttonShape: null }),
+    },
+    menus: can.layouts ? venue.menus : venue.menus.map((menu) => ({ ...menu, layout: null })),
     showPoweredBy: !can.removeBranding,
   };
 }

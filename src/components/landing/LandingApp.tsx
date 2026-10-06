@@ -336,7 +336,13 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
 
   return (
     <LandingContext.Provider value={session}>
-      <div className="landing" data-style={theme.style ?? undefined}>
+      <div
+        className="landing"
+        data-style={theme.style ?? undefined}
+        data-layout={venue.branding.layout ?? "list"}
+        data-header={venue.branding.headerStyle ?? "cover"}
+        data-shape={venue.branding.buttonShape ?? "rounded"}
+      >
         <main className="page-wrapper">
           <VenueHeader branding={venue.branding} name={venue.name} />
           {venue.announcement?.text && (

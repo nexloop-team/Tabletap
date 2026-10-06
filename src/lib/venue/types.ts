@@ -63,6 +63,8 @@ export interface Menu {
   primaryColorHex?: string | null;
   /** Print each item's kcal (required in some jurisdictions, optional elsewhere). */
   showCalories?: boolean | null;
+  /** Pro: rows with thumbnails ("list", the default), big photo cards, or a printed-menu look. */
+  layout?: MenuLayout | null;
   sections: MenuSection[];
 }
 
@@ -94,7 +96,18 @@ export interface VenueBranding {
   hiddenFeatures?: string[];
   /** The merchant's own wording for a core card, e.g. "Coffee club" for loyalty. */
   featureLabels?: Partial<Record<"loyalty" | "menu" | "wifi" | "sudoku" | "feedback" | "google_review", string>>;
+  /** Pro: how the cards are laid out. Absent means "list". */
+  layout?: PageLayout | null;
+  /** Pro: logo beside the name ("cover", the default), centred under the cover, or no logo circle. */
+  headerStyle?: HeaderStyle | null;
+  /** Pro: corner shape of cards and buttons. Absent means "rounded". */
+  buttonShape?: ButtonShape | null;
 }
+
+export type PageLayout = "list" | "grid" | "compact";
+export type HeaderStyle = "cover" | "centered" | "minimal";
+export type ButtonShape = "rounded" | "pill" | "square";
+export type MenuLayout = "list" | "photo" | "classic";
 
 export interface SocialLinks {
   google?: string | null;

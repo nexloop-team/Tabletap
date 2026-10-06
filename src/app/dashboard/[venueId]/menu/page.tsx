@@ -20,7 +20,7 @@ export default async function MenuPage({ params }: PageProps<"/dashboard/[venueI
           <ExternalLink aria-hidden /> View menu
         </a>
       </div>
-      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} ai={ai} importLimits={aiImportLimits()} />
+      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} ai={ai} importLimits={aiImportLimits()} canUseLayouts={can.layouts} />
     </>
   );
 }

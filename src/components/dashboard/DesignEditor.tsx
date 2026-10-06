@@ -1,12 +1,12 @@
 "use client";
 
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { GripVertical, LayoutGrid, List, Plus, Rows4, Trash2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { LINK_ICON_TOKENS } from "@/components/icons";
 import { STYLE_FONT_HREF } from "@/lib/theme";
 import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
-import type { PublicVenue } from "@/lib/venue/types";
+import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
 import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
@@ -36,6 +36,24 @@ const PRESETS = [
   { value: "editorial", label: "Editorial", font: "Petrona, Georgia, serif" },
   { value: "modern", label: "Modern", font: "Outfit, system-ui, sans-serif" },
 ] as const;
+
+const LAYOUTS: { value: PageLayout; label: string; hint: string; icon: LucideIcon }[] = [
+  { value: "list", label: "List", hint: "One card per row", icon: List },
+  { value: "grid", label: "Grid", hint: "Two tiles per row", icon: LayoutGrid },
+  { value: "compact", label: "Compact", hint: "Shorter rows", icon: Rows4 },
+];
+
+const HEADER_STYLES: { value: HeaderStyle; label: string }[] = [
+  { value: "cover", label: "Logo beside name" },
+  { value: "centered", label: "Centred" },
+  { value: "minimal", label: "No logo" },
+];
+
+const BUTTON_SHAPES: { value: ButtonShape; label: string }[] = [
+  { value: "rounded", label: "Rounded" },
+  { value: "pill", label: "Pill" },
+  { value: "square", label: "Square" },
+];
 
 /** The dot colour beside each card in the order list: the same tint the guest page uses. */
 const CARD_TINTS: Record<string, string> = {
@@ -96,11 +114,13 @@ export function DesignEditor({
   shortCode,
   config,
   canUseStyles,
+  canUseLayouts,
 }: {
   venueId: string;
   shortCode: string;
   config: VenueConfig;
   canUseStyles: boolean;
+  canUseLayouts: boolean;
 }) {
   const editor = useVenueDraft<Draft>(venueId, {
     branding: config.branding,
@@ -313,6 +333,70 @@ export function DesignEditor({
             </div>
           </div>
           {!canUseStyles && branding.style && <UpgradeHint venueId={venueId}>Typography presets show on your live page with Pro.</UpgradeHint>}
+        </Card>
+
+        <Card title={<>Layout {!canUseLayouts && <span className="nav-pro">Pro</span>}</>} description="How the cards and header are arranged. Colours always follow your background.">
+          <div className="field">
+            <span className="field-label" id="layout-label">
+              Cards
+            </span>
+            <div className="preset-grid" role="group" aria-labelledby="layout-label">
+              {LAYOUTS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className="preset"
+                  aria-pressed={(branding.layout ?? "list") === option.value}
+                  onClick={() => setBranding({ layout: option.value === "list" ? null : option.value })}
+                >
+                  <option.icon className="preset-icon" aria-hidden />
+                  <span>
+                    {option.label}
+                    <span className="preset-hint">{option.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="row">
+            <div className="field">
+              <span className="field-label" id="header-style-label">
+                Header
+              </span>
+              <div className="segmented" role="group" aria-labelledby="header-style-label">
+                {HEADER_STYLES.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={(branding.headerStyle ?? "cover") === option.value}
+                    onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="field">
+              <span className="field-label" id="shape-label">
+                Corners
+              </span>
+              <div className="segmented" role="group" aria-labelledby="shape-label">
+                {BUTTON_SHAPES.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={(branding.buttonShape ?? "rounded") === option.value}
+                    onClick={() => setBranding({ buttonShape: option.value === "rounded" ? null : option.value })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {!canUseLayouts && (branding.layout || branding.headerStyle || branding.buttonShape) && (
+            <UpgradeHint venueId={venueId}>Layouts show on your live page with Pro. Your choice is saved for when you upgrade.</UpgradeHint>
+          )}
         </Card>
 
         <Card title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">

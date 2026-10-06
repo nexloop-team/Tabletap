@@ -3464,6 +3464,23 @@ body:has(.app) {
   margin: -6px 0 4px;
 }
 
+.preset-icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+  color: var(--a-text-2);
+}
+.preset[aria-pressed="true"] .preset-icon {
+  color: var(--a-accent);
+}
+.preset-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--a-text-3);
+}
+
 /* ───────────────────────── Print (table tents) ───────────────────────── */
 
 /* A4 sheets of four A6 cards. On screen each sheet is a white page that

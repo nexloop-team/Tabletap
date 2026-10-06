@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowDown, ArrowUp, GripVertical, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Image as ImageIcon, List, Loader2, Plus, ScrollText, Sparkles, Trash2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
+import type { MenuLayout } from "@/lib/venue/types";
 import { useConfirm } from "./confirm";
 import { MenuAiTools } from "./MenuAiTools";
-import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField } from "./ui";
+import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField, UpgradeHint } from "./ui";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -26,6 +27,12 @@ const BUTTON_LABELS: Record<(typeof LINK_LABEL_TOKENS)[number], string> = {
   order_online: "Order online",
 };
 
+const MENU_LAYOUTS: { value: MenuLayout; label: string; hint: string; icon: LucideIcon }[] = [
+  { value: "list", label: "List", hint: "Rows with small photos", icon: List },
+  { value: "photo", label: "Photo cards", hint: "Big photo per dish", icon: ImageIcon },
+  { value: "classic", label: "Classic", hint: "Like a printed menu", icon: ScrollText },
+];
+
 function move<T>(list: T[], index: number, delta: number): T[] {
   const target = index + delta;
   if (target < 0 || target >= list.length) return list;
@@ -44,10 +51,13 @@ export function MenuEditor({
   currencyCode,
   ai,
   importLimits,
+  canUseLayouts,
 }: {
   venueId: string;
   menus: VenueConfig["menus"];
   currencyCode: string;
+  /** Pro: menu layout presets. */
+  canUseLayouts: boolean;
   /** "upgrade": shown with an upgrade hint; "off": AI isn't configured on this server. */
   ai: "on" | "upgrade" | "off";
   importLimits: { maxImages: number; pdf: boolean };
@@ -145,6 +155,29 @@ export function MenuEditor({
             ) : (
               <>
                 <TextField label="Welcome note" value={menu.welcomeText} onChange={(value) => setMenu({ welcomeText: value })} placeholder="Food served 12 – 9pm" maxLength={200} />
+                <div className="field">
+                  <span className="field-label" id="menu-layout-label">
+                    Layout {!canUseLayouts && <span className="nav-pro">Pro</span>}
+                  </span>
+                  <div className="preset-grid" role="group" aria-labelledby="menu-layout-label">
+                    {MENU_LAYOUTS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className="preset"
+                        aria-pressed={(menu.layout ?? "list") === option.value}
+                        onClick={() => setMenu({ layout: option.value === "list" ? null : option.value })}
+                      >
+                        <option.icon className="preset-icon" aria-hidden />
+                        <span>
+                          {option.label}
+                          <span className="preset-hint">{option.hint}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {!canUseLayouts && menu.layout && <UpgradeHint venueId={venueId}>Menu layouts show on your live menu with Pro. Your choice is saved for when you upgrade.</UpgradeHint>}
+                </div>
                 <SwitchRow title="Show calories" description="Print each item's kcal where you've entered it." checked={!!menu.showCalories} onChange={(on) => setMenu({ showCalories: on })} />
               </>
             )}

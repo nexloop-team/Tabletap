@@ -44,7 +44,24 @@ describe("entitlements", () => {
     expect(free.branding.style).toBeNull();
     expect(free.showPoweredBy).toBe(true);
     expect(free.wifi).toEqual(venue.wifi);
-    expect(free.menus).toBe(venue.menus);
+    expect(free.menus).toEqual(venue.menus.map((menu) => ({ ...menu, layout: null })));
+  });
+
+  it("keeps saved layouts but only shows them on Pro", () => {
+    const styled = {
+      ...venue,
+      branding: { ...venue.branding, layout: "grid" as const, headerStyle: "centered" as const, buttonShape: "pill" as const },
+      menus: venue.menus.map((menu) => ({ ...menu, layout: "classic" as const })),
+    };
+    const free = applyEntitlements(styled, ENTITLEMENTS.free);
+    expect(free.branding).toMatchObject({ layout: null, headerStyle: null, buttonShape: null });
+    expect(free.menus.every((menu) => menu.layout === null)).toBe(true);
+    expect(free.menus[0].sections).toEqual(venue.menus[0].sections);
+    expect(styled.branding.layout).toBe("grid");
+
+    const pro = applyEntitlements(styled, ENTITLEMENTS.pro);
+    expect(pro.branding).toMatchObject({ layout: "grid", headerStyle: "centered", buttonShape: "pill" });
+    expect(pro.menus[0].layout).toBe("classic");
   });
 
   it("leaves everything on for Pro", () => {

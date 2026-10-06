@@ -197,6 +197,7 @@ Newest first. One line per change: what changed and why.
 - Fixed: dashboard switches ignored clicks (the drawn track sat above the checkbox).
 - Fixed: ngrok tunnels can load the dev server's scripts (`allowedDevOrigins`).
 - Security: Next.js 16.3.8.
+- Added (Pro): layout presets. Guest page cards as List, Grid (two tiles per row) or Compact; header with logo beside the name, centred, or no logo; Rounded, Pill or Square corners. Menus as List, Photo cards or Classic (printed-menu look with dotted leaders). Free venues keep their choice saved but see the defaults until they upgrade.
 
 ### 2026-10-04 (later)
 - Added: Groq as the AI provider (`GROQ_API_KEY`), using gpt-oss for dish notes and Qwen for menu photos, with strict JSON schemas. Photos are shrunk in the browser before upload. Claude remains an option.

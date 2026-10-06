@@ -1493,3 +1493,123 @@
   background: color-mix(in srgb, var(--success-green) 14%, transparent);
   color: var(--card-text-primary, var(--text-primary));
 }
+
+/* ───────────────────────── Layout presets (Pro) ─────────────────────────
+   Set on .landing as data-layout / data-header / data-shape. Colours still
+   come from the theme; these only change arrangement and shape. */
+
+.landing {
+  --shape-card: 16px;
+  --shape-btn: 12px;
+}
+.landing[data-shape="pill"] {
+  --shape-card: 26px;
+  --shape-btn: 999px;
+}
+.landing[data-shape="square"] {
+  --shape-card: 4px;
+  --shape-btn: 4px;
+}
+.landing .feature-wrapper,
+.landing .menu-list,
+.landing .menu-special,
+.landing .menu-filter {
+  border-radius: var(--shape-card);
+}
+.landing .feature-card:focus-visible {
+  border-radius: var(--shape-card);
+}
+.landing :is(.primary-btn, .feedback-submit-btn, .google-btn, .copy-btn, .sheet-btn, .photo-trigger, .wallet-btn, .card-staff-btn, .copy-row, .text-input, .feedback-textarea) {
+  border-radius: var(--shape-btn);
+}
+.landing[data-shape="pill"] :is(.copy-row, .text-input) {
+  border-radius: 18px;
+}
+.landing[data-shape="pill"] .feedback-textarea {
+  border-radius: 18px;
+}
+
+/* Grid: two columns of tiles. A tile that opens, or the odd one out, takes the full row. */
+.landing[data-layout="grid"] .feature-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.landing[data-layout="grid"] .feature-card {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 128px;
+  padding: 16px;
+}
+.landing[data-layout="grid"] .feature-card .chevron {
+  display: none;
+}
+.landing[data-layout="grid"] .icon-circle {
+  width: 48px;
+  height: 48px;
+}
+.landing[data-layout="grid"] .feature-label {
+  flex: none;
+  font-size: 15px;
+}
+.landing[data-layout="grid"] .feature-wrapper:has(.sheet.open),
+.landing[data-layout="grid"] .feature-wrapper:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.landing[data-layout="grid"] .feature-wrapper:has(.sheet.open) .feature-card,
+.landing[data-layout="grid"] .feature-wrapper:last-child:nth-child(odd) .feature-card {
+  flex-direction: row;
+  align-items: center;
+  min-height: 72px;
+  padding: 14px 16px;
+}
+.landing[data-layout="grid"] .feature-wrapper:has(.sheet.open) .chevron,
+.landing[data-layout="grid"] .feature-wrapper:last-child:nth-child(odd) .chevron {
+  display: block;
+}
+.landing[data-layout="grid"] .feature-wrapper:has(.sheet.open) .feature-label,
+.landing[data-layout="grid"] .feature-wrapper:last-child:nth-child(odd) .feature-label {
+  flex: 1;
+}
+
+/* Compact: shorter rows, smaller icons, more cards on screen. */
+.landing[data-layout="compact"] .feature-grid {
+  gap: 8px;
+}
+.landing[data-layout="compact"] .feature-card {
+  min-height: 56px;
+  padding: 8px 14px;
+  gap: 12px;
+}
+.landing[data-layout="compact"] .icon-circle {
+  width: 36px;
+  height: 36px;
+}
+.landing[data-layout="compact"] .icon-circle svg {
+  width: 18px;
+  height: 18px;
+}
+.landing[data-layout="compact"] .feature-label {
+  font-size: 15px;
+}
+
+/* Header styles */
+.landing[data-header="centered"] .header-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.landing[data-header="centered"] .header-text {
+  padding-bottom: 0;
+}
+.landing[data-header="minimal"] .logo-circle {
+  display: none;
+}
+.landing[data-header="minimal"] .header-row {
+  padding-top: 20px;
+}
+.landing[data-header="minimal"] .header-text h1 {
+  font-size: 28px;
+  letter-spacing: -0.01em;
+}
