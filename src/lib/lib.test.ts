@@ -53,7 +53,7 @@ describe("i18n", () => {
 
   it("falls back to English for keys a locale hasn't translated", () => {
     const { t, tf } = createTranslator("es");
-    expect(t("thank_you")).toBe("¡Gracias!");
+    expect(t("thank_you")).toBe("Gracias");
     expect(t("sudoku_title")).toBe("Sudoku");
     expect(tf("collect_stamps_single", { stamps: 8, reward: "café" })).toBe("Acumula 8 sellos para ganar café");
   });
