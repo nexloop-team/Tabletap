@@ -4,7 +4,7 @@ import { Download, Printer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { sourceSlug } from "@/lib/qr-source";
-import { Card, CopyButton, Field } from "./ui";
+import { Card, CopyButton, Field, HelpTip } from "./ui";
 
 const COLORS = ["#000000", "#1F2A24", "#2F4A3A", "#1C2541", "#7A2E2E"];
 
@@ -59,6 +59,12 @@ export function QrDesigner({ venueId, guestUrl }: { venueId: string; guestUrl: s
           <Link className="btn" style={{ marginTop: 14 }} href={`/dashboard/${venueId}/qr/print?${new URLSearchParams({ tables, color })}`}>
             <Printer aria-hidden /> Open print sheet
           </Link>
+          <HelpTip question="How do I print them the right size?">
+            <p>
+              In the print window choose <strong>A4</strong> paper and set the scale to <strong>100%</strong> (sometimes called &ldquo;Actual size&rdquo;). Turn off &ldquo;Fit to page&rdquo;, or the codes print too small to
+              scan easily. Thick card (250gsm or more) stands up best in table holders.
+            </p>
+          </HelpTip>
         </Card>
       </div>
     </div>

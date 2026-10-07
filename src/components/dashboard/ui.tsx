@@ -76,6 +76,16 @@ export function SwitchRow({ title, description, checked, onChange, disabled }: {
   );
 }
 
+/** A one-line "How do I…?" that opens a short answer in place: help exactly where people get stuck. */
+export function HelpTip({ question, children }: { question: string; children: ReactNode }) {
+  return (
+    <details className="help-tip">
+      <summary>{question}</summary>
+      <div className="help-tip-body">{children}</div>
+    </details>
+  );
+}
+
 export function Card({ title, description, actions, children, className }: { title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`card ${className ?? ""}`}>

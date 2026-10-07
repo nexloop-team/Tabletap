@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   Gift,
+  LifeBuoy,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -29,6 +30,7 @@ import { BRAND } from "@/config/brand";
 import { dashboardApi } from "@/lib/api/dashboard-client";
 import { initials } from "@/lib/format";
 import { ConfirmProvider } from "./confirm";
+import { ToastProvider } from "./toast";
 
 export interface ShellVenue {
   id: string;
@@ -287,6 +289,12 @@ export function AppShell({ mode, venues, user, children }: { mode: "venue" | "ad
             ) : (
               user.isAdmin && <NavLink item={{ href: "/admin", label: "Platform admin", icon: Shield }} pathname={pathname} />
             )}
+            <li>
+              <a className="nav-link" href={`mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(`${BRAND.name} help`)}`}>
+                <LifeBuoy aria-hidden />
+                <span className="nav-label">Help &amp; contact</span>
+              </a>
+            </li>
             <NavLink item={{ href: "/dashboard/account", label: "Account", icon: UserRound }} pathname={pathname} />
             <SignOutButton />
           </ul>
@@ -304,9 +312,11 @@ export function AppShell({ mode, venues, user, children }: { mode: "venue" | "ad
 
       <div className="shell-main">
         <ConfirmProvider>
-          <main id="main" tabIndex={-1}>
-            {children}
-          </main>
+          <ToastProvider>
+            <main id="main" tabIndex={-1}>
+              {children}
+            </main>
+          </ToastProvider>
         </ConfirmProvider>
       </div>
     </div>

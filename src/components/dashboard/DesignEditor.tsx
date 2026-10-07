@@ -7,7 +7,7 @@ import { STYLE_FONT_HREF } from "@/lib/theme";
 import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
-import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -408,6 +408,13 @@ export function DesignEditor({
             type="url"
             hint="Google Business Profile → Ask for reviews → copy link."
           />
+          <HelpTip question="How do I find my Google review link?">
+            <ol>
+              <li>On your phone, open Google Maps (or search for your venue on Google) while signed in to the account that manages it.</li>
+              <li>Open your Business Profile and tap <strong>Ask for reviews</strong> (sometimes &ldquo;Get more reviews&rdquo;).</li>
+              <li>Tap <strong>Copy link</strong> and paste it above. It starts with https://g.page/ or https://g.co/.</li>
+            </ol>
+          </HelpTip>
         </Card>
 
         <Card title="Wi-Fi" description="Guests copy the password in one tap. Leave the network name blank to hide the card.">

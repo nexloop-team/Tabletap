@@ -2832,26 +2832,6 @@ body:has(.app) {
   height: 30px;
   border-radius: 50%;
 }
-.trial-banner {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--a-accent-soft);
-  color: var(--a-accent-text);
-  font-size: 14px;
-}
-.trial-banner > svg {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-.trial-banner > span {
-  flex: 1 1 220px;
-}
 .share-pill {
   display: flex;
   align-items: center;
@@ -3479,6 +3459,165 @@ body:has(.app) {
   font-size: 12px;
   font-weight: 400;
   color: var(--a-text-3);
+}
+
+/* One slim bar for the trial countdown and "confirm your email". */
+.account-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-bottom: 20px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 12px;
+  background: var(--a-accent-soft);
+  color: var(--a-accent-text);
+  font-size: 13px;
+}
+.account-bar.only-email {
+  background: var(--a-warm-soft);
+  color: var(--a-warm-text);
+}
+.account-bar-part {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+.account-bar-part + .account-bar-part {
+  flex: 0 1 auto;
+  padding-left: 20px;
+  border-left: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+.account-bar-part > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.account-bar-part > span {
+  flex: 1;
+  min-width: 0;
+}
+.account-bar .btn-sm {
+  flex: none;
+  min-height: 30px;
+}
+.account-bar .btn-ghost {
+  color: inherit;
+}
+@media (max-width: 720px) {
+  .account-bar-more {
+    display: none;
+  }
+  .account-bar-part + .account-bar-part {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+/* "How do I…?" help, opened in place */
+.help-tip {
+  margin-top: 12px;
+  font-size: 14px;
+}
+.help-tip summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--a-accent);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.help-tip summary::-webkit-details-marker {
+  display: none;
+}
+.help-tip summary::before {
+  content: "?";
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--a-accent-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+.help-tip-body {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--a-surface-2);
+  color: var(--a-text-2);
+  line-height: 1.55;
+}
+.help-tip-body ol {
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+.help-tip-body p + p,
+.help-tip-body ol + p {
+  margin-top: 8px;
+}
+/* Toasts: bottom centre, one at a time */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 12px;
+  background: var(--a-text);
+  color: var(--a-bg);
+  box-shadow: var(--a-shadow-lg);
+  font-size: 14px;
+  animation: app-rise 0.2s var(--a-ease);
+}
+.toast-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--a-accent);
+}
+.toast-action,
+.toast-close {
+  flex: none;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.toast-action {
+  padding: 0 10px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.toast-close {
+  width: 32px;
+  display: grid;
+  place-items: center;
+  opacity: 0.7;
+}
+.toast-close svg {
+  width: 16px;
+  height: 16px;
+}
+.toast-action:hover,
+.toast-close:hover {
+  background: rgba(127, 127, 127, 0.2);
 }
 
 /* ───────────────────────── Print (table tents) ───────────────────────── */

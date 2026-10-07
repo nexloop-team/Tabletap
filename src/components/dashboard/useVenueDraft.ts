@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import type { VenueConfig } from "@/lib/venue/schema";
+import { useToast } from "./toast";
 
 /**
  * Local draft of some top-level sections of a venue's config. Saving sends
@@ -11,6 +12,7 @@ import type { VenueConfig } from "@/lib/venue/schema";
  */
 export function useVenueDraft<T extends Partial<VenueConfig>>(venueId: string, initial: T) {
   const router = useRouter();
+  const toast = useToast();
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [saving, setSaving] = useState(false);
@@ -39,12 +41,13 @@ export function useVenueDraft<T extends Partial<VenueConfig>>(venueId: string, i
       setSaved(draft);
       setVersion((v) => v + 1);
       router.refresh();
+      toast({ text: "Changes saved. They're live on your page." });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
-  }, [venueId, draft, router]);
+  }, [venueId, draft, router, toast]);
 
   const reset = useCallback(() => {
     setDraft(saved);

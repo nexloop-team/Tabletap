@@ -1,7 +1,7 @@
-import { Clock, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ResendVerification } from "@/components/dashboard/Shell";
+import { AccountBar } from "@/components/dashboard/AccountBar";
 import { trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { venueRole } from "@/server/repositories/venues";
@@ -36,28 +36,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
       {venue.status === "suspended" && (
         <div className="notice notice-error">This venue is suspended, so its guest page is offline. Contact support to restore it.</div>
       )}
-      {!user.emailVerified && !operatorView && (
-        <div className="notice notice-warn">
-          <span>
-            Confirm your email (<strong>{user.email}</strong>) so we can reach you about your account.
-          </span>
-          <ResendVerification />
-        </div>
-      )}
-      {trialDays !== null && !operatorView && (
-        <div className="trial-banner">
-          <Clock aria-hidden />
-          <span>
-            <strong>
-              Pro trial · {trialDays} day{trialDays === 1 ? "" : "s"} left.
-            </strong>{" "}
-            Keep loyalty, Wi-Fi capture and guest emails after it ends.
-          </span>
-          <Link className="btn btn-primary btn-sm" href={`/dashboard/${venue.id}/billing`}>
-            Choose a plan
-          </Link>
-        </div>
-      )}
+      {!operatorView && <AccountBar unverifiedEmail={user.emailVerified ? null : user.email} trialDays={trialDays} billingHref={`/dashboard/${venue.id}/billing`} />}
       {children}
     </div>
   );

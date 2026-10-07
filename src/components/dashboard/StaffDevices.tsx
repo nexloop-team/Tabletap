@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { useConfirm } from "./confirm";
-import { Card, CopyButton, Field } from "./ui";
+import { Card, CopyButton, Field, HelpTip } from "./ui";
 
 const COOLDOWNS = [
   { value: 0, label: "No limit" },
@@ -70,6 +70,14 @@ export function StaffDevices({
   return (
     <Card title="Staff devices" description="Phones or tablets at the till that can stamp cards. Guests tap “Show to staff” on their card; staff scan it with the device's camera.">
       {!enabled && <p className="hint" style={{ marginBottom: 12 }}>Turn on a stamp card above (and save) to start stamping.</p>}
+      <HelpTip question="How do I set up the till phone or tablet?">
+        <ol>
+          <li>Type a name for the device, like &ldquo;Front counter&rdquo;, and tap <strong>Add a staff device</strong>.</li>
+          <li>On the till phone or tablet, scan the code that appears with its camera (or send it the link). It works once, for 15 minutes.</li>
+          <li>The device opens the staff screen and stays signed in. Add it to the home screen so staff can find it fast.</li>
+        </ol>
+        <p>Lost a device? Tap <strong>Unpair</strong> and it stops working straight away.</p>
+      </HelpTip>
 
       {devices.length > 0 && (
         <div className="list-editor" style={{ marginBottom: 14 }}>
