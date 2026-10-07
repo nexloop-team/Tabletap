@@ -7,6 +7,8 @@ export interface User {
   email: string;
   name: string;
   emailVerified: boolean;
+  /** Blocked by an operator: can't sign in, and existing sessions stop working. */
+  blocked: boolean;
   createdAt: string;
 }
 
@@ -16,11 +18,12 @@ interface UserRow {
   name: string;
   password_hash: string;
   email_verified_at: string | null;
+  blocked_at: string | null;
   created_at: string;
 }
 
 function toUser(row: UserRow): User {
-  return { id: row.id, email: row.email, name: row.name, emailVerified: !!row.email_verified_at, createdAt: row.created_at };
+  return { id: row.id, email: row.email, name: row.name, emailVerified: !!row.email_verified_at, blocked: !!row.blocked_at, createdAt: row.created_at };
 }
 
 export function findUserById(id: string): User | null {
@@ -61,19 +64,18 @@ export function markEmailVerified(userId: string) {
   getDb().prepare("UPDATE users SET email_verified_at = COALESCE(email_verified_at, datetime('now')) WHERE id = ?").run(userId);
 }
 
-export interface AdminUserRow {
-  id: string;
-  email: string;
-  name: string;
-  emailVerified: boolean;
-  createdAt: string;
+export function setUserBlocked(userId: string, blocked: boolean) {
+  getDb().prepare("UPDATE users SET blocked_at = CASE WHEN ? THEN COALESCE(blocked_at, datetime('now')) ELSE NULL END WHERE id = ?").run(blocked ? 1 : 0, userId);
+}
+
+export interface AdminUserRow extends User {
   venueCount: number;
 }
 
 export function listUsersForAdmin(limit = 200): AdminUserRow[] {
   const rows = getDb()
     .prepare(
-      `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, COUNT(m.venue_id) AS venue_count
+      `SELECT u.id, u.email, u.name, u.email_verified_at, u.blocked_at, u.created_at, COUNT(m.venue_id) AS venue_count
        FROM users u LEFT JOIN venue_members m ON m.user_id = u.id
        GROUP BY u.id ORDER BY u.created_at DESC LIMIT ?`,
     )

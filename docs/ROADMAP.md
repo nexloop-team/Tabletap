@@ -195,6 +195,9 @@ Newest first. One line per change: what changed and why.
 - Changed: when a venue has no paid subscription and no trial left, its guest page goes offline; the owner can still sign in and subscribe, and the page comes back as it was.
 - Changed: billing moved from Stripe to Razorpay Subscriptions (Checkout pop-up, signed webhook, cancel at the end of the paid year).
 - Removed: the "Powered by" footer on guest pages and menus.
+- Added (admin): account actions: resend the confirmation email, email a password reset link, block / unblock (signs them out everywhere), delete with the email typed to confirm. Admins and super admins are protected.
+- Added (admin): an activity log of every admin change, with who made it.
+- Fixed: deleting a venue or an account now cancels its Razorpay subscription too.
 - Added (admin): Paying / Trial / Unpaid / Free access / Suspended filters, "Extend trial by 7 days", "Give free access", and a revenue panel (yearly and monthly recurring, churn, won't-renew, failing payments).
 
 ### 2026-10-08

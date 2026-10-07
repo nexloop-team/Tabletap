@@ -19,6 +19,8 @@ type Modules = {
   schema: typeof import("@/lib/venue/schema");
   db: typeof import("./db");
   invites: typeof import("./services/staff-invites");
+  operator: typeof import("./services/operator");
+  log: typeof import("./repositories/admin-actions");
 };
 let m: Modules;
 
@@ -33,6 +35,8 @@ beforeAll(async () => {
     schema: await import("@/lib/venue/schema"),
     db: await import("./db"),
     invites: await import("./services/staff-invites"),
+    operator: await import("./services/operator"),
+    log: await import("./repositories/admin-actions"),
   };
 });
 
@@ -224,8 +228,8 @@ describe("venues on the SaaS side", () => {
     const venue = onboard(user, "Delete Me");
     const db = m.db.getDb();
     db.prepare("INSERT INTO customers (id, venue_id, email, capture_source) VALUES ('cus_x', ?, 'g@example.com', 'landing')").run(venue.id);
-    expect(() => m.admin.removeVenue(venue, "Wrong name")).toThrow(/exactly/);
-    m.admin.removeVenue(venue, "Delete Me");
+    await expect(m.admin.removeVenue(venue, "Wrong name")).rejects.toThrow(/exactly/);
+    await m.admin.removeVenue(venue, "Delete Me");
     expect(m.venues.getVenueRecord(venue.id)).toBeNull();
     expect(db.prepare("SELECT COUNT(*) AS n FROM customers WHERE venue_id = ?").get(venue.id)).toEqual({ n: 0 });
     expect(m.subscriptions.getSubscription(venue.id)).toBeNull();
@@ -260,5 +264,55 @@ describe("venues on the SaaS side", () => {
     expect(m.subscriptions.venueAccess(venue.id)).toBe("paid");
     event("subscription.cancelled", "cancelled");
     expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ paid: false, status: "canceled" });
+  });
+});
+
+describe("operator console", () => {
+  async function account(email: string, verified = true) {
+    const user = m.users.insertUser({ email, name: "Someone", passwordHash: await m.password.hashPassword("pw-12345678") });
+    if (verified) m.users.markEmailVerified(user.id);
+    return m.users.findUserById(user.id)!;
+  }
+
+  it("blocks and unblocks an account, logging who did it", async () => {
+    process.env.ADMIN_EMAILS = "boss@example.com";
+    const boss = await account("boss@example.com");
+    const user = await account("blockme@example.com");
+    m.operator.updateUserAsAdmin(boss, user.id, { action: "block" }, "http://localhost");
+    expect(m.users.findUserById(user.id)?.blocked).toBe(true);
+    m.operator.updateUserAsAdmin(boss, user.id, { action: "unblock" }, "http://localhost");
+    expect(m.users.findUserById(user.id)?.blocked).toBe(false);
+    const log = m.log.listAdminActions({ target: { type: "user", id: user.id } });
+    expect(log.map((entry) => entry.action)).toEqual(["Unblocked account", "Blocked account"]);
+    expect(log[0].adminEmail).toBe("boss@example.com");
+  });
+
+  it("won't lock out yourself or a super admin", async () => {
+    process.env.ADMIN_EMAILS = "boss2@example.com,other-boss@example.com";
+    const boss = await account("boss2@example.com");
+    const other = await account("other-boss@example.com");
+    expect(() => m.operator.updateUserAsAdmin(boss, boss.id, { action: "block" }, "http://localhost")).toThrow(/your own/);
+    expect(() => m.operator.updateUserAsAdmin(boss, other.id, { action: "block" }, "http://localhost")).toThrow(/super admin/);
+  });
+
+  it("deletes an account and the venues only it owns once the email is typed", async () => {
+    process.env.ADMIN_EMAILS = "boss3@example.com";
+    const boss = await account("boss3@example.com");
+    const owner = await account("leaving@example.com");
+    const venue = m.admin.createVenueForUser(owner, m.schema.createVenueRequest.parse({ name: "Leaving Cafe", venueType: "cafe", currencyCode: "GBP" }));
+    await expect(m.operator.deleteUserAsAdmin(boss, owner.id, "wrong@example.com")).rejects.toThrow(/exactly/);
+    await m.operator.deleteUserAsAdmin(boss, owner.id, "Leaving@Example.com");
+    expect(m.users.findUserById(owner.id)).toBeNull();
+    expect(m.venues.getVenueRecord(venue.id)).toBeNull();
+    expect(m.log.listAdminActions({ target: { type: "user", id: owner.id } })[0]).toMatchObject({ action: "Deleted account", detail: "and 1 venue" });
+  });
+
+  it("logs venue changes", async () => {
+    process.env.ADMIN_EMAILS = "boss4@example.com";
+    const boss = await account("boss4@example.com");
+    const owner = await account("venue-owner@example.com");
+    const venue = m.admin.createVenueForUser(owner, m.schema.createVenueRequest.parse({ name: "Logged Cafe", venueType: "cafe", currencyCode: "GBP" }));
+    m.operator.updateVenueAsAdmin(boss, venue.id, { extendTrialDays: 7, status: "suspended" });
+    expect(m.log.listAdminActions({ target: { type: "venue", id: venue.id } }).map((entry) => entry.action).sort()).toEqual(["Extended trial", "Suspended venue"]);
   });
 });

@@ -23,6 +23,7 @@ import {
   type User,
 } from "../repositories/users";
 import { deleteVenue, venuesOwnedSolelyBy } from "../repositories/venues";
+import { stopBilling } from "./billing";
 import { sendMail } from "./mailer";
 
 export function sendVerificationEmail(user: User, origin: string) {
@@ -48,6 +49,7 @@ export async function login(input: z.output<typeof loginRequest>): Promise<User>
   const found = findUserCredentials(input.email);
   const ok = await verifyPassword(input.password, found?.passwordHash ?? (await dummyPasswordHash()));
   if (!found || !ok) throw new ServiceError(401, "That email and password don't match");
+  if (found.user.blocked) throw new ServiceError(403, `This account has been blocked. Email ${BRAND.supportEmail} if you think that's a mistake.`);
   await createSession(found.user.id);
   return found.user;
 }
@@ -60,12 +62,16 @@ export async function logout() {
 export function requestPasswordReset(email: string, origin: string) {
   rateLimitKey(`reset:${email}`, 3, 15 * 60_000);
   const found = findUserCredentials(email);
-  if (!found) return;
-  const token = createAuthToken(found.user.id, "reset_password", 60);
+  if (!found || found.user.blocked) return;
+  sendPasswordResetEmail(found.user, origin);
+}
+
+export function sendPasswordResetEmail(user: User, origin: string) {
+  const token = createAuthToken(user.id, "reset_password", 60);
   sendMail({
-    to: found.user.email,
+    to: user.email,
     subject: `Reset your ${BRAND.name} password`,
-    text: `Hi ${found.user.name},\n\nSomeone (hopefully you) asked to reset your password. Choose a new one here:\n${origin}/reset-password?token=${encodeURIComponent(token)}\n\nThe link works for one hour. If you didn't ask, ignore this email and your password stays the same.\n\n${BRAND.name}`,
+    text: `Hi ${user.name},\n\nSomeone (hopefully you) asked to reset your password. Choose a new one here:\n${origin}/reset-password?token=${encodeURIComponent(token)}\n\nThe link works for one hour. If you didn't ask, ignore this email and your password stays the same.\n\n${BRAND.name}`,
   });
 }
 
@@ -99,7 +105,17 @@ export async function deleteAccount(user: User, password: string) {
   rateLimitKey(`delete:${user.id}`, 5, 15 * 60_000);
   const hash = findPasswordHash(user.id);
   if (!hash || !(await verifyPassword(password, hash))) throw new ServiceError(400, "That password isn't right");
-  for (const venueId of venuesOwnedSolelyBy(user.id)) deleteVenue(venueId);
-  getDb().prepare("DELETE FROM users WHERE id = ?").run(user.id);
+  await removeAccount(user.id);
   await destroySession();
+}
+
+/** The account, its sessions and every venue it alone owns. Returns how many venues went with it. */
+export async function removeAccount(userId: string): Promise<number> {
+  const venues = venuesOwnedSolelyBy(userId);
+  for (const venueId of venues) {
+    await stopBilling(venueId);
+    deleteVenue(venueId);
+  }
+  getDb().prepare("DELETE FROM users WHERE id = ?").run(userId);
+  return venues.length;
 }

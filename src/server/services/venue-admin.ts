@@ -7,6 +7,7 @@ import { isAdmin } from "../auth/session";
 import { ServiceError } from "../http";
 import { newId } from "../ids";
 import type { User } from "../repositories/users";
+import { stopBilling } from "./billing";
 import { createVenue, deleteVenue, getVenueRecord, isManagerRole, listVenuesForUser, shortCodeTaken, type VenueRecord, updateShortCode, updateVenueConfig, venueRole } from "../repositories/venues";
 
 const MAX_VENUES_PER_ACCOUNT = 20;
@@ -65,7 +66,8 @@ function stripUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-export function removeVenue(venue: VenueRecord, confirmName: string) {
+export async function removeVenue(venue: VenueRecord, confirmName: string) {
   if (confirmName.trim() !== venue.config.name.trim()) throw new ServiceError(400, "Type the venue name exactly to confirm");
+  await stopBilling(venue.id);
   deleteVenue(venue.id);
 }

@@ -1,27 +1,6 @@
 "use client";
 
-import {
-  Building2,
-  ChevronsUpDown,
-  CreditCard,
-  Gift,
-  LifeBuoy,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  MessageSquareText,
-  Palette,
-  Plus,
-  QrCode,
-  Settings,
-  Shield,
-  Store,
-  UserRound,
-  Users,
-  UtensilsCrossed,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { Building2, ChevronsUpDown, CreditCard, Gift, History, LayoutDashboard, LifeBuoy, LogOut, Menu, MessageSquareText, Palette, Plus, QrCode, Settings, Shield, Store, type LucideIcon, UserRound, Users, UtensilsCrossed, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -97,6 +76,7 @@ const ADMIN_NAV: NavGroup[] = [
       { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
       { href: "/admin/venues", label: "Venues", icon: Building2 },
       { href: "/admin/accounts", label: "Accounts", icon: Users },
+      { href: "/admin/activity", label: "Activity log", icon: History },
     ],
   },
 ];

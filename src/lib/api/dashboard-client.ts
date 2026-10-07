@@ -1,4 +1,6 @@
 import type {
+  AdminDeleteUserRequest,
+  AdminUserRequest,
   AdminVenueRequest,
   ChangePasswordRequest,
   CheckoutStart,
@@ -78,6 +80,8 @@ export const dashboardApi = {
   },
 
   adminUpdateVenue: (venueId: string, body: AdminVenueRequest) => send<{ ok: true }>("PATCH", `/api/admin/venues/${venueId}`, body),
+  adminUpdateUser: (userId: string, body: AdminUserRequest) => send<{ ok: true }>("PATCH", `/api/admin/users/${userId}`, body),
+  adminDeleteUser: (userId: string, body: AdminDeleteUserRequest) => send<{ ok: true }>("DELETE", `/api/admin/users/${userId}`, body),
 
   addStaffDevice: (venueId: string, body: AddStaffDeviceRequest) =>
     send<{ url: string; qrSvg: string; expiresAt: string }>("POST", `/api/dashboard/venues/${venueId}/staff-devices`, body),

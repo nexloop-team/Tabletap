@@ -19,6 +19,6 @@ export const PATCH = handle(async (request, ctx: Ctx) => {
 export const DELETE = handle(async (request, ctx: Ctx) => {
   const { venue } = await venueFromRequest(request, (await ctx.params).venueId, { write: true });
   const { confirmName } = await parseBody(request, deleteVenueRequest);
-  removeVenue(venue, confirmName);
+  await removeVenue(venue, confirmName);
   return Response.json({ ok: true });
 });

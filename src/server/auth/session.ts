@@ -45,7 +45,8 @@ export const currentUser = cache(async (): Promise<User | null> => {
     | { user_id: string; expires_at: string }
     | undefined;
   if (!row || Date.parse(row.expires_at) <= Date.now()) return null;
-  return findUserById(row.user_id);
+  const user = findUserById(row.user_id);
+  return user && !user.blocked ? user : null;
 });
 
 export async function destroySession() {
@@ -83,14 +84,19 @@ export async function requireApiUser(): Promise<User> {
   return user;
 }
 
-/** Operators are named by email in ADMIN_EMAILS, so there's no way to grant it from inside the app. */
-export function isAdmin(user: User | null): boolean {
+/** Super admins are named by email in ADMIN_EMAILS, so nobody inside the app can grant or take it away. */
+export function isSuperAdmin(user: User | null): boolean {
   if (!user || !user.emailVerified) return false;
   const admins = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
   return admins.includes(user.email);
+}
+
+/** May use the operator console. */
+export function isAdmin(user: User | null): boolean {
+  return isSuperAdmin(user);
 }
 
 export type AuthTokenPurpose = "verify_email" | "reset_password";

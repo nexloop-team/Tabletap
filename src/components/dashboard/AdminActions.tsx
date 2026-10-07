@@ -1,32 +1,32 @@
 "use client";
 
-import { Ban, CalendarPlus, ExternalLink, Gift, LayoutDashboard, Loader2, MoreHorizontal, RotateCcw, XCircle } from "lucide-react";
+import { Ban, CalendarPlus, ExternalLink, Gift, KeyRound, LayoutDashboard, Loader2, Lock, LockOpen, Mail, MoreHorizontal, RotateCcw, Trash2, XCircle, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, type ToggleEvent } from "react";
+import { useId, useRef, useState, type ReactNode, type ToggleEvent } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
-import type { AdminVenueRequest } from "@/lib/api/account-contracts";
+import type { AdminUserRequest, AdminVenueRequest } from "@/lib/api/account-contracts";
 import type { VenueSegment } from "@/server/admin";
 import { useConfirm, type ConfirmOptions } from "./confirm";
+import { useToast } from "./toast";
 
 const TRIAL_EXTENSION_DAYS = 7;
 
-/** Row actions for a venue in the operator console: open it, plus a menu of account changes behind a confirm. */
-export function AdminVenueActions({
-  venueId,
-  name,
-  guestUrl,
-  status,
-  segment,
-}: {
-  venueId: string;
-  name: string;
-  guestUrl: string;
-  status: "active" | "suspended";
-  segment: VenueSegment;
-}) {
+/** One entry in a row's "…" menu: a link, or an action that asks first. */
+type MenuEntry =
+  | { kind: "link"; label: string; icon: LucideIcon; href: string; external?: boolean }
+  | { kind: "action"; label: string; icon: LucideIcon; danger?: boolean; run: () => Promise<unknown>; question: ConfirmOptions | (() => ConfirmOptions); done?: string }
+  | { kind: "separator" };
+
+/**
+ * A row's "…" menu. It lives in the top layer (so the scrolling table can't
+ * clip it), pinned under the trigger and flipping up near the bottom. Every
+ * action asks first, then refreshes the page.
+ */
+function RowMenu({ label, lead, entries }: { label: string; lead?: ReactNode; entries: (MenuEntry | false)[] }) {
   const router = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuId = useId();
@@ -34,7 +34,6 @@ export function AdminVenueActions({
   const trigger = useRef<HTMLButtonElement>(null);
   const onScroll = useRef<(() => void) | null>(null);
 
-  /** The menu lives in the top layer (so the scrolling table can't clip it); pin it under the trigger, flipping up near the bottom. */
   function place() {
     const box = trigger.current?.getBoundingClientRect();
     const el = menu.current;
@@ -57,13 +56,14 @@ export function AdminVenueActions({
     }
   }
 
-  async function apply(body: AdminVenueRequest, question: ConfirmOptions) {
+  async function choose(entry: Extract<MenuEntry, { kind: "action" }>) {
     menu.current?.hidePopover();
-    if (!(await confirm(question))) return;
+    if (!(await confirm(typeof entry.question === "function" ? entry.question() : entry.question))) return;
     setPending(true);
     setError(null);
     try {
-      await dashboardApi.adminUpdateVenue(venueId, body);
+      await entry.run();
+      if (entry.done) toast({ text: entry.done });
       router.refresh();
     } catch (err) {
       setError(errorMessage(err));
@@ -75,88 +75,32 @@ export function AdminVenueActions({
   return (
     <div className="row-actions">
       <div className="inline nowrap">
-        <Link className="btn btn-sm" href={`/dashboard/${venueId}`} title="View as owner (read-only)" aria-label={`View ${name} as owner (read-only)`}>
-          View
-        </Link>
-        <button
-          ref={trigger}
-          type="button"
-          className="btn btn-sm btn-icon"
-          popoverTarget={menuId}
-          aria-label={`More actions for ${name}`}
-          disabled={pending}
-        >
+        {lead}
+        <button ref={trigger} type="button" className="btn btn-sm btn-icon" popoverTarget={menuId} aria-label={label} disabled={pending}>
           {pending ? <Loader2 className="spin" aria-hidden /> : <MoreHorizontal aria-hidden />}
         </button>
       </div>
       <div ref={menu} id={menuId} popover="auto" className="menu" onToggle={onToggle}>
-        <Link className="menu-item" href={`/dashboard/${venueId}`}>
-          <LayoutDashboard aria-hidden /> View as owner (read-only)
-        </Link>
-        <a className="menu-item" href={guestUrl} target="_blank" rel="noreferrer">
-          <ExternalLink aria-hidden /> View guest page
-        </a>
-        <div className="menu-sep" role="separator" />
-        {segment === "free" && (
-          <button
-            type="button"
-            className="menu-item"
-            onClick={() =>
-              apply(
-                { freeAccess: false },
-                { title: `Remove free access from ${name}?`, body: "Unless it subscribes or still has trial days left, its guest page goes offline straight away.", confirmLabel: "Remove access", danger: true },
-              )
-            }
-          >
-            <XCircle aria-hidden /> Remove free access
-          </button>
-        )}
-        {(segment === "trial" || segment === "unpaid") && (
-          <>
-            <button
-              type="button"
-              className="menu-item"
-              onClick={() =>
-                apply(
-                  { extendTrialDays: TRIAL_EXTENSION_DAYS },
-                  {
-                    title: `Give ${name} ${TRIAL_EXTENSION_DAYS} more trial days?`,
-                    body: segment === "unpaid" ? "Its trial restarts from today, so the guest page comes back online now." : "They're added to the end of the current trial.",
-                    confirmLabel: "Extend trial",
-                  },
-                )
-              }
-            >
-              <CalendarPlus aria-hidden /> Extend trial by {TRIAL_EXTENSION_DAYS} days
+        {entries.map((entry, i) => {
+          if (!entry) return null;
+          if (entry.kind === "separator") return <div key={i} className="menu-sep" role="separator" />;
+          const Icon = entry.icon;
+          if (entry.kind === "link")
+            return entry.external ? (
+              <a key={i} className="menu-item" href={entry.href} target="_blank" rel="noreferrer">
+                <Icon aria-hidden /> {entry.label}
+              </a>
+            ) : (
+              <Link key={i} className="menu-item" href={entry.href}>
+                <Icon aria-hidden /> {entry.label}
+              </Link>
+            );
+          return (
+            <button key={i} type="button" className={`menu-item${entry.danger ? " danger" : ""}`} onClick={() => void choose(entry)}>
+              <Icon aria-hidden /> {entry.label}
             </button>
-            <button
-              type="button"
-              className="menu-item"
-              onClick={() => apply({ freeAccess: true }, { title: `Give ${name} free access?`, body: "Every feature stays on with no charge until you remove it.", confirmLabel: "Give free access" })}
-            >
-              <Gift aria-hidden /> Give free access
-            </button>
-          </>
-        )}
-        {status === "active" ? (
-          <button
-            type="button"
-            className="menu-item danger"
-            onClick={() =>
-              apply({ status: "suspended" }, { title: `Suspend ${name}?`, body: "Its guest page goes offline for every QR code until you restore it.", confirmLabel: "Suspend venue", danger: true })
-            }
-          >
-            <Ban aria-hidden /> Suspend venue
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="menu-item"
-            onClick={() => apply({ status: "active" }, { title: `Restore ${name}?`, body: "Its guest page comes back online straight away.", confirmLabel: "Restore venue" })}
-          >
-            <RotateCcw aria-hidden /> Restore venue
-          </button>
-        )}
+          );
+        })}
       </div>
       {error && (
         <p className="field-error" role="alert">
@@ -164,5 +108,157 @@ export function AdminVenueActions({
         </p>
       )}
     </div>
+  );
+}
+
+/** Row actions for a venue: open it, plus subscription and status changes. */
+export function AdminVenueActions({ venueId, name, guestUrl, status, segment }: { venueId: string; name: string; guestUrl: string; status: "active" | "suspended"; segment: VenueSegment }) {
+  const update = (body: AdminVenueRequest) => () => dashboardApi.adminUpdateVenue(venueId, body);
+  const onTrial = segment === "trial" || segment === "unpaid";
+  return (
+    <RowMenu
+      label={`More actions for ${name}`}
+      lead={
+        <Link className="btn btn-sm" href={`/dashboard/${venueId}`} title="View as owner (read-only)" aria-label={`View ${name} as owner (read-only)`}>
+          View
+        </Link>
+      }
+      entries={[
+        { kind: "link", label: "View as owner (read-only)", icon: LayoutDashboard, href: `/dashboard/${venueId}` },
+        { kind: "link", label: "View guest page", icon: ExternalLink, href: guestUrl, external: true },
+        { kind: "separator" },
+        segment === "free" && {
+          kind: "action",
+          label: "Remove free access",
+          icon: XCircle,
+          run: update({ freeAccess: false }),
+          question: {
+            title: `Remove free access from ${name}?`,
+            body: "Unless it subscribes or still has trial days left, its guest page goes offline straight away.",
+            confirmLabel: "Remove access",
+            danger: true,
+          },
+        },
+        onTrial && {
+          kind: "action",
+          label: `Extend trial by ${TRIAL_EXTENSION_DAYS} days`,
+          icon: CalendarPlus,
+          run: update({ extendTrialDays: TRIAL_EXTENSION_DAYS }),
+          question: {
+            title: `Give ${name} ${TRIAL_EXTENSION_DAYS} more trial days?`,
+            body: segment === "unpaid" ? "Its trial restarts from today, so the guest page comes back online now." : "They're added to the end of the current trial.",
+            confirmLabel: "Extend trial",
+          },
+          done: "Trial extended.",
+        },
+        onTrial && {
+          kind: "action",
+          label: "Give free access",
+          icon: Gift,
+          run: update({ freeAccess: true }),
+          question: { title: `Give ${name} free access?`, body: "Every feature stays on with no charge until you remove it.", confirmLabel: "Give free access" },
+        },
+        status === "active"
+          ? {
+              kind: "action",
+              label: "Suspend venue",
+              icon: Ban,
+              danger: true,
+              run: update({ status: "suspended" }),
+              question: { title: `Suspend ${name}?`, body: "Its guest page goes offline for every QR code until you restore it.", confirmLabel: "Suspend venue", danger: true },
+            }
+          : {
+              kind: "action",
+              label: "Restore venue",
+              icon: RotateCcw,
+              run: update({ status: "active" }),
+              question: { title: `Restore ${name}?`, body: "Its guest page comes back online straight away.", confirmLabel: "Restore venue" },
+            },
+      ]}
+    />
+  );
+}
+
+/** Row actions for an account: emails, block or unblock, delete. */
+export function AdminUserActions({ userId, email, verified, blocked, protectedAccount }: { userId: string; email: string; verified: boolean; blocked: boolean; protectedAccount: boolean }) {
+  const typed = useRef("");
+  const confirmId = useId();
+  const update = (action: AdminUserRequest["action"]) => () => dashboardApi.adminUpdateUser(userId, { action });
+  return (
+    <RowMenu
+      label={`Actions for ${email}`}
+      entries={[
+        !verified && {
+          kind: "action",
+          label: "Resend confirmation email",
+          icon: Mail,
+          run: update("resend_verification"),
+          question: { title: `Resend the confirmation email to ${email}?`, confirmLabel: "Resend" },
+          done: "Confirmation email sent.",
+        },
+        !blocked && {
+          kind: "action",
+          label: "Send password reset link",
+          icon: KeyRound,
+          run: update("send_reset"),
+          question: {
+            title: `Email ${email} a password reset link?`,
+            body: "The link goes to their inbox only and works for an hour. Their password doesn't change until they use it.",
+            confirmLabel: "Send link",
+          },
+          done: "Password reset link sent.",
+        },
+        !protectedAccount && { kind: "separator" },
+        !protectedAccount &&
+          (blocked
+            ? {
+                kind: "action",
+                label: "Unblock account",
+                icon: LockOpen,
+                run: update("unblock"),
+                question: { title: `Unblock ${email}?`, body: "They can sign in again.", confirmLabel: "Unblock" },
+                done: "Account unblocked.",
+              }
+            : {
+                kind: "action",
+                label: "Block account",
+                icon: Lock,
+                danger: true,
+                run: update("block"),
+                question: {
+                  title: `Block ${email}?`,
+                  body: "They're signed out everywhere and can't sign in. Their venues stay online; suspend those separately if you need to.",
+                  confirmLabel: "Block account",
+                  danger: true,
+                },
+                done: "Account blocked.",
+              }),
+        !protectedAccount && {
+          kind: "action",
+          label: "Delete account",
+          icon: Trash2,
+          danger: true,
+          run: () => dashboardApi.adminDeleteUser(userId, { confirmEmail: typed.current }),
+          question: () => {
+            typed.current = "";
+            return {
+              title: `Delete ${email}?`,
+              body: (
+                <>
+                  <p>This deletes the account and every venue only they own, with its guests and feedback. It can&apos;t be undone.</p>
+                  <label className="field-label" htmlFor={confirmId} style={{ display: "block", marginTop: 10 }}>
+                    Type their email to confirm
+                  </label>
+                  <input id={confirmId} className="input" type="email" autoComplete="off" onChange={(event) => (typed.current = event.target.value)} />
+                </>
+              ),
+              confirmLabel: "Delete account",
+              danger: true,
+            };
+          },
+          done: "Account deleted.",
+        },
+      ]}
+    />
   );
 }

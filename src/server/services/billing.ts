@@ -125,6 +125,17 @@ export async function cancelSubscription(venue: VenueRecord) {
   updateSubscription(venue.id, { cancelAtPeriodEnd: true });
 }
 
+/** Before a venue is deleted: stop Razorpay charging for it. Best effort; a failure is logged for follow-up by hand. */
+export async function stopBilling(venueId: string) {
+  const sub = getSubscription(venueId);
+  if (billingMode() !== "razorpay" || sub?.provider !== "razorpay" || !sub.paid || !sub.providerSubscriptionId) return;
+  try {
+    await razorpay("POST", `/subscriptions/${encodeURIComponent(sub.providerSubscriptionId)}/cancel`, { cancel_at_cycle_end: 0 });
+  } catch (error) {
+    console.error(`[billing] couldn't cancel ${sub.providerSubscriptionId} for deleted venue ${venueId}; cancel it in the Razorpay dashboard`, error);
+  }
+}
+
 function safeEqualHex(given: string, expected: Buffer): boolean {
   const buffer = Buffer.from(given, "hex");
   return buffer.length === expected.length && timingSafeEqual(buffer, expected);

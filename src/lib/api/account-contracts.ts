@@ -71,3 +71,11 @@ export const adminVenueRequest = z.object({
   extendTrialDays: z.number().int().min(1).max(90).optional(),
 });
 export type AdminVenueRequest = z.input<typeof adminVenueRequest>;
+
+export const adminUserRequest = z.object({
+  action: z.enum(["resend_verification", "send_reset", "block", "unblock"]),
+});
+export type AdminUserRequest = z.input<typeof adminUserRequest>;
+
+export const adminDeleteUserRequest = z.object({ confirmEmail: z.string().max(254) });
+export type AdminDeleteUserRequest = z.input<typeof adminDeleteUserRequest>;

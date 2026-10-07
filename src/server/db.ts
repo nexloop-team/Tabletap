@@ -207,6 +207,21 @@ const MIGRATIONS: string[] = [
    ALTER TABLE staff_devices ADD COLUMN user_id TEXT;`,
   // One plan, billed yearly through Razorpay; a cancellation takes effect when the paid year ends.
   `ALTER TABLE subscriptions ADD COLUMN cancel_at_period_end INTEGER NOT NULL DEFAULT 0;`,
+  // Operator console: every admin change is logged, and accounts can be blocked.
+  `CREATE TABLE admin_actions (
+     id TEXT PRIMARY KEY,
+     admin_id TEXT,
+     admin_email TEXT NOT NULL,
+     action TEXT NOT NULL,
+     target_type TEXT NOT NULL,
+     target_id TEXT NOT NULL,
+     target_label TEXT,
+     detail TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX admin_actions_created ON admin_actions(created_at);
+   CREATE INDEX admin_actions_target ON admin_actions(target_type, target_id);
+   ALTER TABLE users ADD COLUMN blocked_at TEXT;`,
 ];
 
 function migrate(db: DatabaseSync) {

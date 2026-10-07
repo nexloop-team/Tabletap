@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { BadgeCheck, MailWarning, Search, Users } from "lucide-react";
+import { BadgeCheck, Lock, MailWarning, Search, Users } from "lucide-react";
 import Link from "next/link";
+import { AdminUserActions } from "@/components/dashboard/AdminActions";
 import { EmptyState, PageHeader } from "@/components/dashboard/blocks";
 import { formatAgo, formatDate, initials } from "@/lib/format";
-import { isAdmin } from "@/server/auth/session";
+import { isAdmin, isSuperAdmin } from "@/server/auth/session";
 import { adminUsers, matches, USER_LIMIT } from "@/server/admin";
 import { requireAdminPage } from "@/server/dashboard";
 import { firstParam } from "@/server/request";
@@ -14,23 +15,24 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "unverified", label: "Unverified" },
   { key: "no-venue", label: "No venue" },
+  { key: "blocked", label: "Blocked" },
 ] as const;
 
 export default async function AdminAccountsPage({ searchParams }: PageProps<"/admin/accounts">) {
-  await requireAdminPage();
+  const admin = await requireAdminPage();
   const query = await searchParams;
   const q = firstParam(query.q).slice(0, 100);
   const filter = FILTERS.find((f) => f.key === firstParam(query.filter))?.key ?? "all";
 
   const all = adminUsers();
   const searched = all.filter((user) => matches(q, user.name, user.email));
-  const inFilter = (key: string) => (user: (typeof all)[number]) => (key === "unverified" ? !user.emailVerified : key === "no-venue" ? user.venueCount === 0 : true);
+  const inFilter = (key: string) => (user: (typeof all)[number]) => (key === "unverified" ? !user.emailVerified : key === "no-venue" ? user.venueCount === 0 : key === "blocked" ? user.blocked : true);
   const rows = searched.filter(inFilter(filter));
   const href = (key: string) => `/admin/accounts?${new URLSearchParams({ ...(q ? { q } : {}), ...(key !== "all" ? { filter: key } : {}) })}`;
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Platform admin" title="Accounts" description="Everyone who has signed up, newest first." />
+      <PageHeader eyebrow="Platform admin" title="Accounts" description="Everyone who has signed up, newest first. Resend emails, block or delete from the … menu." />
 
       <section className="card card-flush">
         <div className="toolbar">
@@ -63,6 +65,9 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
                     Venues
                   </th>
                   <th scope="col">Signed up</th>
+                  <th scope="col">
+                    <span className="visually-hidden">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -90,7 +95,12 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
                             <MailWarning aria-hidden /> Unverified
                           </span>
                         )}
-                        {isAdmin(user) && <span className="badge badge-admin">Admin</span>}
+                        {user.blocked && (
+                          <span className="badge badge-danger">
+                            <Lock aria-hidden /> Blocked
+                          </span>
+                        )}
+                        {isAdmin(user) && <span className="badge badge-admin">{isSuperAdmin(user) ? "Super admin" : "Admin"}</span>}
                       </span>
                     </td>
                     <td className="num">
@@ -104,6 +114,15 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
                     </td>
                     <td className="nowrap">
                       <span title={formatDate(user.createdAt)}>{formatAgo(user.createdAt)}</span>
+                    </td>
+                    <td className="cell-actions">
+                      <AdminUserActions
+                        userId={user.id}
+                        email={user.email}
+                        verified={user.emailVerified}
+                        blocked={user.blocked}
+                        protectedAccount={user.id === admin.id || isSuperAdmin(user) || (isAdmin(user) && !isSuperAdmin(admin))}
+                      />
                     </td>
                   </tr>
                 ))}

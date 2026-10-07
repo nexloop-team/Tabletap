@@ -95,7 +95,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `/dashboard/<venue>/qr`, `/qr/print` | QR downloads (PNG/SVG, per-table sources) and printable table cards |
 | `/dashboard/<venue>/billing`, `/settings` | Plan, venue details, page address, delete venue |
 | `/dashboard/account` | Name, password, delete account |
-| `/admin` | Operator view: all accounts and venues, suspend, extend trials, give free access, revenue |
+| `/admin` | Operator view: all accounts and venues, suspend, extend trials, give free access, revenue, account actions (resend emails, reset link, block, delete) and an activity log of every admin change |
 | `/staff`, `/staff/stamp?c=<card>` | Till screens for paired staff devices: find a member, add stamps, redeem rewards, undo |
 
 **Guests**
