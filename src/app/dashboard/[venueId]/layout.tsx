@@ -5,7 +5,7 @@ import { AccountBar } from "@/components/dashboard/AccountBar";
 import { HashFocus } from "@/components/dashboard/HashFocus";
 import { trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
-import { venueRole } from "@/server/repositories/venues";
+import { isManagerRole, venueRole } from "@/server/repositories/venues";
 
 export async function generateMetadata({ params }: LayoutProps<"/dashboard/[venueId]">) {
   const { venue } = await loadDashboardVenue((await params).venueId);
@@ -17,7 +17,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
   const { user, venue, subscription } = await loadDashboardVenue(venueId);
   const trialDays = trialDaysLeft(subscription);
   // Only operators reach a venue they aren't a member of (loadDashboardVenue 404s everyone else).
-  const operatorView = !venueRole(user.id, venue.id);
+  const operatorView = !isManagerRole(venueRole(user.id, venue.id));
 
   return (
     <div className="page">

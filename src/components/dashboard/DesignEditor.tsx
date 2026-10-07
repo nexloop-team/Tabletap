@@ -165,7 +165,7 @@ export function DesignEditor({
     const link = linkFor(key);
     if (link) return link.labelCustom || (link.labelToken ? LINK_LABELS[link.labelToken] : link.url) || "Custom link";
     const core = key as CoreFeature;
-    return branding.featureLabels?.[core]?.trim() || CARD_LABELS[core] || key;
+    return branding.featureLabels?.[core]?.trim() || defaultLabel(key);
   }
 
   /** The owner's own wording for a card ("" when they kept the default). */
@@ -189,6 +189,8 @@ export function DesignEditor({
   function defaultLabel(key: FeatureKey): string {
     const link = linkFor(key);
     if (link) return link.labelToken ? LINK_LABELS[link.labelToken] : "Label for this link";
+    // Rewards-only venues run a members club, not a stamp card.
+    if (key === "loyalty" && config.loyaltyProgram?.stampsEnabled === false) return "Join the members club";
     return CARD_LABELS[key as CoreFeature] ?? key;
   }
 

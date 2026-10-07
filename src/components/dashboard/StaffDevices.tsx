@@ -3,6 +3,7 @@
 import { Loader2, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { formatSince } from "@/lib/format";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { useConfirm } from "./confirm";
 import { Card, CopyButton, Field, HelpTip } from "./ui";
@@ -16,6 +17,12 @@ const COOLDOWNS = [
 ];
 
 /** Pair till phones/tablets for stamping, revoke them, and set the stamp cooldown. */
+/** "4 min ago", "2 h ago", "Yesterday": recent enough to spot a till that's gone quiet. */
+function lastUsed(at: string): string {
+  const since = formatSince(at);
+  return /(min| h)$/.test(since) ? `${since} ago` : since.toLowerCase();
+}
+
 export function StaffDevices({
   venueId,
   devices,
@@ -87,8 +94,9 @@ export function StaffDevices({
                 <Smartphone size={18} aria-hidden />
                 <span className="grow">
                   <strong>{device.label}</strong>
-                  <span className="hint" style={{ display: "block" }}>
-                    {device.lastUsedAt ? `Last used ${device.lastUsedAt.slice(0, 16).replace("T", " ")} UTC` : "Not used yet"}
+                  {/* Relative time: server and browser may round it differently. */}
+                  <span className="hint" style={{ display: "block" }} suppressHydrationWarning>
+                    {device.lastUsedAt ? `Last used ${lastUsed(device.lastUsedAt)}` : "Not used yet"}
                   </span>
                 </span>
                 <button type="button" className="btn btn-sm btn-danger" onClick={() => revoke(device.id, device.label)}>

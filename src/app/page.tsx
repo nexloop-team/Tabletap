@@ -2,7 +2,7 @@ import { Check, Heart, MessageCircle, Palette, QrCode, Star, Users, BookOpen, Wi
 import Link from "next/link";
 import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
-import { PLANS, TRIAL_DAYS } from "@/lib/plans";
+import { PLANS, planPriceParts, TRIAL_DAYS } from "@/lib/plans";
 import { isLightColor } from "@/lib/theme";
 import { currentUser } from "@/server/auth/session";
 import { uiFont } from "@/app/fonts";
@@ -31,13 +31,6 @@ const STEPS = [
   { title: "Add your menu and logo", text: "Type it in, or snap a photo of your printed menu and we'll read it for you." },
   { title: "Print your QR codes", text: "A sheet of table cards, one per table, so you can see which ones get scanned." },
 ];
-
-/** "£19 / month per venue" → ["£19", "/ month per venue"]; the free plan reads "£0 forever". */
-function splitPrice(id: string, label: string): [string, string] {
-  if (id === "free") return ["£0", "forever"];
-  const space = label.indexOf(" ");
-  return space < 0 ? [label, ""] : [label.slice(0, space), label.slice(space + 1)];
-}
 
 export default async function Home() {
   const user = await currentUser();
@@ -133,7 +126,7 @@ export default async function Home() {
             <div className="pricing">
               {PLANS.map((plan) => {
                 const pro = plan.id === "pro";
-                const [amount, per] = splitPrice(plan.id, plan.price);
+                const [amount, per] = planPriceParts(plan);
                 return (
                   <section key={plan.id} className={`price-card ${pro ? "featured" : ""}`}>
                     <div className="price-top">

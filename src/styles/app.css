@@ -115,12 +115,7 @@ body:has(.app) {
 .num,
 .table td.num,
 .stat .value {
-  font-family: var(--a-font-display);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  margin-top: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -709,13 +704,16 @@ body:has(.app) {
   font-size: 18px;
 }
 .price-card .price {
-  font-size: 26px;
+  font-family: var(--a-font-display);
+  font-size: 30px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 6px 0 2px;
 }
 .price-card ul {
   list-style: none;
   display: grid;
+  align-content: start;
   gap: 8px;
   margin: 18px 0 22px;
   font-size: 14px;
@@ -1963,11 +1961,12 @@ body:has(.app) {
   height: 15px;
 }
 .stat .value {
+  font-family: var(--a-font-display);
   font-size: 28px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 1.15;
-  margin-top: 8px;
+  margin-top: 0;
 }
 .stat .sub {
   font-size: 12px;
@@ -2620,6 +2619,7 @@ body:has(.app) {
 /* Lists inside editors (sections, items, links, tiers) */
 .list-editor {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .list-row {
@@ -2639,6 +2639,7 @@ body:has(.app) {
 .list-row-head .grow {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .list-row-body {
   margin-top: 12px;
@@ -3503,7 +3504,7 @@ body:has(.app) {
   flex: none;
 }
 .account-bar-part > span {
-  flex: 1 1 180px;
+  flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -4420,4 +4421,30 @@ body:has(.app) {
 }
 .app a.venue-tile .btn-primary {
   color: var(--a-on-accent);
+}
+
+.price-card .price span {
+  font-family: var(--font-sans), var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--a-text-3);
+}
+
+/* With both parts showing, the trial part keeps to one line. */
+.account-bar:has(.account-bar-part + .account-bar-part) .account-bar-more {
+  display: none;
+}
+/* Cards in the overview row share it, whatever is inside them. */
+.overview-grid > .card {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+.till-wordmark {
+  text-transform: lowercase;
+  letter-spacing: -0.03em;
+}
+
+.row-actions .inline {
+  flex-wrap: nowrap;
 }

@@ -47,7 +47,7 @@ export function StaffMembers({ venueId, members }: { venueId: string; members: S
   async function remove(member: StaffMemberView) {
     const ok = await ask({
       title: `Remove ${member.name || member.email}?`,
-      body: "They won't be able to open the till from their account any more. Till devices they already opened keep working until you unpair them above.",
+      body: "They won't be able to open the till any more, and the till on their phone stops working straight away.",
       confirmLabel: "Remove",
       danger: true,
     });

@@ -144,7 +144,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={customFeatureLabel(venue, "loyalty") ?? t("feature_loyalty")}
+                label={customFeatureLabel(venue, "loyalty") ?? t(isRewardsOnly(venue) ? "feature_members_club" : "feature_loyalty")}
                 icon={<FilledHeart />}
                 tint={TINT.loyalty}
                 onToggle={(open) => {

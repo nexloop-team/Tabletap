@@ -162,8 +162,15 @@ describe("venues on the SaaS side", () => {
     m.invites.acceptStaffInvite(again, alice);
     expect(m.venues.venueRole(alice.id, venue.id)).toBe("owner");
 
+    // A till Bob opened with his login (and one the owner paired) — only Bob's is locked when he leaves.
+    const db = m.db.getDb();
+    db.prepare("INSERT INTO staff_devices (id, venue_id, label, user_id) VALUES ('dev-bob', ?, 'Bob', ?), ('dev-counter', ?, 'Counter', NULL)").run(venue.id, bob.id, venue.id);
     expect(m.venues.removeStaffMember(venue.id, bob.id)).toBe(true);
     expect(m.venues.venueRole(bob.id, venue.id)).toBeNull();
+    const revoked = (id: string) => !!(db.prepare("SELECT revoked_at FROM staff_devices WHERE id = ?").get(id) as { revoked_at: string | null }).revoked_at;
+    expect(revoked("dev-bob")).toBe(true);
+    expect(revoked("dev-counter")).toBe(false);
+    expect(m.venues.removeStaffMember(venue.id, bob.id)).toBe(false);
     expect(() => m.invites.createStaffInvite(venue, alice, "not an email", "https://tabletap.test")).toThrow(/email/i);
   });
 

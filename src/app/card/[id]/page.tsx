@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CardLive } from "@/components/card/CardLive";
+import { LandingError } from "@/components/landing/LandingError";
 import { InviteFriend } from "@/components/card/InviteFriend";
 import { FilledHeart } from "@/components/icons";
 import { ThemeStyle } from "@/components/ThemeStyle";
@@ -33,15 +34,7 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
 
   const card = token ? findCardForViewer(id, token) : null;
   const venue = card ? findVenue(card.venue_id) : null;
-  if (!card || !venue) {
-    return (
-      <main className="page-wrapper simple-page">
-        <div className="error-box" role="alert">
-          {t("card_not_found")}
-        </div>
-      </main>
-    );
-  }
+  if (!card || !venue) return <LandingError locale={locale} message="card_not_found" source="card" />;
 
   const logo = safeImageUrl(venue.branding.logoUrl);
   const holder = card.first_name?.trim() || card.name?.trim() || "";

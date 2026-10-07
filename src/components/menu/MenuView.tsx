@@ -206,8 +206,9 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
         />
 
         {!menu ? (
-          <div className="error-container">
-            <div className="error-box">{t("menu_empty")}</div>
+          <div className="menu-empty">
+            <h2>{t("menu_title")}</h2>
+            <p>{t("menu_empty")}</p>
           </div>
         ) : (
           <>

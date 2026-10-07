@@ -24,7 +24,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
           <BrandMark size={32} />
           <span>
             {device ? <span className="till-device">Till · {device.label}</span> : null}
-            <strong>{venue?.config.name ?? BRAND.name}</strong>
+            {venue ? <strong>{venue.config.name}</strong> : <strong className="till-wordmark">{BRAND.name}</strong>}
           </span>
         </Link>
         {device && (

@@ -72,8 +72,8 @@ export function AdminVenueActions({
   return (
     <div className="row-actions">
       <div className="inline nowrap">
-        <Link className="btn btn-sm" href={`/dashboard/${venueId}`} title="See the owner's dashboard, read-only">
-          View as owner
+        <Link className="btn btn-sm" href={`/dashboard/${venueId}`} title="View as owner (read-only)" aria-label={`View ${name} as owner (read-only)`}>
+          View
         </Link>
         <button
           ref={trigger}

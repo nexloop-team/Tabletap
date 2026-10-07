@@ -47,10 +47,12 @@ export interface StaffDeviceRow {
 // ─── Pairing (owner side) ────────────────────────────────────────────────────
 
 /** A one-time link the owner opens on the device that should become a till device. */
-export function createPairing(venueId: string, label: string): { token: string; expiresAt: string } {
+export function createPairing(venueId: string, label: string, userId: string | null = null): { token: string; expiresAt: string } {
   const token = newToken();
   const expiresAt = new Date(Date.now() + PAIRING_MINUTES * 60_000).toISOString();
-  getDb().prepare("INSERT INTO staff_pairings (id, venue_id, label, expires_at) VALUES (?, ?, ?, ?)").run(digest(token), venueId, label, expiresAt);
+  getDb()
+    .prepare("INSERT INTO staff_pairings (id, venue_id, label, expires_at, user_id) VALUES (?, ?, ?, ?, ?)")
+    .run(digest(token), venueId, label, expiresAt, userId);
   return { token, expiresAt };
 }
 
@@ -58,12 +60,12 @@ export function createPairing(venueId: string, label: string): { token: string; 
 export async function completePairing(token: string): Promise<boolean> {
   const deviceToken = newToken();
   const paired = transaction((db) => {
-    const pairing = db.prepare("SELECT venue_id, label, expires_at, used_at FROM staff_pairings WHERE id = ?").get(digest(token)) as
-      | { venue_id: string; label: string; expires_at: string; used_at: string | null }
+    const pairing = db.prepare("SELECT venue_id, label, expires_at, used_at, user_id FROM staff_pairings WHERE id = ?").get(digest(token)) as
+      | { venue_id: string; label: string; expires_at: string; used_at: string | null; user_id: string | null }
       | undefined;
     if (!pairing || pairing.used_at || Date.parse(pairing.expires_at) <= Date.now()) return false;
     db.prepare("UPDATE staff_pairings SET used_at = datetime('now') WHERE id = ?").run(digest(token));
-    db.prepare("INSERT INTO staff_devices (id, venue_id, label) VALUES (?, ?, ?)").run(digest(deviceToken), pairing.venue_id, pairing.label);
+    db.prepare("INSERT INTO staff_devices (id, venue_id, label, user_id) VALUES (?, ?, ?, ?)").run(digest(deviceToken), pairing.venue_id, pairing.label, pairing.user_id);
     return true;
   });
   if (!paired) return false;

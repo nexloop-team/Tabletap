@@ -7,7 +7,7 @@ import { getDb, transaction } from "../db";
 import { ServiceError } from "../http";
 import { addStaffMember, isManagerRole, venueRole, type VenueRecord } from "../repositories/venues";
 import { sendMail } from "./mailer";
-import { completePairing, createPairing } from "./staff";
+import { completePairing, createPairing, currentStaffDevice } from "./staff";
 
 /**
  * Staff logins. An owner invites someone by email; the link adds them to the
@@ -63,6 +63,8 @@ export function acceptStaffInvite(token: string, user: User): string | null {
 export async function openTillForUser(user: User, venueId: string): Promise<void> {
   const role = venueRole(user.id, venueId);
   if (role !== "staff" && !isManagerRole(role)) throw new ServiceError(404, "Venue not found");
-  const { token } = createPairing(venueId, `${user.name || user.email.split("@")[0]}'s login`);
+  // Already a till for this venue: don't add a duplicate to the owner's device list.
+  if ((await currentStaffDevice())?.venueId === venueId) return;
+  const { token } = createPairing(venueId, `${user.name || user.email.split("@")[0]}'s login`, user.id);
   if (!(await completePairing(token))) throw new ServiceError(500, "Couldn't open the till, please try again");
 }

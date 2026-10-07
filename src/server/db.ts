@@ -202,6 +202,9 @@ const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE INDEX staff_invites_venue ON staff_invites(venue_id);`,
+  // Till devices remember which staff login opened them, so removing the person locks the device too.
+  `ALTER TABLE staff_pairings ADD COLUMN user_id TEXT;
+   ALTER TABLE staff_devices ADD COLUMN user_id TEXT;`,
 ];
 
 function migrate(db: DatabaseSync) {

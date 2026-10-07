@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { BillingActions } from "@/components/dashboard/BillingActions";
-import { parseDbDate, PLANS, trialDaysLeft } from "@/lib/plans";
+import { parseDbDate, planPriceParts, PLANS, trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { firstParam } from "@/server/request";
 import { billingMode } from "@/server/services/billing";
@@ -60,29 +60,35 @@ export default async function BillingPage({ params, searchParams }: PageProps<"/
       </section>
 
       <div className="pricing" style={{ margin: 0, maxWidth: "none" }}>
-        {PLANS.map((p) => (
-          <section key={p.id} className={`card price-card ${p.id === "pro" ? "featured" : ""}`}>
-            <h3>{p.name}</h3>
-            <div className="price">{p.price}</div>
-            <p className="muted">{p.blurb}</p>
-            <ul>
-              {p.features.map((feature) => (
-                <li key={feature}>
-                  <Check aria-hidden /> {feature}
-                </li>
-              ))}
-            </ul>
-            {p.id === "pro" &&
-              (paying ? (
-                <BillingActions venueId={venue.id} action="portal" label={mode === "dev" ? "Cancel Pro (dev)" : "Manage billing"} devMode={mode === "dev"} />
-              ) : mode === "disabled" ? (
-                <p className="hint">Payments aren&apos;t set up yet. Contact us to upgrade.</p>
-              ) : (
-                <BillingActions venueId={venue.id} action="checkout" label={trialDays !== null ? "Subscribe to keep Pro" : "Upgrade to Pro"} devMode={mode === "dev"} />
-              ))}
-            {p.id === "free" && plan === "free" && <p className="hint">You&apos;re on this plan.</p>}
-          </section>
-        ))}
+        {PLANS.map((p) => {
+          const [amount, per] = planPriceParts(p);
+          return (
+            <section key={p.id} className={`card price-card ${p.id === "pro" ? "featured" : ""}`}>
+              <h3>{p.name}</h3>
+              <div className="price">
+                {amount}
+                {per && <span> {per}</span>}
+              </div>
+              <p className="muted">{p.blurb}</p>
+              <ul>
+                {p.features.map((feature) => (
+                  <li key={feature}>
+                    <Check aria-hidden /> {feature}
+                  </li>
+                ))}
+              </ul>
+              {p.id === "pro" &&
+                (paying ? (
+                  <BillingActions venueId={venue.id} action="portal" label={mode === "dev" ? "Cancel Pro (dev)" : "Manage billing"} devMode={mode === "dev"} />
+                ) : mode === "disabled" ? (
+                  <p className="hint">Payments aren&apos;t set up yet. Contact us to upgrade.</p>
+                ) : (
+                  <BillingActions venueId={venue.id} action="checkout" label={trialDays !== null ? "Subscribe to keep Pro" : "Upgrade to Pro"} devMode={mode === "dev"} />
+                ))}
+              {p.id === "free" && plan === "free" && <p className="hint">You&apos;re on this plan.</p>}
+            </section>
+          );
+        })}
       </div>
     </>
   );

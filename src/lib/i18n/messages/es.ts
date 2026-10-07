@@ -20,6 +20,7 @@ export const es: Partial<Messages> = {
   feature_menu_orderonline: "Pedir online",
   feature_wifi: "Wi-Fi",
   feature_loyalty: "Tarjeta de sellos",
+  feature_members_club: "Únete al club",
   feature_my_card: "Tu tarjeta de recompensas",
   feature_feedback_box: "Buzón de sugerencias",
   feature_feedback_anon: "Opinión anónima",
@@ -87,4 +88,5 @@ export const es: Partial<Messages> = {
   menu_popular: "Lo más pedido",
   menu_items_one: "1 plato",
   menu_items: "{count} platos",
+  menu_empty: "La carta aún no está en línea. Pregunta a alguien del personal.",
 };

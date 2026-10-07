@@ -71,6 +71,13 @@ export const PLANS: PlanInfo[] = [
   },
 ];
 
+/** "£19 / month per venue" → ["£19", "/ month per venue"]; the free plan reads "£0 forever". */
+export function planPriceParts(plan: PlanInfo): [amount: string, per: string] {
+  if (plan.id === "free") return ["£0", "forever"];
+  const space = plan.price.indexOf(" ");
+  return space < 0 ? [plan.price, ""] : [plan.price.slice(0, space), plan.price.slice(space + 1)];
+}
+
 export interface SubscriptionState {
   plan: PlanId;
   status: SubscriptionStatus;

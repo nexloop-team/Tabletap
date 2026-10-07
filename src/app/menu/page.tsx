@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { LandingError } from "@/components/landing/LandingError";
+import { menuExternalUrl, sanitiseExternalUrl } from "@/lib/venue/features";
 import { MenuView } from "@/components/menu/MenuView";
 import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
@@ -26,6 +28,9 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
 
   // Only hosted menus with something on them; an external-link menu has its own site.
   const menus = venue.menus.filter((menu) => !menu.externalUrl && menu.sections.some((section) => section.items.length > 0));
+  // Someone landed here (an old link, a typed URL) for a venue whose menu lives elsewhere: send them there.
+  const external = sanitiseExternalUrl(menuExternalUrl(venue));
+  if (menus.length === 0 && external) redirect(external);
 
   return (
     <>

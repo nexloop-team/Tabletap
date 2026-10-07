@@ -125,9 +125,14 @@ export function addStaffMember(venueId: string, userId: string) {
   getDb().prepare("INSERT OR IGNORE INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'staff')").run(venueId, userId);
 }
 
+/** Removes a staff login and locks any till device that login opened. */
 export function removeStaffMember(venueId: string, userId: string): boolean {
-  const result = getDb().prepare("DELETE FROM venue_members WHERE venue_id = ? AND user_id = ? AND role = 'staff'").run(venueId, userId);
-  return Number(result.changes) > 0;
+  return transaction((db) => {
+    const result = db.prepare("DELETE FROM venue_members WHERE venue_id = ? AND user_id = ? AND role = 'staff'").run(venueId, userId);
+    if (Number(result.changes) === 0) return false;
+    db.prepare("UPDATE staff_devices SET revoked_at = datetime('now') WHERE venue_id = ? AND user_id = ? AND revoked_at IS NULL").run(venueId, userId);
+    return true;
+  });
 }
 
 export function shortCodeTaken(code: string, exceptVenueId = ""): boolean {
