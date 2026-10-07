@@ -27,6 +27,19 @@ export function detectLocale(input: string | null | undefined): Locale {
   return "en";
 }
 
+/** Languages a guest can pick on the venue page, each named in its own language. */
+export const LANGUAGE_CHOICES: { locale: string; label: string }[] = [
+  { locale: "en", label: "English" },
+  { locale: "es", label: "Español" },
+];
+
+/** Cookie a guest's language choice is kept in; it wins over the phone's language. */
+export const LANGUAGE_COOKIE = "tt_lang";
+
+export function isSupportedLocale(value: string | null | undefined): value is Locale {
+  return !!value && Object.hasOwn(DICTIONARIES, value);
+}
+
 export function isRtl(locale: Locale): boolean {
   return RTL_LOCALES.has(locale);
 }

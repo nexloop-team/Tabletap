@@ -205,7 +205,9 @@ export function DesignEditor({
       case "wifi":
         return wifi.ssid || "Expands · Wi-Fi details";
       case "feedback":
-        return "Then invites a Google review";
+        return branding.featureLabels?.feedback?.trim()
+          ? "Then invites a Google review"
+          : "Guests see “Suggestion box” or “Anonymous feedback” while we test which gets more replies. Rename it to choose.";
       case "google_review":
         return "Links to your Google page";
       case "sudoku":

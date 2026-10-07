@@ -1,7 +1,7 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
-import { detectLocale, type Locale } from "@/lib/i18n";
+import { detectLocale, isSupportedLocale, LANGUAGE_COOKIE, type Locale } from "@/lib/i18n";
 import { findVenue } from "./repositories/venues";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
@@ -40,7 +40,10 @@ export async function serverOrigin(): Promise<string> {
 }
 
 /** Server-rendered text uses the browser's Accept-Language, so the first paint is already localised. */
+/** The guest's chosen language (language switch), else the phone's. */
 export async function requestLocale(): Promise<Locale> {
+  const chosen = (await cookies()).get(LANGUAGE_COOKIE)?.value;
+  if (isSupportedLocale(chosen)) return chosen;
   return detectLocale((await headers()).get("accept-language"));
 }
 

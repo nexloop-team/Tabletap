@@ -34,6 +34,7 @@ import { RewardsSheet } from "./loyalty/RewardsJoinForm";
 import { SocialLinks } from "./SocialLinks";
 import { SudokuSheet } from "./sudoku/SudokuSheet";
 import { useGoogleReview } from "./useGoogleReview";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { VenueHeader } from "./VenueHeader";
 import { WifiSheet } from "./wifi/WifiSheet";
 
@@ -354,6 +355,7 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
           )}
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
+          <LanguageSwitch locale={locale} />
           {venue.showPoweredBy !== false && (
             <Link className="powered-by" href="/">
               <BrandMark />

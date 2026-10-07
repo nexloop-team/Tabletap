@@ -41,7 +41,8 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
   if (!venue) return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
 
   // `?cta=` forces a bucket for QA without touching the visitor's stored one.
-  const forced = parseVariant(firstParam(params.cta));
+  // The owner's own dashboard preview always shows the default label, outside the test.
+  const forced = parseVariant(firstParam(params.cta)) ?? (source === "preview" ? "box" : null);
   const stored = parseVariant((await cookies()).get(FEEDBACK_VARIANT_COOKIE)?.value);
   const variant = forced ?? stored ?? drawVariant();
 

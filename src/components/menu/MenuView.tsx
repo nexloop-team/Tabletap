@@ -2,6 +2,7 @@
 
 import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Sparkles, Sprout, Star, WheatOff, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LanguageSwitch } from "@/components/landing/LanguageSwitch";
 import { VenueHeader } from "@/components/landing/VenueHeader";
 import { BRAND } from "@/config/brand";
 import { createTracker } from "@/lib/analytics";
@@ -352,6 +353,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
               ))
             )}
 
+            <LanguageSwitch locale={locale} />
             <p className="menu-note small">
               {t("menu_allergen_note")}
               {showPoweredBy && (
