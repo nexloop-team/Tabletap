@@ -77,9 +77,18 @@ export function getVenueRecord(venueId: string): VenueRecord | null {
   return row ? toRecord(row) : null;
 }
 
+/** Venues this user runs (owner, or any future manager role). Staff memberships are listed separately. */
 export function listVenuesForUser(userId: string): VenueRecord[] {
   const rows = getDb()
-    .prepare("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? ORDER BY v.created_at")
+    .prepare("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role != 'staff' ORDER BY v.created_at")
+    .all(userId) as unknown as VenueRow[];
+  return rows.map(toRecord);
+}
+
+/** Venues where this user is staff: they can open the till there and nothing else. */
+export function listStaffVenuesForUser(userId: string): VenueRecord[] {
+  const rows = getDb()
+    .prepare("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role = 'staff' ORDER BY v.created_at")
     .all(userId) as unknown as VenueRow[];
   return rows.map(toRecord);
 }
@@ -87,6 +96,38 @@ export function listVenuesForUser(userId: string): VenueRecord[] {
 export function venueRole(userId: string, venueId: string): string | null {
   const row = getDb().prepare("SELECT role FROM venue_members WHERE user_id = ? AND venue_id = ?").get(userId, venueId) as { role: string } | undefined;
   return row?.role ?? null;
+}
+
+/** Can see and change the venue's dashboard: any membership except staff. */
+export function isManagerRole(role: string | null): boolean {
+  return role !== null && role !== "staff";
+}
+
+export interface StaffMember {
+  userId: string;
+  name: string;
+  email: string;
+  joinedAt: string;
+}
+
+export function listStaffMembers(venueId: string): StaffMember[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT u.id, u.name, u.email, m.created_at FROM venue_members m JOIN users u ON u.id = m.user_id
+        WHERE m.venue_id = ? AND m.role = 'staff' ORDER BY m.created_at`,
+    )
+    .all(venueId) as { id: string; name: string; email: string; created_at: string }[];
+  return rows.map((row) => ({ userId: row.id, name: row.name, email: row.email, joinedAt: row.created_at }));
+}
+
+/** Adds a staff membership; someone who's already a member keeps their existing role. */
+export function addStaffMember(venueId: string, userId: string) {
+  getDb().prepare("INSERT OR IGNORE INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'staff')").run(venueId, userId);
+}
+
+export function removeStaffMember(venueId: string, userId: string): boolean {
+  const result = getDb().prepare("DELETE FROM venue_members WHERE venue_id = ? AND user_id = ? AND role = 'staff'").run(venueId, userId);
+  return Number(result.changes) > 0;
 }
 
 export function shortCodeTaken(code: string, exceptVenueId = ""): boolean {
@@ -178,6 +219,9 @@ export interface AdminVenueRow {
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
   guests: number;
+  /** Guest page opens in the last 7 days, not counting the owner's own previews. */
+  scans7d: number;
+  lastScanAt: string | null;
 }
 
 export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
@@ -186,7 +230,11 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
       `SELECT v.id, v.short_code, json_extract(v.config, '$.name') AS name, v.status, v.created_at,
               (SELECT u.email FROM venue_members m JOIN users u ON u.id = m.user_id WHERE m.venue_id = v.id AND m.role = 'owner' LIMIT 1) AS owner_email,
               s.plan, s.status AS sub_status, s.trial_ends_at,
-              (SELECT COUNT(*) FROM customers c WHERE c.venue_id = v.id) AS guests
+              (SELECT COUNT(*) FROM customers c WHERE c.venue_id = v.id) AS guests,
+              (SELECT COUNT(*) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= datetime('now', '-7 days')
+                 AND COALESCE(json_extract(e.params, '$.source'), '') != 'preview') AS scans_7d,
+              (SELECT MAX(e.created_at) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened'
+                 AND COALESCE(json_extract(e.params, '$.source'), '') != 'preview') AS last_scan_at
        FROM venues v LEFT JOIN subscriptions s ON s.venue_id = v.id
        ORDER BY v.created_at DESC LIMIT ?`,
     )
@@ -201,6 +249,8 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
     sub_status: string | null;
     trial_ends_at: string | null;
     guests: number;
+    scans_7d: number;
+    last_scan_at: string | null;
   }[];
   return rows.map((row) => ({
     id: row.id,
@@ -213,5 +263,7 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
     subscriptionStatus: row.sub_status,
     trialEndsAt: row.trial_ends_at,
     guests: row.guests,
+    scans7d: row.scans_7d,
+    lastScanAt: row.last_scan_at,
   }));
 }

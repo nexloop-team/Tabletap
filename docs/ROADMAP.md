@@ -8,7 +8,7 @@ The working plan for Tabletap: what's done, what's next, why things were decided
 - New idea? Put it in [Ideas parking lot](#ideas-parking-lot) first and move it into a section once you decide to do it.
 - Changing a big decision (market, price, hosting)? Add it to the [Decisions](#decisions) table with the reason.
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-08_
 
 ---
 
@@ -96,7 +96,7 @@ These are must-haves. Without them the product is not ready to demo or sell.
 
 ## 5. Later: once you have customers
 
-- [ ] Staff logins (stamping only, no access to billing or guest data).
+- [x] Staff logins (stamping only, no access to billing or guest data).
 - [ ] Printable menu PDF generated from the same menu data.
 - [ ] Automatic menu translation for tourists.
 - [ ] Import name, logo, hours and review link from the Google Business Profile at signup.
@@ -188,6 +188,18 @@ Newest first. One line per change: what changed and why.
 ### YYYY-MM-DD
 - Added / Changed / Fixed: what, and why
 ```
+
+### 2026-10-08
+- Added: "Changes saved" toasts with Undo (restores the version before the last save; undo twice to redo).
+- Changed: the trial countdown and "confirm your email" share one slim bar; the email reminder can be snoozed for a day.
+- Added: "How do I…?" help for the Google review link, pairing a till and printing at 100%, plus "Help & contact" in the sidebar (`NEXT_PUBLIC_SUPPORT_EMAIL`).
+- Added: setup checklist links open the exact card and highlight it; full-screen "Preview" on phones; loading placeholders for dashboard pages.
+- Added: social fields accept @handles.
+- Added: English / Español switch on the guest page and menu (`tt_lang` cookie).
+- Changed: the owner's own preview always shows "Suggestion box" (outside the label A/B test), and the editor explains the test.
+- Added: staff logins. Owners invite by email; staff sign in (or sign up) and can only open the till. The till shows recent stamps and rewards.
+- Added (admin): scans in the last 7 days and last scan per venue; "View as owner" is now read-only.
+- Fixed: dashboard pages scrolled sideways on phones.
 
 ### 2026-10-07
 - Changed: full redesign to the Claude Design mockups (brand, marketing home, guest page, menu, dashboard, editors, onboarding, staff till, A4 table cards).

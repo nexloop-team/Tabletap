@@ -236,3 +236,50 @@ export function searchMembers(device: StaffDevice, query: string): MemberMatch[]
     .all(device.venueId, like, like) as { id: string; stamps: number; email: string; first_name: string | null; name: string | null }[];
   return rows.map((row) => ({ cardId: row.id, name: row.first_name || row.name, email: maskEmail(row.email), stamps: row.stamps }));
 }
+
+export interface TillActivity {
+  cardId: string;
+  name: string | null;
+  kind: "stamp" | "redeem";
+  delta: number;
+  rewardName: string | null;
+  undone: boolean;
+  /** SQLite UTC timestamp. */
+  at: string;
+  deviceLabel: string | null;
+}
+
+/** The latest stamps and rewards at this venue, from any till, newest first: "did we already stamp them?" */
+export function recentTillActivity(device: StaffDevice, limit = 5): TillActivity[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT e.card_id, e.kind, e.delta, e.reward_name, e.undone_at, e.created_at, c.first_name, c.name, d.label AS device_label
+         FROM stamp_events e
+         JOIN loyalty_cards l ON l.id = e.card_id
+         JOIN customers c ON c.id = l.customer_id
+         LEFT JOIN staff_devices d ON d.id = e.device_id
+        WHERE e.venue_id = ? AND e.kind IN ('stamp', 'redeem')
+        ORDER BY e.id DESC LIMIT ?`,
+    )
+    .all(device.venueId, limit) as {
+    card_id: string;
+    kind: "stamp" | "redeem";
+    delta: number;
+    reward_name: string | null;
+    undone_at: string | null;
+    created_at: string;
+    first_name: string | null;
+    name: string | null;
+    device_label: string | null;
+  }[];
+  return rows.map((row) => ({
+    cardId: row.card_id,
+    name: row.first_name || row.name,
+    kind: row.kind,
+    delta: row.delta,
+    rewardName: row.reward_name,
+    undone: !!row.undone_at,
+    at: row.created_at,
+    deviceLabel: row.device_label,
+  }));
+}

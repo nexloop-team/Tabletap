@@ -1,9 +1,11 @@
-import { Search } from "lucide-react";
+import { ScanLine, Search } from "lucide-react";
 import Link from "next/link";
 import { ScanCardButton } from "@/components/staff/ScanCardButton";
-import { initials } from "@/lib/format";
+import { formatSince, initials } from "@/lib/format";
+import { currentUser } from "@/server/auth/session";
+import { listStaffVenuesForUser, listVenuesForUser } from "@/server/repositories/venues";
 import { firstParam } from "@/server/request";
-import { currentStaffDevice, searchMembers } from "@/server/services/staff";
+import { currentStaffDevice, recentTillActivity, searchMembers } from "@/server/services/staff";
 
 /** Home screen of a paired till device: scan a card, or find a member by name or email. */
 export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
@@ -12,19 +14,42 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
   const device = await currentStaffDevice();
 
   if (!device) {
+    const user = await currentUser();
+    // A signed-in owner or staff member can open the till here without a pairing link.
+    const tills = user ? [...listStaffVenuesForUser(user.id), ...listVenuesForUser(user.id)] : [];
     return (
       <section className="till-message">
         {paired === "0" && <div className="notice notice-error">That pairing link has expired or was already used. Ask the owner for a new one.</div>}
-        <h1>This isn&apos;t a staff device yet</h1>
-        <p>
-          The venue owner can pair it from their dashboard: <strong>Loyalty &amp; capture → Staff devices → Add a staff device</strong>, then open the link on this phone or tablet.
-        </p>
+        {params.invite === "0" && <div className="notice notice-error">That invite link has expired or was already used. Ask the owner to send a new one.</div>}
+        {tills.length > 0 ? (
+          <>
+            <h1>Open the till</h1>
+            <p>This turns the phone or tablet you&apos;re holding into a till for stamping cards.</p>
+            {tills.map((venue) => (
+              // A plain link: prefetching it would pair the device.
+              <a key={venue.id} className="staff-btn staff-btn-primary" href={`/staff/open?v=${encodeURIComponent(venue.id)}`}>
+                <ScanLine aria-hidden /> {venue.config.name}
+              </a>
+            ))}
+          </>
+        ) : (
+          <>
+            <h1>This isn&apos;t a staff device yet</h1>
+            <p>
+              Sign in with your staff login, or ask the venue owner to pair this device from their dashboard: <strong>Loyalty &amp; capture → Staff devices</strong>.
+            </p>
+            <a className="staff-btn staff-btn-secondary" href="/login?next=%2Fstaff">
+              Sign in with a staff login
+            </a>
+          </>
+        )}
       </section>
     );
   }
 
   const q = firstParam(params.q).slice(0, 80);
   const matches = q ? searchMembers(device, q) : [];
+  const recent = q ? [] : recentTillActivity(device);
 
   return (
     <>
@@ -39,6 +64,32 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
         <Search aria-hidden />
         <input name="q" defaultValue={q} placeholder="Name or email" aria-label="Find a member by name or email" autoComplete="off" />
       </form>
+
+      {recent.length > 0 && (
+        <section aria-label="Recent">
+          <h2 className="till-label">Recent</h2>
+          <ul className="till-list">
+            {recent.map((entry, index) => (
+              <li key={`${entry.cardId}-${entry.at}-${index}`} className={entry.undone ? "undone" : undefined}>
+                <Link href={`/staff/stamp?c=${entry.cardId}`}>
+                  <span className="till-avatar" aria-hidden>
+                    {initials(entry.name || "Guest")}
+                  </span>
+                  <span className="till-list-text">
+                    <strong>{entry.name || "Guest"}</strong>
+                    <span>
+                      {entry.undone ? "Undone · " : ""}
+                      {entry.kind === "redeem" ? `Redeemed ${entry.rewardName ?? "a reward"}` : `+${entry.delta} stamp${entry.delta === 1 ? "" : "s"}`}
+                      {entry.deviceLabel ? ` · ${entry.deviceLabel}` : ""}
+                    </span>
+                  </span>
+                  <span className="till-list-meta">{formatSince(entry.at)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {q && (
         <section aria-label="Members found">

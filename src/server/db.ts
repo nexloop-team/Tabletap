@@ -191,6 +191,17 @@ const MIGRATIONS: string[] = [
    CREATE UNIQUE INDEX loyalty_cards_referral ON loyalty_cards(referral_code);`,
   // One step of undo for the page editors.
   `ALTER TABLE venues ADD COLUMN previous_config TEXT;`,
+  // Staff logins: owners invite staff by email; staff can only open the till.
+  `CREATE TABLE staff_invites (
+     id TEXT PRIMARY KEY,
+     venue_id TEXT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+     email TEXT NOT NULL,
+     invited_by TEXT,
+     expires_at TEXT NOT NULL,
+     used_at TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX staff_invites_venue ON staff_invites(venue_id);`,
 ];
 
 function migrate(db: DatabaseSync) {

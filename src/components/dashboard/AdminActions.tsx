@@ -72,8 +72,8 @@ export function AdminVenueActions({
   return (
     <div className="row-actions">
       <div className="inline nowrap">
-        <Link className="btn btn-sm" href={`/dashboard/${venueId}`}>
-          Open
+        <Link className="btn btn-sm" href={`/dashboard/${venueId}`} title="See the owner's dashboard, read-only">
+          View as owner
         </Link>
         <button
           ref={trigger}
@@ -88,7 +88,7 @@ export function AdminVenueActions({
       </div>
       <div ref={menu} id={menuId} popover="auto" className="menu" onToggle={onToggle}>
         <Link className="menu-item" href={`/dashboard/${venueId}`}>
-          <LayoutDashboard aria-hidden /> Open dashboard
+          <LayoutDashboard aria-hidden /> View as owner (read-only)
         </Link>
         <a className="menu-item" href={guestUrl} target="_blank" rel="noreferrer">
           <ExternalLink aria-hidden /> View guest page

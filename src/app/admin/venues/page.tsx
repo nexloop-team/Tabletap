@@ -75,6 +75,10 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                   <th scope="col" className="num">
                     Guests
                   </th>
+                  <th scope="col" className="num">
+                    Scans · 7 days
+                  </th>
+                  <th scope="col">Last scan</th>
                   <th scope="col">Created</th>
                   <th scope="col">
                     <span className="visually-hidden">Actions</span>
@@ -106,6 +110,8 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                       <SegmentBadge venue={venue} />
                     </td>
                     <td className="num">{venue.guests.toLocaleString("en-GB")}</td>
+                    <td className="num">{venue.scans7d.toLocaleString("en-GB")}</td>
+                    <td className="nowrap">{venue.lastScanAt ? <span title={formatDate(venue.lastScanAt)}>{formatAgo(venue.lastScanAt)}</span> : <span className="muted">Never</span>}</td>
                     <td className="nowrap">
                       <span title={formatDate(venue.createdAt)}>{formatAgo(venue.createdAt)}</span>
                     </td>

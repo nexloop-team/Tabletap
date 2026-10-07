@@ -26,7 +26,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
           <span className="inline">
             <Shield aria-hidden />
             <span>
-              You&apos;re viewing <strong>{venue.config.name}</strong> as a platform admin. Changes you save go live for this venue.
+              You&apos;re viewing <strong>{venue.config.name}</strong> as a platform admin. This is a read-only support view: saving is switched off.
             </span>
           </span>
           <Link className="btn btn-sm" href="/admin/venues">

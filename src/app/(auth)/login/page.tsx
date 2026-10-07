@@ -11,13 +11,14 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = firstParam((await searchParams).next);
   if (await currentUser()) redirect(safeNext(next));
+  const joiningStaff = next.startsWith("/staff/");
   return (
     <>
-      <h1>Welcome back</h1>
-      <p>Sign in to manage your venue.</p>
+      <h1>{joiningStaff ? "Sign in to open the till" : "Welcome back"}</h1>
+      <p>{joiningStaff ? "Use your own account. Staff accounts can stamp cards and nothing else." : "Sign in to manage your venue."}</p>
       <LoginForm next={next || undefined} />
       <p className="auth-alt">
-        New here? <Link href="/signup">Create a free account</Link>
+        New here? <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}>Create a free account</Link>
       </p>
     </>
   );

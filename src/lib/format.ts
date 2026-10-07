@@ -25,6 +25,17 @@ export function formatAgo(value: string | null | undefined, now = Date.now()): s
   return formatDate(value);
 }
 
+/** "just now", "4 min", "2 h", then the day: for the till, where minutes matter. */
+export function formatSince(value: string | null | undefined, now = Date.now()): string {
+  const time = parseDbDate(value);
+  if (time === null) return "–";
+  const minutes = Math.floor((now - time) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)} h`;
+  return formatAgo(value, now);
+}
+
 /** Counts per UTC day for the last `days` days (oldest first), from a list of timestamps. */
 export function dailyCounts(values: (string | null | undefined)[], days: number, now = Date.now()): { day: string; count: number }[] {
   const today = utcDay(now);

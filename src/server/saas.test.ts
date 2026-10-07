@@ -18,6 +18,7 @@ type Modules = {
   admin: typeof import("./services/venue-admin");
   schema: typeof import("@/lib/venue/schema");
   db: typeof import("./db");
+  invites: typeof import("./services/staff-invites");
 };
 let m: Modules;
 
@@ -31,6 +32,7 @@ beforeAll(async () => {
     admin: await import("./services/venue-admin"),
     schema: await import("@/lib/venue/schema"),
     db: await import("./db"),
+    invites: await import("./services/staff-invites"),
   };
 });
 
@@ -138,6 +140,45 @@ describe("venues on the SaaS side", () => {
     const venue = onboard(alice, "Bloom");
     expect(m.admin.requireVenueAccess(alice, venue.id).id).toBe(venue.id);
     expect(() => m.admin.requireVenueAccess(mallory, venue.id)).toThrow(/not found/i);
+  });
+
+  it("keeps staff logins out of the dashboard and lets each invite work once", async () => {
+    const alice = await owner("staff-owner@example.com");
+    const bob = await owner("staff-bob@example.com");
+    const venue = onboard(alice, "Till Test");
+    const { url } = m.invites.createStaffInvite(venue, alice, " Staff-Bob@Example.com ", "https://tabletap.test");
+    const token = new URL(url).searchParams.get("t")!;
+
+    expect(m.invites.acceptStaffInvite(token, bob)).toBe(venue.id);
+    expect(m.venues.venueRole(bob.id, venue.id)).toBe("staff");
+    expect(() => m.admin.requireVenueAccess(bob, venue.id)).toThrow(/not found/i);
+    expect(m.venues.listVenuesForUser(bob.id).map((v) => v.id)).not.toContain(venue.id);
+    expect(m.venues.listStaffVenuesForUser(bob.id).map((v) => v.id)).toEqual([venue.id]);
+    expect(m.venues.listStaffMembers(venue.id).map((s) => s.email)).toEqual(["staff-bob@example.com"]);
+
+    // Used links don't work twice, and an owner invited by mistake stays an owner.
+    expect(m.invites.acceptStaffInvite(token, bob)).toBeNull();
+    const again = new URL(m.invites.createStaffInvite(venue, alice, alice.email, "https://tabletap.test").url).searchParams.get("t")!;
+    m.invites.acceptStaffInvite(again, alice);
+    expect(m.venues.venueRole(alice.id, venue.id)).toBe("owner");
+
+    expect(m.venues.removeStaffMember(venue.id, bob.id)).toBe(true);
+    expect(m.venues.venueRole(bob.id, venue.id)).toBeNull();
+    expect(() => m.invites.createStaffInvite(venue, alice, "not an email", "https://tabletap.test")).toThrow(/email/i);
+  });
+
+  it("undoes the last save, and undoing again redoes it", async () => {
+    const user = await owner("undo@example.com");
+    const venue = onboard(user, "Undo Test");
+    expect(m.venues.restorePreviousConfig(venue.id)).toBe(false);
+    const branding = (tagline: string) => ({ coverImageUrl: null, logoUrl: null, tagline });
+    m.admin.updateVenue(venue, { config: { branding: branding("First") } });
+    const second = m.admin.updateVenue(m.venues.getVenueRecord(venue.id)!, { config: { branding: branding("Second") } });
+    expect(second.config.branding.tagline).toBe("Second");
+    expect(m.venues.restorePreviousConfig(venue.id)).toBe(true);
+    expect(m.venues.getVenueRecord(venue.id)!.config.branding.tagline).toBe("First");
+    expect(m.venues.restorePreviousConfig(venue.id)).toBe(true);
+    expect(m.venues.getVenueRecord(venue.id)!.config.branding.tagline).toBe("Second");
   });
 
   it("merges a section save and validates the result as a whole", async () => {

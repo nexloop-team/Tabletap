@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lexiconSentiment } from "@/server/services/sentiment";
+import { formatSince } from "./format";
 import { createTranslator, detectLocale } from "./i18n";
 import { linkLabel } from "./landing-copy";
 import { computeTheme, isLightColor, themeCss } from "./theme";
@@ -72,5 +73,16 @@ describe("sentiment", () => {
     expect(lexiconSentiment("Rude service and the food was cold")).toBeLessThan(0);
     expect(lexiconSentiment("The food was not good")).toBeLessThan(0);
     expect(lexiconSentiment("We sat by the window")).toBe(0);
+  });
+});
+
+describe("formatSince", () => {
+  const now = Date.UTC(2026, 9, 8, 12, 0, 0);
+  it("counts minutes and hours for the till, then falls back to days", () => {
+    expect(formatSince("2026-10-08 11:59:40", now)).toBe("just now");
+    expect(formatSince("2026-10-08 11:56:00", now)).toBe("4 min");
+    expect(formatSince("2026-10-08 09:30:00", now)).toBe("2 h");
+    expect(formatSince("2026-10-07 09:00:00", now)).toBe("Yesterday");
+    expect(formatSince(null, now)).toBe("–");
   });
 });

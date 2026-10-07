@@ -7,17 +7,7 @@ import { isAdmin } from "../auth/session";
 import { ServiceError } from "../http";
 import { newId } from "../ids";
 import type { User } from "../repositories/users";
-import {
-  createVenue,
-  deleteVenue,
-  getVenueRecord,
-  listVenuesForUser,
-  shortCodeTaken,
-  updateShortCode,
-  updateVenueConfig,
-  venueRole,
-  type VenueRecord,
-} from "../repositories/venues";
+import { createVenue, deleteVenue, getVenueRecord, isManagerRole, listVenuesForUser, shortCodeTaken, type VenueRecord, updateShortCode, updateVenueConfig, venueRole } from "../repositories/venues";
 
 const MAX_VENUES_PER_ACCOUNT = 20;
 
@@ -27,7 +17,7 @@ const RESERVED_CODES = new Set(["admin", "api", "app", "dashboard", "login", "si
 /** Owners (and operators) only; anyone else gets the same 404 as a missing venue. */
 export function requireVenueAccess(user: User, venueId: string): VenueRecord {
   const venue = getVenueRecord(venueId);
-  if (!venue || (!venueRole(user.id, venueId) && !isAdmin(user))) throw new ServiceError(404, "Venue not found");
+  if (!venue || (!isManagerRole(venueRole(user.id, venueId)) && !isAdmin(user))) throw new ServiceError(404, "Venue not found");
   return venue;
 }
 

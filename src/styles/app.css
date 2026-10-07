@@ -4407,3 +4407,17 @@ body:has(.app) {
   color: #111;
   border-color: #fff;
 }
+
+.till-list li.undone .till-list-text {
+  opacity: 0.6;
+}
+
+.till-access {
+  margin-top: 28px;
+}
+.till-access .card-title {
+  margin-bottom: 12px;
+}
+.app a.venue-tile .btn-primary {
+  color: var(--a-on-accent);
+}

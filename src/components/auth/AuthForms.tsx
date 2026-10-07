@@ -73,11 +73,11 @@ export function LoginForm({ next }: { next?: string }) {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ next }: { next?: string }) {
   const router = useRouter();
   const { pending, error, onSubmit } = useSubmit(async (form) => {
     await dashboardApi.signup({ name: text(form, "name"), email: text(form, "email"), password: text(form, "password"), captchaToken: captchaToken(form) });
-    router.replace("/onboarding");
+    router.replace(safeNext(next, "/onboarding"));
     router.refresh();
   });
   return (
