@@ -5,9 +5,11 @@ import { useState } from "react";
 import { LINK_ICON_TOKENS } from "@/components/icons";
 import { STYLE_FONT_HREF } from "@/lib/theme";
 import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
+import { expandSocialLink } from "@/lib/venue/social";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
 import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { MobilePreview } from "./MobilePreview";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -226,7 +228,8 @@ export function DesignEditor({
   return (
     <div className="editor-grid">
       <div>
-        <Card title="Header" description="The top of your page: who you are at a glance.">
+        <MobilePreview src={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} label="Preview your page" dirty={editor.dirty} />
+        <Card id="logo" title="Header" description="The top of your page: who you are at a glance.">
           <div className="row">
             <ImageField venueId={venueId} label="Logo" value={branding.logoUrl} onChange={(url) => setBranding({ logoUrl: url })} hint="Square, at least 300×300." />
             <ImageField venueId={venueId} label="Cover photo" value={branding.coverImageUrl} onChange={(url) => setBranding({ coverImageUrl: url })} hint="Landscape, about 1200×600." wide />
@@ -399,7 +402,7 @@ export function DesignEditor({
           )}
         </Card>
 
-        <Card title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">
+        <Card id="google" title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">
           <TextField
             label="Review link"
             value={social.google}
@@ -417,7 +420,7 @@ export function DesignEditor({
           </HelpTip>
         </Card>
 
-        <Card title="Wi-Fi" description="Guests copy the password in one tap. Leave the network name blank to hide the card.">
+        <Card id="wifi" title="Wi-Fi" description="Guests copy the password in one tap. Leave the network name blank to hide the card.">
           <div className="row">
             <TextField
               label="Network name"
@@ -528,14 +531,38 @@ export function DesignEditor({
           )}
         </Card>
 
-        <Card title="Social profiles" description="Shown as icons at the bottom of your page.">
+        <Card title="Social profiles" description="Shown as icons at the bottom of your page. Type your handle, like @junipercoffee, or paste a link.">
           <div className="row">
-            <TextField label="Instagram" value={social.instagram} onChange={(value) => setSocial({ instagram: value })} placeholder="https://instagram.com/…" type="url" />
-            <TextField label="Facebook" value={social.facebook} onChange={(value) => setSocial({ facebook: value })} placeholder="https://facebook.com/…" type="url" />
+            <TextField
+              label="Instagram"
+              value={social.instagram}
+              onChange={(value) => setSocial({ instagram: value })}
+              onBlur={() => setSocial({ instagram: expandSocialLink("instagram", social.instagram) })}
+              placeholder="@yourcafe"
+            />
+            <TextField
+              label="Facebook"
+              value={social.facebook}
+              onChange={(value) => setSocial({ facebook: value })}
+              onBlur={() => setSocial({ facebook: expandSocialLink("facebook", social.facebook) })}
+              placeholder="@yourcafe"
+            />
           </div>
           <div className="row" style={{ marginTop: 14 }}>
-            <TextField label="Tripadvisor" value={social.tripAdvisor} onChange={(value) => setSocial({ tripAdvisor: value })} placeholder="https://tripadvisor.com/…" type="url" />
-            <TextField label="YouTube" value={social.youtube} onChange={(value) => setSocial({ youtube: value })} placeholder="https://youtube.com/…" type="url" />
+            <TextField
+              label="Tripadvisor"
+              value={social.tripAdvisor}
+              onChange={(value) => setSocial({ tripAdvisor: value })}
+              onBlur={() => setSocial({ tripAdvisor: expandSocialLink("tripAdvisor", social.tripAdvisor) })}
+              placeholder="Paste your Tripadvisor link"
+            />
+            <TextField
+              label="YouTube"
+              value={social.youtube}
+              onChange={(value) => setSocial({ youtube: value })}
+              onBlur={() => setSocial({ youtube: expandSocialLink("youtube", social.youtube) })}
+              placeholder="@yourchannel"
+            />
           </div>
         </Card>
       </div>

@@ -8,6 +8,7 @@ import type { MenuLayout } from "@/lib/venue/types";
 import { useConfirm } from "./confirm";
 import { MenuAiTools } from "./MenuAiTools";
 import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { MobilePreview } from "./MobilePreview";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -52,8 +53,11 @@ export function MenuEditor({
   ai,
   importLimits,
   canUseLayouts,
+  previewUrl,
 }: {
   venueId: string;
+  /** The hosted menu, for the full-screen preview on phones. */
+  previewUrl: string;
   menus: VenueConfig["menus"];
   currencyCode: string;
   /** Pro: menu layout presets. */
@@ -91,6 +95,7 @@ export function MenuEditor({
 
   return (
     <>
+      <MobilePreview src={previewUrl} label="Preview your menu" dirty={editor.dirty} />
       <div className="tabs" role="group" aria-label="Menus">
         {list.map((m, index) => (
           <button key={m.id} type="button" className="chip" aria-pressed={m === menu} onClick={() => setSelected(index)}>

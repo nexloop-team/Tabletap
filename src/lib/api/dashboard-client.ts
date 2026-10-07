@@ -55,6 +55,8 @@ export const dashboardApi = {
 
   createVenue: (body: CreateVenueRequest) => send<{ id: string; shortCode: string }>("POST", "/api/dashboard/venues", body),
   updateVenue: (venueId: string, body: UpdateVenueRequest) => send<SavedVenue>("PATCH", `/api/dashboard/venues/${venueId}`, body),
+  /** Back to how the page was before the last save (twice = redo). */
+  restoreVenue: (venueId: string) => send<SavedVenue>("POST", `/api/dashboard/venues/${venueId}/restore`),
   deleteVenue: (venueId: string, confirmName: string) => send<{ ok: true }>("DELETE", `/api/dashboard/venues/${venueId}`, { confirmName }),
   checkout: (venueId: string) => send<{ url: string }>("POST", `/api/dashboard/venues/${venueId}/billing/checkout`),
   billingPortal: (venueId: string) => send<{ url: string }>("POST", `/api/dashboard/venues/${venueId}/billing/portal`),

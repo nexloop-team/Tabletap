@@ -27,10 +27,12 @@ export function TextField({
   multiline,
   autoComplete,
   required,
+  onBlur,
 }: {
   label: ReactNode;
   value: string | null | undefined;
   onChange: (value: string | null) => void;
+  onBlur?: () => void;
   hint?: ReactNode;
   placeholder?: string;
   type?: string;
@@ -47,6 +49,7 @@ export function TextField({
     maxLength,
     required,
     onChange: (event: { target: { value: string } }) => onChange(event.target.value === "" ? null : event.target.value),
+    onBlur,
   };
   return (
     <Field label={label} hint={hint} htmlFor={id}>
@@ -86,9 +89,9 @@ export function HelpTip({ question, children }: { question: string; children: Re
   );
 }
 
-export function Card({ title, description, actions, children, className }: { title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({ id, title, description, actions, children, className }: { id?: string; title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`card ${className ?? ""}`}>
+    <section id={id} className={`card ${className ?? ""}`}>
       {(title || actions) && (
         <div className="card-head">
           <div>

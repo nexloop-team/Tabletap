@@ -43,10 +43,10 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
 
   const hostedItems = config.menus.reduce((sum, menu) => sum + menu.sections.reduce((n, section) => n + section.items.length, 0), 0);
   const checklist = [
-    { done: !!config.branding.logoUrl, label: "Add your logo", cta: "Upload", href: `${base}/design` },
+    { done: !!config.branding.logoUrl, label: "Add your logo", cta: "Upload", href: `${base}/design#logo` },
     { done: hostedItems > 0 || config.menus.some((menu) => !!menu.externalUrl), label: "Add your menu", cta: "Add", href: `${base}/menu` },
-    { done: !!config.wifi?.ssid, label: "Share your Wi-Fi", cta: "Add", href: `${base}/design` },
-    { done: !!config.socialLinks.google && !!config.branding.showGoogleReviewButton, label: "Link your Google reviews", cta: "Link", href: `${base}/design` },
+    { done: !!config.wifi?.ssid, label: "Share your Wi-Fi", cta: "Add", href: `${base}/design#wifi` },
+    { done: !!config.socialLinks.google && !!config.branding.showGoogleReviewButton, label: "Link your Google reviews", cta: "Link", href: `${base}/design#google` },
     ...(plan === "pro"
       ? [{ done: !!config.loyaltyProgram && (config.loyaltyProgram.stampsEnabled === false || !!config.loyaltyProgram.rewardName), label: "Set up a loyalty card", cta: "Set up", href: `${base}/loyalty` }]
       : []),

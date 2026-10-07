@@ -189,6 +189,8 @@ const MIGRATIONS: string[] = [
    ALTER TABLE loyalty_cards ADD COLUMN referred_by_card_id TEXT;
    ALTER TABLE loyalty_cards ADD COLUMN referral_rewarded_at TEXT;
    CREATE UNIQUE INDEX loyalty_cards_referral ON loyalty_cards(referral_code);`,
+  // One step of undo for the page editors.
+  `ALTER TABLE venues ADD COLUMN previous_config TEXT;`,
 ];
 
 function migrate(db: DatabaseSync) {

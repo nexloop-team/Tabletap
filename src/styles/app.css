@@ -1886,6 +1886,8 @@ body:has(.app) {
 /* Editor with live preview */
 .editor-grid {
   display: grid;
+  /* One column that can shrink below its content (long links, wide rows) on phones. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -2720,6 +2722,7 @@ body:has(.app) {
 /* QR */
 .qr-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 @media (min-width: 900px) {
@@ -3041,6 +3044,7 @@ body:has(.app) {
 .feature-rows {
   list-style: none;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 .feature-row {
@@ -3156,6 +3160,7 @@ body:has(.app) {
 .pane-list {
   list-style: none;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 .pane-items .pane-list {
@@ -3480,9 +3485,11 @@ body:has(.app) {
 .account-bar-part {
   flex: 1 1 280px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   min-height: 36px;
+  min-width: 0;
 }
 .account-bar-part + .account-bar-part {
   flex: 0 1 auto;
@@ -3495,8 +3502,9 @@ body:has(.app) {
   flex: none;
 }
 .account-bar-part > span {
-  flex: 1;
+  flex: 1 1 180px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .account-bar .btn-sm {
   flex: none;
@@ -3618,6 +3626,105 @@ body:has(.app) {
 .toast-action:hover,
 .toast-close:hover {
   background: rgba(127, 127, 127, 0.2);
+}
+
+/* Deep links (#logo, #wifi…): a brief highlight on the card they land on. */
+.flash-target {
+  animation: flash-target 1.8s var(--a-ease);
+  scroll-margin: 96px;
+}
+@keyframes flash-target {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--a-accent), var(--a-shadow-lg);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+/* Full-screen preview on phones and small tablets */
+.mobile-preview-btn {
+  display: none;
+  width: 100%;
+  margin-bottom: 16px;
+}
+@media (max-width: 1179px) {
+  .mobile-preview-btn {
+    display: inline-flex;
+  }
+}
+.mobile-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--a-bg);
+}
+.mobile-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--a-border);
+  background: var(--a-surface);
+  font-size: 13px;
+  color: var(--a-text-2);
+}
+.mobile-preview iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+/* Dashboard loading placeholder */
+.dash-skeleton {
+  display: grid;
+  gap: 14px;
+}
+.dash-skeleton > div,
+.dash-skeleton-tiles > div {
+  border-radius: 12px;
+  background: var(--a-surface-2);
+  animation: dash-pulse 1.3s ease-in-out infinite alternate;
+}
+.dash-skeleton-title {
+  width: 220px;
+  height: 36px;
+}
+.dash-skeleton .dash-skeleton-line {
+  width: min(360px, 70%);
+  height: 14px;
+  border-radius: 6px;
+}
+.dash-skeleton .dash-skeleton-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  background: none;
+  animation: none;
+}
+.dash-skeleton-tiles > div {
+  height: 96px;
+}
+.dash-skeleton-card {
+  height: 220px;
+}
+.dash-skeleton-card.short {
+  height: 120px;
+}
+@keyframes dash-pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-skeleton > div,
+  .dash-skeleton-tiles > div,
+  .flash-target {
+    animation: none;
+  }
 }
 
 /* ───────────────────────── Print (table tents) ───────────────────────── */

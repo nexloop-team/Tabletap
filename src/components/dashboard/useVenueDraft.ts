@@ -33,6 +33,24 @@ export function useVenueDraft<T extends Partial<VenueConfig>>(venueId: string, i
     setDraft((current) => ({ ...current, [key]: value }));
   }, []);
 
+  /** Puts back the version before the last save, keeping this editor's fields in step. */
+  const restore = useCallback(async () => {
+    try {
+      const venue = await dashboardApi.restoreVenue(venueId);
+      const config = venue.config ?? {};
+      const restored = Object.fromEntries(Object.keys(initial).map((key) => [key, config[key as keyof VenueConfig]])) as T;
+      setSaved(restored);
+      setDraft(restored);
+      setVersion((v) => v + 1);
+      router.refresh();
+      toast({ text: "Undone. Your page is back to how it was." });
+    } catch (err) {
+      toast({ text: errorMessage(err) });
+    }
+    // `initial` only supplies the field names, which never change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venueId, router, toast]);
+
   const save = useCallback(async () => {
     setSaving(true);
     setError(null);
@@ -41,13 +59,13 @@ export function useVenueDraft<T extends Partial<VenueConfig>>(venueId: string, i
       setSaved(draft);
       setVersion((v) => v + 1);
       router.refresh();
-      toast({ text: "Changes saved. They're live on your page." });
+      toast({ text: "Changes saved. They're live on your page.", action: { label: "Undo", onClick: () => void restore() } });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
-  }, [venueId, draft, router, toast]);
+  }, [venueId, draft, router, toast, restore]);
 
   const reset = useCallback(() => {
     setDraft(saved);

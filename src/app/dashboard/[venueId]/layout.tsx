@@ -2,6 +2,7 @@ import { Shield } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AccountBar } from "@/components/dashboard/AccountBar";
+import { HashFocus } from "@/components/dashboard/HashFocus";
 import { trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { venueRole } from "@/server/repositories/venues";
@@ -37,6 +38,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
         <div className="notice notice-error">This venue is suspended, so its guest page is offline. Contact support to restore it.</div>
       )}
       {!operatorView && <AccountBar unverifiedEmail={user.emailVerified ? null : user.email} trialDays={trialDays} billingHref={`/dashboard/${venue.id}/billing`} />}
+      <HashFocus />
       {children}
     </div>
   );

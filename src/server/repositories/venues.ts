@@ -105,8 +105,22 @@ export function createVenue(input: { id: string; shortCode: string; ownerId: str
   });
 }
 
+/** Saves a new config and keeps the one it replaces, so the last save can be undone. */
 export function updateVenueConfig(venueId: string, config: VenueConfig) {
-  getDb().prepare("UPDATE venues SET config = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(config), venueId);
+  getDb()
+    .prepare("UPDATE venues SET previous_config = config, config = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(JSON.stringify(config), venueId);
+}
+
+/**
+ * Swaps the config with the one before the last save. Doing it twice redoes
+ * the save. Returns false when there's nothing to go back to.
+ */
+export function restorePreviousConfig(venueId: string): boolean {
+  const result = getDb()
+    .prepare("UPDATE venues SET config = previous_config, previous_config = config, updated_at = datetime('now') WHERE id = ? AND previous_config IS NOT NULL")
+    .run(venueId);
+  return Number(result.changes) > 0;
 }
 
 export function updateShortCode(venueId: string, shortCode: string) {
