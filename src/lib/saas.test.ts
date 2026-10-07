@@ -1,74 +1,47 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_VENUES } from "@/server/seed";
-import { ENTITLEMENTS, effectivePlan, parseDbDate, trialDaysLeft, type SubscriptionState } from "./plans";
+import { accessBadge, accessState, formatInr, parseDbDate, PRICE_WITH_GST_INR, trialDaysLeft, type SubscriptionState } from "./plans";
 import { sourceSlug } from "./qr-source";
 import { safeNext } from "./safe-next";
-import { applyEntitlements } from "./venue/entitlements";
 import { createVenueRequest, initialVenueConfig, slugify, venueConfigPatch, venueConfigSchema } from "./venue/schema";
 
 const DAY = 86_400_000;
-const sub = (patch: Partial<SubscriptionState>): SubscriptionState => ({ plan: "free", status: "active", trialEndsAt: null, currentPeriodEnd: null, ...patch });
+const sub = (patch: Partial<SubscriptionState>): SubscriptionState => ({ paid: false, status: "active", trialEndsAt: null, currentPeriodEnd: null, ...patch });
 
 describe("plans", () => {
-  it("is Pro while paid, through a failed renewal, and during the trial", () => {
-    expect(effectivePlan(null)).toBe("free");
-    expect(effectivePlan(sub({ plan: "pro" }))).toBe("pro");
-    expect(effectivePlan(sub({ plan: "pro", status: "past_due" }))).toBe("pro");
-    expect(effectivePlan(sub({ plan: "pro", status: "canceled" }))).toBe("free");
-    expect(effectivePlan(sub({ trialEndsAt: new Date(Date.now() + DAY).toISOString() }))).toBe("pro");
-    expect(effectivePlan(sub({ trialEndsAt: new Date(Date.now() - DAY).toISOString() }))).toBe("free");
+  it("is paid while live, through a failed renewal, and on trial until it ends", () => {
+    expect(accessState(null)).toBe("unpaid");
+    expect(accessState(sub({ paid: true }))).toBe("paid");
+    expect(accessState(sub({ paid: true, status: "past_due" }))).toBe("paid");
+    expect(accessState(sub({ paid: true, status: "canceled" }))).toBe("unpaid");
+    expect(accessState(sub({ trialEndsAt: new Date(Date.now() + DAY).toISOString() }))).toBe("trial");
+    expect(accessState(sub({ trialEndsAt: new Date(Date.now() - DAY).toISOString() }))).toBe("unpaid");
   });
 
-  it("counts trial days only for unpaid venues", () => {
+  it("lapses a few days after the paid period ends without a renewal", () => {
+    expect(accessState(sub({ paid: true, currentPeriodEnd: new Date(Date.now() - DAY).toISOString() }))).toBe("paid");
+    expect(accessState(sub({ paid: true, currentPeriodEnd: new Date(Date.now() - 5 * DAY).toISOString() }))).toBe("unpaid");
+  });
+
+  it("counts trial days only while on the trial", () => {
     const trialEndsAt = new Date(Date.now() + 3.5 * DAY).toISOString();
     expect(trialDaysLeft(sub({ trialEndsAt }))).toBe(4);
-    expect(trialDaysLeft(sub({ plan: "pro", trialEndsAt }))).toBeNull();
+    expect(trialDaysLeft(sub({ paid: true, trialEndsAt }))).toBeNull();
     expect(trialDaysLeft(sub({ trialEndsAt: new Date(Date.now() - DAY).toISOString() }))).toBeNull();
+    expect(accessBadge(sub({ trialEndsAt })).label).toBe("Trial · 4 days left");
+    expect(accessBadge(sub({})).label).toBe("Unpaid");
+  });
+
+  it("prices in rupees with GST on top", () => {
+    expect(PRICE_WITH_GST_INR).toBe(1178.82);
+    expect(formatInr(999)).toBe("₹999");
+    expect(formatInr(1178.82)).toBe("₹1,178.82");
   });
 
   it("reads SQLite timestamps as UTC", () => {
     expect(parseDbDate("2026-01-02 03:04:05")).toBe(Date.UTC(2026, 0, 2, 3, 4, 5));
     expect(parseDbDate("2026-01-02T03:04:05.000Z")).toBe(Date.UTC(2026, 0, 2, 3, 4, 5));
     expect(parseDbDate(null)).toBeNull();
-  });
-});
-
-describe("entitlements", () => {
-  const venue = { ...DEMO_VENUES[1] };
-
-  it("switches paid features off on Free without losing the rest", () => {
-    const free = applyEntitlements(venue, ENTITLEMENTS.free);
-    expect(free.loyaltyProgram).toBeNull();
-    expect(free.crm.enabled).toBe(false);
-    expect(free.crm.wifiCapture).toBe(false);
-    expect(free.branding.style).toBeNull();
-    expect(free.showPoweredBy).toBe(true);
-    expect(free.wifi).toEqual(venue.wifi);
-    expect(free.menus).toEqual(venue.menus.map((menu) => ({ ...menu, layout: null })));
-  });
-
-  it("keeps saved layouts but only shows them on Pro", () => {
-    const styled = {
-      ...venue,
-      branding: { ...venue.branding, layout: "grid" as const, headerStyle: "centered" as const, buttonShape: "pill" as const },
-      menus: venue.menus.map((menu) => ({ ...menu, layout: "classic" as const })),
-    };
-    const free = applyEntitlements(styled, ENTITLEMENTS.free);
-    expect(free.branding).toMatchObject({ layout: null, headerStyle: null, buttonShape: null });
-    expect(free.menus.every((menu) => menu.layout === null)).toBe(true);
-    expect(free.menus[0].sections).toEqual(venue.menus[0].sections);
-    expect(styled.branding.layout).toBe("grid");
-
-    const pro = applyEntitlements(styled, ENTITLEMENTS.pro);
-    expect(pro.branding).toMatchObject({ layout: "grid", headerStyle: "centered", buttonShape: "pill" });
-    expect(pro.menus[0].layout).toBe("classic");
-  });
-
-  it("leaves everything on for Pro", () => {
-    const pro = applyEntitlements(venue, ENTITLEMENTS.pro);
-    expect(pro.loyaltyProgram).toEqual(venue.loyaltyProgram);
-    expect(pro.crm).toEqual(venue.crm);
-    expect(pro.showPoweredBy).toBe(false);
   });
 });
 

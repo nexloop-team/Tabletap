@@ -73,23 +73,27 @@ describe("request origin", () => {
   });
 });
 
-describe("Stripe webhook signatures", () => {
+describe("Razorpay signatures", () => {
   const secret = "whsec_test";
-  const body = '{"type":"ping"}';
-  const sign = (t: number, payload = body, key = secret) => `t=${t},v1=${createHmac("sha256", key).update(`${t}.${payload}`).digest("hex")}`;
-  const now = Date.now();
-  const t = Math.floor(now / 1000);
+  const body = '{"event":"subscription.charged"}';
+  const sign = (payload = body, key = secret) => createHmac("sha256", key).update(payload).digest("hex");
 
-  it("accepts a fresh, correctly signed payload", () => {
-    expect(m.billing.verifyStripeSignature(body, sign(t), secret, now)).toBe(true);
+  it("accepts a correctly signed webhook body", () => {
+    expect(m.billing.verifyWebhookSignature(body, sign(), secret)).toBe(true);
   });
 
-  it("rejects tampering, the wrong secret, replays and junk", () => {
-    expect(m.billing.verifyStripeSignature('{"type":"evil"}', sign(t), secret, now)).toBe(false);
-    expect(m.billing.verifyStripeSignature(body, sign(t, body, "whsec_other"), secret, now)).toBe(false);
-    expect(m.billing.verifyStripeSignature(body, sign(t - 3600), secret, now)).toBe(false);
-    expect(m.billing.verifyStripeSignature(body, "t=1,v1=zz", secret, now)).toBe(false);
-    expect(m.billing.verifyStripeSignature(body, null, secret, now)).toBe(false);
+  it("rejects tampering, the wrong secret and junk", () => {
+    expect(m.billing.verifyWebhookSignature('{"event":"evil"}', sign(), secret)).toBe(false);
+    expect(m.billing.verifyWebhookSignature(body, sign(body, "other"), secret)).toBe(false);
+    expect(m.billing.verifyWebhookSignature(body, "zz", secret)).toBe(false);
+    expect(m.billing.verifyWebhookSignature(body, null, secret)).toBe(false);
+  });
+
+  it("checks Checkout's payment signature over payment id | subscription id", () => {
+    const signature = createHmac("sha256", "key_secret").update("pay_1|sub_1").digest("hex");
+    expect(m.billing.verifyCheckoutSignature("pay_1", "sub_1", signature, "key_secret")).toBe(true);
+    expect(m.billing.verifyCheckoutSignature("pay_2", "sub_1", signature, "key_secret")).toBe(false);
+    expect(m.billing.verifyCheckoutSignature("pay_1", "sub_1", signature, "other")).toBe(false);
   });
 });
 
@@ -105,13 +109,13 @@ describe("venues on the SaaS side", () => {
     );
   }
 
-  it("creates a venue on a Pro trial that the guest page can load by short code", async () => {
+  it("creates a venue on the free trial that the guest page can load by short code", async () => {
     const user = await owner("a@example.com");
     const venue = onboard(user, "Juniper Coffee House");
     expect(venue.shortCode).toBe("juniper-coffee-house");
     const page = m.venues.findVenue("juniper-coffee-house");
     expect(page?.loyaltyProgram?.rewardName).toBe("Free coffee");
-    expect(m.subscriptions.entitlementsFor(venue.id).plan).toBe("pro");
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("trial");
   });
 
   it("gives clashing names a unique code and refuses reserved ones", async () => {
@@ -123,15 +127,25 @@ describe("venues on the SaaS side", () => {
     expect(() => m.admin.updateVenue(first, { shortCode: "juniper-coffee-house" })).toThrow(/already uses/);
   });
 
-  it("hides paid features from guests once the trial is over", async () => {
+  it("takes the guest page offline once the trial is over, and back when paid", async () => {
     const user = await owner("c@example.com");
     const venue = onboard(user, "Kettle");
     m.db.getDb().prepare("UPDATE subscriptions SET trial_ends_at = ? WHERE venue_id = ?").run(new Date(Date.now() - 1000).toISOString(), venue.id);
-    expect(m.venues.findVenue(venue.id)?.loyaltyProgram).toBeNull();
-    // The merchant's saved setup is untouched, ready for an upgrade.
+    expect(m.venues.findVenue(venue.id)).toBeNull();
+    // The merchant's saved setup is untouched, ready for when they subscribe.
     expect(m.venues.getVenueRecord(venue.id)?.config.loyaltyProgram?.rewardName).toBe("Free coffee");
-    m.subscriptions.updateSubscription(venue.id, { plan: "pro", status: "active" });
+    m.subscriptions.updateSubscription(venue.id, { paid: true, status: "active" });
     expect(m.venues.findVenue(venue.id)?.loyaltyProgram?.rewardName).toBe("Free coffee");
+  });
+
+  it("extends a lapsed trial from today", async () => {
+    const user = await owner("c2@example.com");
+    const venue = onboard(user, "Lapsed");
+    m.db.getDb().prepare("UPDATE subscriptions SET trial_ends_at = ? WHERE venue_id = ?").run(new Date(Date.now() - 30 * 86_400_000).toISOString(), venue.id);
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("unpaid");
+    m.subscriptions.extendTrial(venue.id, 7);
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("trial");
+    expect(m.venues.findVenue(venue.id)).not.toBeNull();
   });
 
   it("only lets owners at a venue", async () => {
@@ -217,18 +231,34 @@ describe("venues on the SaaS side", () => {
     expect(m.subscriptions.getSubscription(venue.id)).toBeNull();
   });
 
-  it("applies Stripe subscription events to the right venue", async () => {
+  it("applies Razorpay subscription events to the right venue", async () => {
     const user = await owner("i@example.com");
-    const venue = onboard(user, "Stripe Cafe");
-    m.billing.handleStripeEvent({
-      type: "checkout.session.completed",
-      data: { object: { mode: "subscription", client_reference_id: venue.id, customer: "cus_1", subscription: "sub_1" } },
-    });
-    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ plan: "pro", status: "active", providerSubscriptionId: "sub_1" });
-    // A late "incomplete" event must not undo the upgrade.
-    m.billing.handleStripeEvent({ type: "customer.subscription.created", data: { object: { id: "sub_1", customer: "cus_1", status: "incomplete" } } });
-    expect(m.subscriptions.getSubscription(venue.id)?.plan).toBe("pro");
-    m.billing.handleStripeEvent({ type: "customer.subscription.deleted", data: { object: { id: "sub_1", customer: "cus_1", status: "canceled" } } });
-    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ plan: "free", status: "canceled" });
+    const venue = onboard(user, "Razorpay Cafe");
+    const event = (name: string, status: string, extra: Record<string, unknown> = {}) =>
+      m.billing.handleRazorpayEvent({ event: name, payload: { subscription: { entity: { id: "sub_1", status, customer_id: "cust_1", notes: { venue_id: venue.id }, ...extra } } } });
+    const yearOn = Math.floor(Date.now() / 1000) + 365 * 86_400;
+
+    // Not live yet: nothing changes.
+    event("subscription.authenticated", "authenticated");
+    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ paid: false, providerSubscriptionId: null });
+
+    event("subscription.activated", "active", { current_end: yearOn });
+    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ paid: true, status: "active", provider: "razorpay", providerSubscriptionId: "sub_1" });
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("paid");
+
+    // A failed renewal keeps the page up while Razorpay retries...
+    event("subscription.pending", "pending");
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("paid");
+    // ...and takes it offline when the retries run out (the trial is long over by then).
+    m.db.getDb().prepare("UPDATE subscriptions SET trial_ends_at = NULL WHERE venue_id = ?").run(venue.id);
+    event("subscription.halted", "halted");
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("unpaid");
+    expect(m.venues.findVenue(venue.id)).toBeNull();
+
+    // Found by subscription id when the notes are missing.
+    event("subscription.charged", "active", { notes: [], current_end: yearOn });
+    expect(m.subscriptions.venueAccess(venue.id)).toBe("paid");
+    event("subscription.cancelled", "cancelled");
+    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ paid: false, status: "canceled" });
   });
 });

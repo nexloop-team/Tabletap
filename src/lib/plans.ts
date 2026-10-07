@@ -1,85 +1,44 @@
 /**
- * Plans and what each unlocks. The landing page is filtered through these
- * entitlements when it is served, so a lapsed subscription switches features
- * off without touching the merchant's saved configuration.
+ * One subscription, billed per venue. While it's paid or the free trial is
+ * running, every feature is on; once neither, the guest page goes offline
+ * (the owner can still sign in, change things and pay). Saved configuration
+ * is never touched, so the page comes back exactly as it was.
  */
-
-export type PlanId = "free" | "pro";
 
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled";
 
-export interface Entitlements {
-  /** Stamp cards and rewards-only memberships. */
-  loyalty: boolean;
-  /** Guest capture: Wi-Fi email gate, marketing consent, birthdays, feedback join. */
-  crm: boolean;
-  /** Classic / editorial / modern typography presets. */
-  stylePresets: boolean;
-  /** Guest page and menu layout presets, header styles and button shapes. */
-  layouts: boolean;
-  /** Hide the "Powered by" footer on the guest page. */
-  removeBranding: boolean;
-  /** Download the guest list as CSV. */
-  guestExport: boolean;
-  /** AI menu import and "What's this dish?" drafts. */
-  ai: boolean;
-  /** Reward-ready, birthday and win-back emails to guests. */
-  automations: boolean;
-  /** Refer-a-friend stamps. */
-  referrals: boolean;
+/** Paid (or given free access by an admin), within the free trial, or neither. */
+export type AccessState = "paid" | "trial" | "unpaid";
+
+export const TRIAL_DAYS = 7;
+
+/** Prices in rupees. GST is charged on top and shown alongside. */
+export const PRICE_INR = 999;
+export const GST_RATE = 0.18;
+export const PRICE_WITH_GST_INR = Math.round(PRICE_INR * (1 + GST_RATE) * 100) / 100;
+export const BILLING_PERIOD = "year";
+
+/** ₹999 · ₹1,178.82 (paise only when there are any). */
+export function formatInr(amount: number): string {
+  const whole = Number.isInteger(amount);
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 }).format(amount);
 }
 
-export const ENTITLEMENTS: Record<PlanId, Entitlements> = {
-  free: { loyalty: false, crm: false, stylePresets: false, layouts: false, removeBranding: false, guestExport: false, ai: false, automations: false, referrals: false },
-  pro: { loyalty: true, crm: true, stylePresets: true, layouts: true, removeBranding: true, guestExport: true, ai: true, automations: true, referrals: true },
-};
-
-export const TRIAL_DAYS = 14;
-
-export interface PlanInfo {
-  id: PlanId;
-  name: string;
-  price: string;
-  blurb: string;
-  features: string[];
-}
-
-export const PLANS: PlanInfo[] = [
-  {
-    id: "free",
-    name: "Free",
-    price: "Free",
-    blurb: "Everything a table needs.",
-    features: ["Hosted menu with allergens", "Wi-Fi card", "Private feedback box and Google review invitations", "Custom links and socials", "Unlimited QR codes", "Scan analytics and weekly summary email"],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: process.env.NEXT_PUBLIC_PRO_PRICE_LABEL || "£19 / month per venue",
-    blurb: "Turn first visits into regulars.",
-    features: [
-      "Everything in Free",
-      "Digital stamp cards, stamped at the till",
-      "Refer-a-friend rewards",
-      "Automatic reward, birthday and win-back emails",
-      "AI menu import and dish explanations",
-      "Guest list with marketing consent",
-      "Wi-Fi email capture and birthdays",
-      "Layouts, typography presets and no branding",
-      "CSV export",
-    ],
-  },
+export const PLAN_FEATURES = [
+  "Hosted menu with photos, allergens and AI import",
+  "Digital stamp cards, stamped at the till",
+  "Wi-Fi card with optional email capture",
+  "Private feedback box and Google review invitations",
+  "Guest list with marketing consent and CSV export",
+  "Reward, birthday and win-back emails",
+  "Refer-a-friend rewards",
+  "Layouts, typography and no third-party branding",
+  "Unlimited QR codes, scan analytics and weekly summary",
 ];
 
-/** "£19 / month per venue" → ["£19", "/ month per venue"]; the free plan reads "£0 forever". */
-export function planPriceParts(plan: PlanInfo): [amount: string, per: string] {
-  if (plan.id === "free") return ["£0", "forever"];
-  const space = plan.price.indexOf(" ");
-  return space < 0 ? [plan.price, ""] : [plan.price.slice(0, space), plan.price.slice(space + 1)];
-}
-
 export interface SubscriptionState {
-  plan: PlanId;
+  /** A paid subscription (or free access an admin gave) is on file. */
+  paid: boolean;
   status: SubscriptionStatus;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
@@ -93,18 +52,41 @@ export function parseDbDate(value: string | null | undefined): number | null {
   return Number.isNaN(time) ? null : time;
 }
 
-/** Pro while paid (a failed renewal keeps it during the retry window) or within the free trial. */
-export function effectivePlan(sub: SubscriptionState | null, now = Date.now()): PlanId {
-  if (!sub) return "free";
-  if (sub.plan === "pro" && (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due")) return "pro";
+/** Room for a late renewal webhook before a lapsed period takes the page offline. */
+const RENEWAL_GRACE_MS = 3 * 86_400_000;
+
+/**
+ * Paid while the subscription is live (a failed renewal keeps it during the
+ * provider's retry window) and its period hasn't run out; otherwise the free
+ * trial, if any of it is left.
+ */
+export function accessState(sub: SubscriptionState | null, now = Date.now()): AccessState {
+  if (!sub) return "unpaid";
+  if (sub.paid && sub.status !== "canceled") {
+    const end = parseDbDate(sub.currentPeriodEnd);
+    if (end === null || end + RENEWAL_GRACE_MS > now) return "paid";
+  }
   const trialEnd = parseDbDate(sub.trialEndsAt);
-  return trialEnd !== null && trialEnd > now ? "pro" : "free";
+  return trialEnd !== null && trialEnd > now ? "trial" : "unpaid";
+}
+
+export function hasAccess(sub: SubscriptionState | null, now = Date.now()): boolean {
+  return accessState(sub, now) !== "unpaid";
 }
 
 /** Whole days left in the free trial, or null when not on one. */
 export function trialDaysLeft(sub: SubscriptionState | null, now = Date.now()): number | null {
-  if (!sub || (sub.plan === "pro" && sub.status !== "canceled")) return null;
-  const trialEnd = parseDbDate(sub.trialEndsAt);
-  if (trialEnd === null || trialEnd <= now) return null;
-  return Math.ceil((trialEnd - now) / 86_400_000);
+  if (accessState(sub, now) !== "trial") return null;
+  return Math.ceil((parseDbDate(sub!.trialEndsAt)! - now) / 86_400_000);
+}
+
+/** The short status shown next to a venue: "Active", "Trial · 3 days left", "Unpaid". */
+export function accessBadge(sub: SubscriptionState | null, now = Date.now()): { label: string; className: string } {
+  const state = accessState(sub, now);
+  if (state === "paid") return sub?.status === "past_due" ? { label: "Payment retrying", className: "badge-danger" } : { label: "Active", className: "badge-ok" };
+  if (state === "trial") {
+    const days = trialDaysLeft(sub, now)!;
+    return { label: `Trial · ${days} day${days === 1 ? "" : "s"} left`, className: "badge-pro" };
+  }
+  return { label: "Unpaid", className: "badge-danger" };
 }

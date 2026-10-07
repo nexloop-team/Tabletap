@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { VenueConfig } from "@/lib/venue/schema";
-import { Card, Field, SaveBar, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { Card, Field, SaveBar, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
 
 type Draft = Pick<VenueConfig, "loyaltyProgram" | "crm">;
@@ -32,13 +32,11 @@ const DEFAULT_REFERRAL = { enabled: false, referrerStamps: 2, friendStamps: 1 };
 export function LoyaltyEditor({
   venueId,
   initial,
-  isPro,
   venueType,
   referralStats,
 }: {
   venueId: string;
   initial: Draft;
-  isPro: boolean;
   venueType: string | null | undefined;
   referralStats?: { joined: number; visited: number };
 }) {
@@ -65,7 +63,6 @@ export function LoyaltyEditor({
 
   return (
     <>
-      {!isPro && <UpgradeHint venueId={venueId}>Loyalty and guest capture are Pro features. You can set them up now; they go live when you upgrade.</UpgradeHint>}
 
       <Card title="Loyalty programme" description="Guests join with their email and get a card on their phone. Staff stamp it at the till.">
         <div className="choice-grid">

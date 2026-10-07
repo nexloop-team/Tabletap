@@ -17,7 +17,7 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
   return (
     <>
       <h1>{joiningStaff ? "Create your staff account" : "Set up your venue in minutes"}</h1>
-      <p>{joiningStaff ? "A free account just for you. It lets you stamp cards at the till, nothing else." : `Free forever for the basics, with ${TRIAL_DAYS} days of Pro included. No card needed.`}</p>
+      <p>{joiningStaff ? "A free account just for you. It lets you stamp cards at the till, nothing else." : `Try everything free for ${TRIAL_DAYS} days. No card needed.`}</p>
       <SignupForm next={next || undefined} />
       <p className="auth-alt">
         Already have an account? <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}>Sign in</Link>

@@ -8,7 +8,7 @@ import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/li
 import { expandSocialLink } from "@/lib/venue/social";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
-import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { MobilePreview } from "./MobilePreview";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
@@ -115,14 +115,10 @@ export function DesignEditor({
   venueId,
   shortCode,
   config,
-  canUseStyles,
-  canUseLayouts,
 }: {
   venueId: string;
   shortCode: string;
   config: VenueConfig;
-  canUseStyles: boolean;
-  canUseLayouts: boolean;
 }) {
   const editor = useVenueDraft<Draft>(venueId, {
     branding: config.branding,
@@ -326,7 +322,7 @@ export function DesignEditor({
 
           <div className="field">
             <span className="field-label" id="style-label">
-              Typography {!canUseStyles && <span className="nav-pro">Pro</span>}
+              Typography
             </span>
             <div className="preset-grid" role="group" aria-labelledby="style-label">
               {PRESETS.map((preset) => (
@@ -339,10 +335,9 @@ export function DesignEditor({
               ))}
             </div>
           </div>
-          {!canUseStyles && branding.style && <UpgradeHint venueId={venueId}>Typography presets show on your live page with Pro.</UpgradeHint>}
         </Card>
 
-        <Card title={<>Layout {!canUseLayouts && <span className="nav-pro">Pro</span>}</>} description="How the cards and header are arranged. Colours always follow your background.">
+        <Card title="Layout" description="How the cards and header are arranged. Colours always follow your background.">
           <div className="field">
             <span className="field-label" id="layout-label">
               Cards
@@ -401,9 +396,6 @@ export function DesignEditor({
               </div>
             </div>
           </div>
-          {!canUseLayouts && (branding.layout || branding.headerStyle || branding.buttonShape) && (
-            <UpgradeHint venueId={venueId}>Layouts show on your live page with Pro. Your choice is saved for when you upgrade.</UpgradeHint>
-          )}
         </Card>
 
         <Card id="google" title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">

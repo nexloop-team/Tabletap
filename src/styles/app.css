@@ -517,11 +517,13 @@ body:has(.app) {
   background: var(--a-admin-soft);
   color: var(--a-admin);
 }
-.notice-admin .inline {
+.notice-admin .inline,
+.notice-action .inline {
   flex-wrap: nowrap;
   align-items: flex-start;
 }
-.notice-admin svg {
+.notice-admin svg,
+.notice-action .inline > svg {
   margin-top: 2px;
 }
 .notice-warn {
@@ -1034,6 +1036,72 @@ body:has(.app) {
   color: var(--a-text-3);
 }
 .mk .price-card.featured .price span {
+  color: #a3a8ad;
+}
+.pricing-single {
+  max-width: 520px;
+}
+.mk .pricing-single {
+  margin: 0 auto;
+}
+.money-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+}
+.money-grid > div {
+  display: grid;
+  gap: 2px;
+}
+.money-grid dt {
+  font-size: 13px;
+  color: var(--a-text-2);
+}
+.money-grid dd {
+  margin: 0;
+  font-family: var(--a-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.money-grid span {
+  font-size: 12.5px;
+  color: var(--a-text-3);
+}
+.price-gst {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--a-text-3);
+}
+.mk .price-card.featured .money-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+}
+.money-grid > div {
+  display: grid;
+  gap: 2px;
+}
+.money-grid dt {
+  font-size: 13px;
+  color: var(--a-text-2);
+}
+.money-grid dd {
+  margin: 0;
+  font-family: var(--a-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.money-grid span {
+  font-size: 12.5px;
+  color: var(--a-text-3);
+}
+.price-gst {
   color: #a3a8ad;
 }
 .mk .price-card ul {
@@ -2703,21 +2771,6 @@ body:has(.app) {
 .image-preview svg {
   width: 20px;
   height: 20px;
-}
-
-/* Upgrade hint inside gated sections */
-.upgrade {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px dashed var(--a-accent);
-  background: var(--a-accent-soft);
-  font-size: 14px;
-  margin-bottom: 14px;
 }
 
 /* QR */

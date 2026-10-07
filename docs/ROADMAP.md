@@ -17,7 +17,7 @@ _Last updated: 2026-10-08_
 **Built**
 - Guest page: menu, Wi-Fi, loyalty card, feedback, Google review link, Sudoku. Three demo venues.
 - Self-serve owner side: signup/login, email verification, password reset, 4-step onboarding, dashboard (overview, guest page editor, menu editor, loyalty, guests, feedback, QR codes and print sheet, billing, settings), account deletion.
-- Free and Pro plans per venue, 14-day Pro trial, Stripe billing (dev mode without keys).
+- One yearly plan per venue (₹999 + GST), 7-day free trial, Razorpay billing (dev mode without keys); unpaid venues go offline.
 - Admin panel (`/admin`) for suspending venues and comping Pro.
 
 - Staff stamping at the till, refer-a-friend, automatic guest emails, weekly owner digest.
@@ -57,9 +57,10 @@ These are must-haves. Without them the product is not ready to demo or sell.
   - [ ] Point your domain's DNS at Railway.
 - [ ] **Email:** create a Resend account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 - [ ] **Payments:**
-  - [ ] Choose Stripe (needs a UK/US company or Stripe Atlas) or Paddle / Lemon Squeezy (they handle VAT and sales tax for you).
-  - [ ] Create the Pro product and price.
-  - [ ] Add the webhook at `/api/billing/webhook` and turn on the Customer Portal.
+  - [x] Razorpay Subscriptions (India, rupees).
+  - [ ] Create the yearly plan (₹1,178.82 = ₹999 + 18% GST) and API keys.
+  - [ ] Add the webhook at `/api/billing/webhook` for `subscription.*` events.
+  - [ ] Add your GSTIN in Razorpay so it issues GST invoices.
   - [ ] Test the whole flow in test mode first.
 - [ ] **Backups** of `/data`, using Railway volume snapshots or Litestream. Test restoring once.
 - [ ] **Monitoring:** Sentry for errors, plus an uptime check (e.g. UptimeRobot).
@@ -67,7 +68,7 @@ These are must-haves. Without them the product is not ready to demo or sell.
   - [ ] Get a lawyer to review `/terms` and `/privacy`.
   - [ ] Register for data protection in your country (e.g. the ICO in the UK).
   - [ ] Register the business.
-- [ ] Set the final price (`NEXT_PUBLIC_PRO_PRICE_LABEL` and the Stripe price).
+- [x] Set the price: ₹999 + GST a year per venue (`src/lib/plans.ts`).
 
 ---
 
@@ -188,6 +189,13 @@ Newest first. One line per change: what changed and why.
 ### YYYY-MM-DD
 - Added / Changed / Fixed: what, and why
 ```
+
+### 2026-10-08 (later)
+- Changed: one plan instead of Free and Pro: ₹999 + 18% GST a year per venue, every feature included, 7-day free trial with no card. Pro markers and upgrade hints are gone.
+- Changed: when a venue has no paid subscription and no trial left, its guest page goes offline; the owner can still sign in and subscribe, and the page comes back as it was.
+- Changed: billing moved from Stripe to Razorpay Subscriptions (Checkout pop-up, signed webhook, cancel at the end of the paid year).
+- Removed: the "Powered by" footer on guest pages and menus.
+- Added (admin): Paying / Trial / Unpaid / Free access / Suspended filters, "Extend trial by 7 days", "Give free access", and a revenue panel (yearly and monthly recurring, churn, won't-renew, failing payments).
 
 ### 2026-10-08
 - Added: "Changes saved" toasts with Undo (restores the version before the last save; undo twice to redo).

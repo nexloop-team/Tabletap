@@ -1,16 +1,14 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import type { PlanId } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/plans";
-import { applyEntitlements } from "@/lib/venue/entitlements";
 import { liveAnnouncement } from "@/lib/venue/features";
 import { localDate } from "../jobs/time";
 import type { VenueConfig } from "@/lib/venue/schema";
 import { resolveSettings, type VenueSettings } from "@/lib/venue/settings";
 import type { PublicVenue } from "@/lib/venue/types";
 import { DATA_DIR, getDb, transaction } from "../db";
-import { entitlementsFor, startTrial } from "./subscriptions";
+import { startTrial, venueHasAccess } from "./subscriptions";
 
 export type VenueStatus = "active" | "suspended";
 
@@ -45,15 +43,15 @@ function toVenue(row: VenueRow): PublicVenue {
 
 /**
  * Accepts the canonical id or the short code printed in QR codes. This is the
- * guest-facing lookup: suspended venues don't resolve, and features the plan
- * doesn't include are switched off.
+ * guest-facing lookup: suspended venues and venues without a paid
+ * subscription or running trial don't resolve, so their pages go offline.
  */
 export function findVenue(idOrCode: string): PublicVenue | null {
   const row = getDb()
     .prepare("SELECT * FROM venues WHERE (id = ? OR short_code = ?) AND status = 'active' LIMIT 1")
     .get(idOrCode, idOrCode) as VenueRow | undefined;
-  if (!row) return null;
-  const venue = applyEntitlements(toVenue(row), entitlementsFor(row.id).can);
+  if (!row || !venueHasAccess(row.id)) return null;
+  const venue = toVenue(row);
   return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date())) };
 }
 
@@ -220,9 +218,13 @@ export interface AdminVenueRow {
   status: VenueStatus;
   createdAt: string;
   ownerEmail: string | null;
-  plan: PlanId;
+  paid: boolean;
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  provider: string | null;
+  cancelAtPeriodEnd: boolean;
+  subscriptionUpdatedAt: string | null;
   guests: number;
   /** Guest page opens in the last 7 days, not counting the owner's own previews. */
   scans7d: number;
@@ -234,7 +236,7 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
     .prepare(
       `SELECT v.id, v.short_code, json_extract(v.config, '$.name') AS name, v.status, v.created_at,
               (SELECT u.email FROM venue_members m JOIN users u ON u.id = m.user_id WHERE m.venue_id = v.id AND m.role = 'owner' LIMIT 1) AS owner_email,
-              s.plan, s.status AS sub_status, s.trial_ends_at,
+              s.plan, s.status AS sub_status, s.trial_ends_at, s.current_period_end, s.provider, s.cancel_at_period_end, s.updated_at AS sub_updated_at,
               (SELECT COUNT(*) FROM customers c WHERE c.venue_id = v.id) AS guests,
               (SELECT COUNT(*) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= datetime('now', '-7 days')
                  AND COALESCE(json_extract(e.params, '$.source'), '') != 'preview') AS scans_7d,
@@ -250,9 +252,13 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
     status: VenueStatus;
     created_at: string;
     owner_email: string | null;
-    plan: PlanId | null;
+    plan: string | null;
     sub_status: string | null;
     trial_ends_at: string | null;
+    current_period_end: string | null;
+    provider: string | null;
+    cancel_at_period_end: number | null;
+    sub_updated_at: string | null;
     guests: number;
     scans_7d: number;
     last_scan_at: string | null;
@@ -264,9 +270,13 @@ export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
     status: row.status,
     createdAt: row.created_at,
     ownerEmail: row.owner_email,
-    plan: row.plan ?? "free",
+    paid: row.plan === "pro",
     subscriptionStatus: row.sub_status,
     trialEndsAt: row.trial_ends_at,
+    currentPeriodEnd: row.current_period_end,
+    provider: row.provider,
+    cancelAtPeriodEnd: !!row.cancel_at_period_end,
+    subscriptionUpdatedAt: row.sub_updated_at,
     guests: row.guests,
     scans7d: row.scans_7d,
     lastScanAt: row.last_scan_at,

@@ -50,8 +50,24 @@ export const explainDishesRequest = z.object({
 });
 export type ExplainDishesRequest = z.input<typeof explainDishesRequest>;
 
+/** Razorpay Checkout's signed success response. */
+export const confirmPaymentRequest = z.object({
+  paymentId: z.string().min(1).max(100),
+  subscriptionId: z.string().min(1).max(100),
+  signature: z.string().min(1).max(200),
+});
+export type ConfirmPaymentRequest = z.input<typeof confirmPaymentRequest>;
+
+/** What the billing page needs to open Razorpay Checkout, or (dev mode) where to go next. */
+export type CheckoutStart =
+  | { kind: "redirect"; url: string }
+  | { kind: "razorpay"; keyId: string; subscriptionId: string; name: string; description: string; prefill: { name: string; email: string }; fallbackUrl: string | null };
+
 export const adminVenueRequest = z.object({
   status: z.enum(["active", "suspended"]).optional(),
-  plan: z.enum(["free", "pro"]).optional(),
+  /** Give or take away free access (no charge); never touches a Razorpay subscription. */
+  freeAccess: z.boolean().optional(),
+  /** Push the trial end out by this many days (from today if it already ended). */
+  extendTrialDays: z.number().int().min(1).max(90).optional(),
 });
 export type AdminVenueRequest = z.input<typeof adminVenueRequest>;

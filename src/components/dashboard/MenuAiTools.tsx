@@ -6,7 +6,6 @@ import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { compressImage } from "@/lib/browser";
 import type { VenueConfig } from "@/lib/venue/schema";
 import { useConfirm } from "./confirm";
-import { UpgradeHint } from "./ui";
 
 type Section = VenueConfig["menus"][number]["sections"][number];
 
@@ -29,14 +28,12 @@ async function shrinkForUpload(file: File): Promise<File> {
 
 export function MenuAiTools({
   venueId,
-  ai,
   importLimits,
   sections,
   onImport,
   onExplanations,
 }: {
   venueId: string;
-  ai: "on" | "upgrade";
   /** What the server's AI provider can read: some take PDFs and more photos than others. */
   importLimits: { maxImages: number; pdf: boolean };
   sections: Section[];
@@ -61,23 +58,12 @@ export function MenuAiTools({
       </span>
       <div>
         <strong className="ai-title">
-          Import from a photo{importLimits.pdf ? " or PDF" : ""} <span className="nav-pro">Pro</span>
+          Import from a photo{importLimits.pdf ? " or PDF" : ""}
         </strong>
         <p>Snap your printed menu. We&apos;ll read the dishes, prices and allergens, and you check them before anything goes live.</p>
       </div>
     </div>
   );
-
-  if (ai === "upgrade") {
-    return (
-      <section className="card ai-card">
-        {intro}
-        <div className="ai-drop">
-          <UpgradeHint venueId={venueId}>AI menu import and dish explanations are part of Pro.</UpgradeHint>
-        </div>
-      </section>
-    );
-  }
 
   async function runImport(files: File[]) {
     setError(null);

@@ -1,6 +1,6 @@
 # Tabletap — self-serve QR pages for hospitality venues
 
-Venue owners sign up, answer four onboarding questions and get a live guest page with printable QR codes, all without help from us. A guest who scans a table QR code gets the menu, Wi-Fi, a loyalty card that staff stamp at the till, a private feedback box with a Google review invitation for every guest, and a Sudoku to pass the time. Owners manage everything from a dashboard and pay per venue for Pro features. Guest-page behaviour is modelled on the analysis in [docs/candour-analysis.md](docs/candour-analysis.md), with our own brand, copy and backend.
+Venue owners sign up, answer four onboarding questions and get a live guest page with printable QR codes, all without help from us. A guest who scans a table QR code gets the menu, Wi-Fi, a loyalty card that staff stamp at the till, a private feedback box with a Google review invitation for every guest, and a Sudoku to pass the time. Owners manage everything from a dashboard and pay one yearly subscription per venue. Guest-page behaviour is modelled on the analysis in [docs/candour-analysis.md](docs/candour-analysis.md), with our own brand, copy and backend.
 
 Plans, to-dos, decisions and the change log live in [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -18,14 +18,14 @@ Requires Node 22+ (the database uses the built-in `node:sqlite`). The SQLite fil
 
 ### Try the owner flow locally
 
-1. Open `/signup` and create an account. You land in the onboarding wizard, and the venue starts on a 14-day Pro trial.
+1. Open `/signup` and create an account. You land in the onboarding wizard, and the venue starts on a 7-day free trial (no card).
 2. Edit the guest page, menu and loyalty settings from the dashboard. The phone preview reloads on save.
 3. Download QR codes or a print sheet of table cards from **QR codes**.
 4. Emails aren't sent in development. They go to the `outbox` table and the server log, so copy the verification or reset link from there.
 5. To see `/admin`, put your email in `ADMIN_EMAILS` and verify it.
-6. Billing runs in **dev mode** without Stripe keys: "Upgrade" switches Pro on instantly and "Cancel" switches it off.
+6. Billing runs in **dev mode** without Razorpay keys: "Subscribe" switches the venue on for a year instantly and "Cancel subscription" ends it straight away.
 
-Three demo venues are seeded on first start (Pro, no owner):
+Three demo venues are seeded on first start (free access, no owner):
 
 | URL | Shows |
 |---|---|
@@ -33,27 +33,24 @@ Three demo venues are seeded on first start (Pro, no owner):
 | `/s?i=demo-crm` | Dark pub theme, Wi-Fi email gate, marketing consent (18+), birthday ask |
 | `/s?i=demo-rewards` | Rewards-only membership, external ordering link, custom link cards |
 
-## Plans
+## Subscription
 
-| | Free | Pro (per venue) |
-|---|---|---|
-| Guest page, hosted or linked menu, Wi-Fi, feedback + Google review routing, links, socials, QR codes, scan stats | ✓ | ✓ |
-| Stamp cards and members club | | ✓ |
-| Guest capture: Wi-Fi email gate, marketing consent, birthdays, join after feedback | | ✓ |
-| Typography presets, no "Powered by" footer, guest CSV export | | ✓ |
+One plan, billed per venue: **₹999 + 18% GST a year** (₹1,178.82 in total), with a **7-day free trial** and no card needed. Every feature is included.
 
-The plan is applied when the guest page is served (`applyEntitlements`), so a lapsed subscription switches features off without losing the owner's settings. Plans and prices live in `src/lib/plans.ts`.
+When a venue has neither a paid subscription nor trial days left, its guest page (and everything guests reach through it: menu, loyalty card, till stamping) goes offline. The owner can still sign in, edit and subscribe, and the page comes back exactly as it was. A failed renewal keeps the page up while Razorpay retries; it goes offline when Razorpay halts the subscription. Prices and the access rules live in `src/lib/plans.ts`.
 
 ## Going to production
 
 1. **Host on a server with a persistent disk**, such as Railway, Fly.io, Render or a VPS, and mount a volume at `DATA_DIR`. SQLite and uploads are files, so serverless hosts like Vercel would lose them. Run a single instance, because rate limits are kept in memory.
 2. **Set `APP_URL`** to your public origin (e.g. `https://tabletap.app`). It's encoded into every QR code, so it must never change.
 3. **Email:** create a [Resend](https://resend.com) account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
-4. **Stripe:**
-   1. Create a Product with a monthly recurring Price, and set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID`.
-   2. Add a webhook endpoint at `https://<your-domain>/api/billing/webhook` for `checkout.session.completed` and `customer.subscription.created`, `.updated` and `.deleted`, then set `STRIPE_WEBHOOK_SECRET`.
-   3. Turn on the Customer Portal in the Stripe dashboard.
-   4. Without keys in production, billing is disabled and the UI says so.
+4. **Razorpay:**
+   1. In the Razorpay dashboard, create a yearly plan (Subscriptions → Plans) for ₹1,178.82 (₹999 + 18% GST), and set `RAZORPAY_PLAN_ID`.
+   2. Create API keys and set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
+   3. Add a webhook at `https://<your-domain>/api/billing/webhook` for the `subscription.*` events (activated, charged, pending, halted, cancelled, completed, paused, resumed), and set `RAZORPAY_WEBHOOK_SECRET`.
+   4. Owners subscribe in Razorpay Checkout on the Subscription page; the signed payment response switches the venue on at once, and the webhook keeps renewals and cancellations in step.
+   5. Without keys in production, payments are disabled and the Subscription page asks owners to email support.
+   6. Ask your accountant about GST invoices: Razorpay can issue them if you add your GSTIN in its dashboard.
 5. **Set `ADMIN_EMAILS`** to your own address(es).
 6. **Back up `DATA_DIR`**: snapshot the volume, or use [Litestream](https://litestream.io) for continuous SQLite replication.
 7. **Get the starter [terms](src/app/terms/page.tsx) and [privacy notice](src/app/privacy/page.tsx) reviewed by a lawyer.**
@@ -67,10 +64,10 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `ADMIN_EMAILS` | Comma-separated emails allowed into `/admin` (the email must be verified) |
 | `RESEND_API_KEY` | Sends email through Resend; without it emails only go to the `outbox` table and log |
 | `MAIL_FROM` | Sender for all emails, e.g. `Tabletap <hello@tabletap.app>` |
-| `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` | Stripe Checkout and Customer Portal for the Pro plan |
-| `STRIPE_WEBHOOK_SECRET` | Verifies `/api/billing/webhook` |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID` | Razorpay Subscriptions for the yearly plan |
+| `RAZORPAY_WEBHOOK_SECRET` | Verifies `/api/billing/webhook` |
 | `BILLING_DEV_MODE` | `1` allows dev-mode billing in a production build (for staging only) |
-| `GROQ_API_KEY` | Turns on AI menu import (photos, up to 3 at a time) and "What's this?" drafts (Pro) using Groq; used first when set |
+| `GROQ_API_KEY` | Turns on AI menu import (photos, up to 3 at a time) and "What's this?" drafts using Groq; used first when set |
 | `GROQ_TEXT_MODEL`, `GROQ_VISION_MODEL` | Groq models (defaults `openai/gpt-oss-120b` for text, `qwen/qwen3.8-27b` for menu photos) |
 | `ANTHROPIC_API_KEY` | Alternative AI provider (Claude); also reads PDF menus and up to 5 photos |
 | `ANTHROPIC_MODEL` | Claude model (default `claude-opus-5-5`) |
@@ -78,7 +75,6 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile captcha on sign-up and password reset; off without them |
 | `CRON_SECRET` | Enables `POST /api/cron/run` for an external scheduler (`Authorization: Bearer …`) |
 | `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails), e.g. when running more than one server |
-| `NEXT_PUBLIC_PRO_PRICE_LABEL` | Price shown on the pricing page (default "£19 / month per venue") |
 | `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
 | `APPLE_PASS_CERT_PATH`, `GOOGLE_WALLET_ISSUER_ID` | Reserved for Wallet passes (not implemented yet; the web card is used instead) |
@@ -95,11 +91,11 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `/dashboard` | Venue list (or straight into your only venue) |
 | `/dashboard/<venue>` | Overview: scans, guests, feedback, setup checklist |
 | `/dashboard/<venue>/design`, `/menu`, `/loyalty` | Editors for the guest page, menus and loyalty/capture |
-| `/dashboard/<venue>/guests`, `/feedback` | Guest list (CSV on Pro) and feedback inbox |
+| `/dashboard/<venue>/guests`, `/feedback` | Guest list (with CSV export) and feedback inbox |
 | `/dashboard/<venue>/qr`, `/qr/print` | QR downloads (PNG/SVG, per-table sources) and printable table cards |
 | `/dashboard/<venue>/billing`, `/settings` | Plan, venue details, page address, delete venue |
 | `/dashboard/account` | Name, password, delete account |
-| `/admin` | Operator view: all accounts and venues, suspend, comp Pro |
+| `/admin` | Operator view: all accounts and venues, suspend, extend trials, give free access, revenue |
 | `/staff`, `/staff/stamp?c=<card>` | Till screens for paired staff devices: find a member, add stamps, redeem rewards, undo |
 
 **Guests**
@@ -114,7 +110,7 @@ The plan is applied when the guest page is served (`applyEntitlements`), so a la
 | `/unsubscribe?token=` | Stop offer emails from one venue (also one-click from mail apps) |
 | `/media/<venue>/<file>` | Images uploaded by owners |
 
-**APIs:** `api/auth/*`, `api/account`, `api/dashboard/venues/*` and `api/admin/*` are cookie-authenticated, and their writes are refused from other origins. `api/billing/webhook` is signed by Stripe. The guest APIs (`api/venues`, `api/loyalty`, `api/feedback`, `api/guests`, `api/consent`, `api/events`) are unchanged.
+**APIs:** `api/auth/*`, `api/account`, `api/dashboard/venues/*` and `api/admin/*` are cookie-authenticated, and their writes are refused from other origins. `api/billing/webhook` is signed by Razorpay. The guest APIs (`api/venues`, `api/loyalty`, `api/feedback`, `api/guests`, `api/consent`, `api/events`) are unchanged.
 
 ## Security notes
 

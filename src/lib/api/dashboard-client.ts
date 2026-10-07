@@ -1,6 +1,8 @@
 import type {
   AdminVenueRequest,
   ChangePasswordRequest,
+  CheckoutStart,
+  ConfirmPaymentRequest,
   DeleteAccountRequest,
   ExplainDishesRequest,
   ForgotPasswordRequest,
@@ -55,13 +57,14 @@ export const dashboardApi = {
 
   createVenue: (body: CreateVenueRequest) => send<{ id: string; shortCode: string }>("POST", "/api/dashboard/venues", body),
   updateVenue: (venueId: string, body: UpdateVenueRequest) => send<SavedVenue>("PATCH", `/api/dashboard/venues/${venueId}`, body),
-  /** Back to how the page was before the last save (twice = redo). */
   inviteStaff: (venueId: string, email: string) => send<{ url: string }>("POST", `/api/dashboard/venues/${venueId}/staff-members`, { email }),
   removeStaff: (venueId: string, userId: string) => send<{ ok: true }>("DELETE", `/api/dashboard/venues/${venueId}/staff-members/${userId}`),
+  /** Back to how the page was before the last save (twice = redo). */
   restoreVenue: (venueId: string) => send<SavedVenue>("POST", `/api/dashboard/venues/${venueId}/restore`),
   deleteVenue: (venueId: string, confirmName: string) => send<{ ok: true }>("DELETE", `/api/dashboard/venues/${venueId}`, { confirmName }),
-  checkout: (venueId: string) => send<{ url: string }>("POST", `/api/dashboard/venues/${venueId}/billing/checkout`),
-  billingPortal: (venueId: string) => send<{ url: string }>("POST", `/api/dashboard/venues/${venueId}/billing/portal`),
+  checkout: (venueId: string) => send<CheckoutStart>("POST", `/api/dashboard/venues/${venueId}/billing/checkout`),
+  confirmPayment: (venueId: string, body: ConfirmPaymentRequest) => send<{ ok: true }>("POST", `/api/dashboard/venues/${venueId}/billing/confirm`, body),
+  cancelSubscription: (venueId: string) => send<{ ok: true }>("POST", `/api/dashboard/venues/${venueId}/billing/cancel`),
 
   async uploadImage(venueId: string, file: File): Promise<string> {
     const form = new FormData();

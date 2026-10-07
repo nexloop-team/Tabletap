@@ -3,7 +3,7 @@ import { BRAND } from "@/config/brand";
 import { getDb } from "../db";
 import { appOrigin } from "../origin";
 import { birthdayGuests, claimGuestEmail, ensureUnsubscribeToken, lapsedGuests, releaseGuestEmail, type EmailableGuest } from "../repositories/retention";
-import { entitlementsFor } from "../repositories/subscriptions";
+import { venueHasAccess } from "../repositories/subscriptions";
 import { getVenueSettings } from "../repositories/venues";
 import { sendMail } from "../services/mailer";
 import { localParts } from "./time";
@@ -49,7 +49,7 @@ export async function runGuestAutomations(now: Date): Promise<number> {
   const venues = getDb().prepare("SELECT id, json_extract(config, '$.name') AS name FROM venues WHERE status = 'active'").all() as { id: string; name: string }[];
   let sent = 0;
   for (const venue of venues) {
-    if (!entitlementsFor(venue.id).can.automations) continue;
+    if (!venueHasAccess(venue.id)) continue;
     const { birthday, winBack } = getVenueSettings(venue.id).automations;
 
     if (birthday.enabled) {

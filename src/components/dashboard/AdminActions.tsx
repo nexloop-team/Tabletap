@@ -1,12 +1,15 @@
 "use client";
 
-import { Ban, Crown, ExternalLink, LayoutDashboard, Loader2, MoreHorizontal, RotateCcw, XCircle } from "lucide-react";
+import { Ban, CalendarPlus, ExternalLink, Gift, LayoutDashboard, Loader2, MoreHorizontal, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ToggleEvent } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import type { AdminVenueRequest } from "@/lib/api/account-contracts";
+import type { VenueSegment } from "@/server/admin";
 import { useConfirm, type ConfirmOptions } from "./confirm";
+
+const TRIAL_EXTENSION_DAYS = 7;
 
 /** Row actions for a venue in the operator console: open it, plus a menu of account changes behind a confirm. */
 export function AdminVenueActions({
@@ -14,13 +17,13 @@ export function AdminVenueActions({
   name,
   guestUrl,
   status,
-  plan,
+  segment,
 }: {
   venueId: string;
   name: string;
   guestUrl: string;
   status: "active" | "suspended";
-  plan: "free" | "pro";
+  segment: VenueSegment;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -94,27 +97,46 @@ export function AdminVenueActions({
           <ExternalLink aria-hidden /> View guest page
         </a>
         <div className="menu-sep" role="separator" />
-        {plan === "pro" ? (
+        {segment === "free" && (
           <button
             type="button"
             className="menu-item"
             onClick={() =>
               apply(
-                { plan: "free" },
-                { title: `Remove Pro from ${name}?`, body: "Loyalty, guest capture and other Pro features switch off. This doesn't cancel a Stripe subscription.", confirmLabel: "Remove Pro", danger: true },
+                { freeAccess: false },
+                { title: `Remove free access from ${name}?`, body: "Unless it subscribes or still has trial days left, its guest page goes offline straight away.", confirmLabel: "Remove access", danger: true },
               )
             }
           >
-            <XCircle aria-hidden /> Remove Pro
+            <XCircle aria-hidden /> Remove free access
           </button>
-        ) : (
-          <button
-            type="button"
-            className="menu-item"
-            onClick={() => apply({ plan: "pro" }, { title: `Give ${name} Pro for free?`, body: "Every Pro feature switches on straight away, with no charge.", confirmLabel: "Comp Pro" })}
-          >
-            <Crown aria-hidden /> Comp Pro
-          </button>
+        )}
+        {(segment === "trial" || segment === "unpaid") && (
+          <>
+            <button
+              type="button"
+              className="menu-item"
+              onClick={() =>
+                apply(
+                  { extendTrialDays: TRIAL_EXTENSION_DAYS },
+                  {
+                    title: `Give ${name} ${TRIAL_EXTENSION_DAYS} more trial days?`,
+                    body: segment === "unpaid" ? "Its trial restarts from today, so the guest page comes back online now." : "They're added to the end of the current trial.",
+                    confirmLabel: "Extend trial",
+                  },
+                )
+              }
+            >
+              <CalendarPlus aria-hidden /> Extend trial by {TRIAL_EXTENSION_DAYS} days
+            </button>
+            <button
+              type="button"
+              className="menu-item"
+              onClick={() => apply({ freeAccess: true }, { title: `Give ${name} free access?`, body: "Every feature stays on with no charge until you remove it.", confirmLabel: "Give free access" })}
+            >
+              <Gift aria-hidden /> Give free access
+            </button>
+          </>
         )}
         {status === "active" ? (
           <button

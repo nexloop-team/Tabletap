@@ -19,7 +19,7 @@ const CONSENT: Record<string, { label: string; tone: string }> = {
 const SOURCES: Record<string, string> = { landing: "Loyalty card", feedback: "After feedback", wifi: "Wi-Fi", rewards: "Members club" };
 
 export default async function GuestsPage({ params, searchParams }: PageProps<"/dashboard/[venueId]/guests">) {
-  const { venue, can } = await loadDashboardVenue((await params).venueId);
+  const { venue } = await loadDashboardVenue((await params).venueId);
   const query = await searchParams;
   const q = firstParam(query.q).slice(0, 100);
   const page = Math.max(1, Number(firstParam(query.page)) || 1);
@@ -35,15 +35,9 @@ export default async function GuestsPage({ params, searchParams }: PageProps<"/d
           <h1>Guests</h1>
           <p>Everyone who joined your loyalty card or left their email.</p>
         </div>
-        {can.guestExport ? (
-          <a className="btn" href={`/api/dashboard/venues/${venue.id}/guests/export`}>
-            <Download aria-hidden /> Export CSV
-          </a>
-        ) : (
-          <Link className="btn" href={`/dashboard/${venue.id}/billing`}>
-            <Download aria-hidden /> Export CSV <span className="badge badge-pro">Pro</span>
-          </Link>
-        )}
+        <a className="btn" href={`/api/dashboard/venues/${venue.id}/guests/export`}>
+          <Download aria-hidden /> Export CSV
+        </a>
       </div>
 
       <section className="card">

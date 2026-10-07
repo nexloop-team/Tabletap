@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/dashboard/blocks";
 import { VenueAvatar } from "@/components/dashboard/Shell";
 import { firstParam } from "@/server/request";
 import { requireUser } from "@/server/auth/session";
-import { entitlementsFor } from "@/server/repositories/subscriptions";
+import { accessBadge } from "@/lib/plans";
+import { getSubscription } from "@/server/repositories/subscriptions";
 import { listStaffVenuesForUser, listVenuesForUser } from "@/server/repositories/venues";
 
 /** Lands new merchants in onboarding, single-venue merchants in their venue, and lists the rest. */
@@ -23,7 +24,7 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
       {verified === "0" && <div className="notice notice-error">That confirmation link has expired or was already used.</div>}
       <PageHeader
         title={venues.length > 0 ? "Your venues" : "Your till access"}
-        description={venues.length > 0 ? "Each venue has its own guest page, QR codes and plan." : "Open the till on the phone or tablet you're using behind the counter."}
+        description={venues.length > 0 ? "Each venue has its own guest page, QR codes and subscription." : "Open the till on the phone or tablet you're using behind the counter."}
         actions={
           <Link className={`btn ${venues.length > 0 ? "btn-primary" : ""}`} href="/onboarding">
             <Plus aria-hidden /> Add a venue
@@ -32,7 +33,7 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
       />
       <div className="venue-list">
         {venues.map((venue) => {
-          const pro = entitlementsFor(venue.id).plan === "pro";
+          const badge = accessBadge(getSubscription(venue.id));
           return (
             <Link key={venue.id} href={`/dashboard/${venue.id}`} className="card venue-tile">
               <VenueAvatar venue={{ name: venue.config.name, logoUrl: venue.config.branding.logoUrl ?? null }} />
@@ -41,7 +42,7 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
                 <span className="mono muted">/{venue.shortCode}</span>
               </span>
               <span className="inline">
-                {venue.status === "suspended" ? <span className="badge badge-danger">Suspended</span> : <span className={`badge ${pro ? "badge-pro" : ""}`}>{pro ? "Pro" : "Free"}</span>}
+                {venue.status === "suspended" ? <span className="badge badge-danger">Suspended</span> : <span className={`badge ${badge.className}`}>{badge.label}</span>}
                 <ChevronRight className="venue-tile-chevron" aria-hidden />
               </span>
             </Link>

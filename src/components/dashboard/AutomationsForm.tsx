@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import type { VenueSettings } from "@/lib/venue/settings";
-import { Card, Field, SwitchRow, UpgradeHint } from "./ui";
+import { Card, Field, SwitchRow } from "./ui";
 
 type Automations = VenueSettings["automations"];
 
@@ -12,13 +12,11 @@ type Automations = VenueSettings["automations"];
 export function AutomationsForm({
   venueId,
   initial,
-  isPro,
   collectsConsent,
   collectsBirthdays,
 }: {
   venueId: string;
   initial: Automations;
-  isPro: boolean;
   collectsConsent: boolean;
   collectsBirthdays: boolean;
 }) {
@@ -45,7 +43,6 @@ export function AutomationsForm({
 
   return (
     <Card title="Automatic emails" description="Set them once and they send themselves, so regulars keep coming back.">
-      {!isPro && <UpgradeHint venueId={venueId}>Automatic emails are part of Pro.</UpgradeHint>}
 
       <SwitchRow
         title="“Your reward is ready”"

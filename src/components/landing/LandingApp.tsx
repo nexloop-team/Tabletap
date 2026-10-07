@@ -1,10 +1,8 @@
 "use client";
 
 import { Megaphone } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { BRAND } from "@/config/brand";
 import { createTracker } from "@/lib/analytics";
 import { deviceMemory, parseCardCredentials, subscribeNever, type CardCredentials } from "@/lib/browser";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -23,7 +21,7 @@ import {
   type LinkFeature,
 } from "@/lib/venue/features";
 import type { PublicVenue } from "@/lib/venue/types";
-import { BrandMark, FeatureGlyphs, FilledHeart, GoogleG, LINK_ICON_TOKENS, LinkIconGlyph, MenuGlyph, type LinkIconToken } from "../icons";
+import { FeatureGlyphs, FilledHeart, GoogleG, LINK_ICON_TOKENS, LinkIconGlyph, MenuGlyph, type LinkIconToken } from "../icons";
 import { AppDialog } from "./AppDialog";
 import { ActionCard, ExpandableCard, LinkCard, useSheet } from "./FeatureCard";
 import { MyCard } from "./loyalty/MyCard";
@@ -356,12 +354,6 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
           <LanguageSwitch locale={locale} />
-          {venue.showPoweredBy !== false && (
-            <Link className="powered-by" href="/">
-              <BrandMark />
-              {tf("powered_by", { brand: BRAND.name })}
-            </Link>
-          )}
         </main>
       </div>
       <AppDialog content={dialog} okLabel={t("ok")} onClose={() => setDialog(null)} />

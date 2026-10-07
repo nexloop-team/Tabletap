@@ -7,8 +7,8 @@ import { aiConfigured, aiImportLimits } from "@/server/services/ai";
 export const metadata: Metadata = { title: "Menu" };
 
 export default async function MenuPage({ params }: PageProps<"/dashboard/[venueId]/menu">) {
-  const { venue, can } = await loadDashboardVenue((await params).venueId);
-  const ai = !aiConfigured() ? "off" : can.ai ? "on" : "upgrade";
+  const { venue } = await loadDashboardVenue((await params).venueId);
+  const ai = aiConfigured() ? "on" : "off";
   return (
     <>
       <div className="page-head">
@@ -20,7 +20,7 @@ export default async function MenuPage({ params }: PageProps<"/dashboard/[venueI
           <ExternalLink aria-hidden /> View menu
         </a>
       </div>
-      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} ai={ai} importLimits={aiImportLimits()} canUseLayouts={can.layouts} previewUrl={`/menu?i=${encodeURIComponent(venue.shortCode)}&s=preview`} />
+      <MenuEditor venueId={venue.id} menus={venue.config.menus} currencyCode={venue.config.currencyCode} ai={ai} importLimits={aiImportLimits()} previewUrl={`/menu?i=${encodeURIComponent(venue.shortCode)}&s=preview`} />
     </>
   );
 }

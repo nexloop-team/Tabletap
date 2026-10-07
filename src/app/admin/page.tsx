@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { AlertTriangle, ArrowRight, Ban, Building2, CheckCircle2, Clock, Crown, Users, UserRoundPlus } from "lucide-react";
+import { AlertTriangle, ArrowRight, Ban, Building2, CheckCircle2, Clock, IndianRupee, PowerOff, Users, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 import { SegmentBadge } from "@/components/dashboard/admin-blocks";
 import { DailyBars, PageHeader, Stat } from "@/components/dashboard/blocks";
 import { VenueAvatar } from "@/components/dashboard/Shell";
 import { dailyCounts, formatAgo } from "@/lib/format";
-import { adminUsers, adminVenues, isRecent } from "@/server/admin";
+import { formatInr } from "@/lib/plans";
+import { adminUsers, adminVenues, isRecent, revenueSummary } from "@/server/admin";
 import { requireAdminPage } from "@/server/dashboard";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -17,8 +18,9 @@ export default async function AdminOverview() {
   const venues = adminVenues();
 
   const count = (segment: string) => venues.filter((venue) => venue.segment === segment).length;
-  const paying = count("paying");
   const trialing = count("trial");
+  const unpaid = count("unpaid");
+  const money = revenueSummary(venues);
   const unverified = users.filter((user) => !user.emailVerified).length;
   const guests = venues.reduce((sum, venue) => sum + venue.guests, 0);
   const active = venues.length - count("suspended");
@@ -34,6 +36,9 @@ export default async function AdminOverview() {
       .filter((venue) => venue.segment === "trial" && venue.trialDays !== null && venue.trialDays <= 3)
       .map((venue) => ({ venue, icon: Clock, reason: `Trial ends in ${venue.trialDays} day${venue.trialDays === 1 ? "" : "s"}` })),
     ...venues.filter((venue) => venue.segment === "suspended").map((venue) => ({ venue, icon: Ban, reason: "Suspended: guest page offline" })),
+    ...venues
+      .filter((venue) => venue.segment === "unpaid" && isRecent(venue.subscriptionUpdatedAt ?? venue.trialEndsAt ?? venue.createdAt, 14))
+      .map((venue) => ({ venue, icon: PowerOff, reason: "Unpaid: guest page offline" })),
   ].slice(0, 8);
 
   return (
@@ -53,15 +58,54 @@ export default async function AdminOverview() {
         <Stat label="Venues" value={venues.length} icon={Building2} sub={`${venues.filter((v) => isRecent(v.createdAt)).length} new this week · ${active} live`} href="/admin/venues" />
         <Stat label="Accounts" value={users.length} icon={Users} sub={`${users.filter((u) => isRecent(u.createdAt)).length} new this week · ${unverified} unverified`} href="/admin/accounts" />
         <Stat
-          label="Paying Pro"
-          value={paying}
-          icon={Crown}
-          sub={venues.length ? `${Math.round((paying / venues.length) * 100)}% of venues` : "No venues yet"}
+          label="Paying"
+          value={money.paying}
+          icon={IndianRupee}
+          sub={venues.length ? `${Math.round((money.paying / venues.length) * 100)}% of venues` : "No venues yet"}
           href="/admin/venues?segment=paying"
         />
-        <Stat label="On trial" value={trialing} icon={Clock} sub="Pro features, not yet paying" href="/admin/venues?segment=trial" />
+        <Stat label="On trial" value={trialing} icon={Clock} sub={`${money.trialsEndingThisWeek} end within a week`} href="/admin/venues?segment=trial" />
+        <Stat label="Unpaid" value={unpaid} icon={PowerOff} sub="Guest page offline" href="/admin/venues?segment=unpaid" />
         <Stat label="Guests captured" value={guests} icon={UserRoundPlus} sub="Across all venues" />
       </div>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="card-head">
+          <div>
+            <h2>Revenue</h2>
+            <p>Before GST, from venues paying through Razorpay</p>
+          </div>
+        </div>
+        <dl className="money-grid">
+          <div>
+            <dt>Yearly recurring</dt>
+            <dd>{formatInr(money.arr)}</dd>
+            <span>{money.paying - money.wontRenew} renewing</span>
+          </div>
+          <div>
+            <dt>Per month</dt>
+            <dd>{formatInr(money.mrr)}</dd>
+            <span>Yearly ÷ 12</span>
+          </div>
+          <div>
+            <dt>Churn · 30 days</dt>
+            <dd>{Math.round(money.churn30d * 100)}%</dd>
+            <span>
+              {money.lapsed30d} cancelled or lapsed
+            </span>
+          </div>
+          <div>
+            <dt>Won&apos;t renew</dt>
+            <dd>{money.wontRenew}</dd>
+            <span>Cancelled, still paid up</span>
+          </div>
+          <div>
+            <dt>Payment failing</dt>
+            <dd>{money.pastDue}</dd>
+            <span>Razorpay is retrying</span>
+          </div>
+        </dl>
+      </section>
 
       <div className="overview-grid">
         <section className="card">
@@ -80,7 +124,7 @@ export default async function AdminOverview() {
           <div className="card-head">
             <div>
               <h2>Needs attention</h2>
-              <p>Failing payments, ending trials and suspensions</p>
+              <p>Failing payments, ending trials, offline pages and suspensions</p>
             </div>
           </div>
           {attention.length === 0 ? (
@@ -134,7 +178,7 @@ export default async function AdminOverview() {
                 <tr>
                   <th scope="col">Venue</th>
                   <th scope="col">Owner</th>
-                  <th scope="col">Plan</th>
+                  <th scope="col">Subscription</th>
                   <th scope="col" className="num">
                     Guests
                   </th>

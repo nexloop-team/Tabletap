@@ -7,6 +7,8 @@ export interface ConfirmOptions {
   title: string;
   body?: ReactNode;
   confirmLabel?: string;
+  /** Instead of "Cancel", when the action itself is a cancellation. */
+  cancelLabel?: string;
   /** Red confirm button, and focus starts on Cancel so Enter doesn't destroy anything. */
   danger?: boolean;
 }
@@ -77,7 +79,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             </div>
             <div className="modal-actions">
               <button type="button" className="btn" onClick={() => settle(false)} autoFocus={request.danger}>
-                Cancel
+                {request.cancelLabel ?? "Cancel"}
               </button>
               <button type="button" className={`btn ${request.danger ? "btn-danger-solid" : "btn-primary"}`} onClick={() => settle(true)} autoFocus={!request.danger}>
                 {request.confirmLabel ?? "Continue"}

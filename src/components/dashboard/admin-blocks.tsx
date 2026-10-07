@@ -1,7 +1,7 @@
-import { AlertTriangle, Ban, Clock, Crown } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Clock, Gift, PowerOff } from "lucide-react";
 import type { AdminVenue } from "@/server/admin";
 
-/** Plan and billing state for a venue row. Icon + text, never colour alone. */
+/** Subscription state for a venue row. Icon + text, never colour alone. */
 export function SegmentBadge({ venue }: { venue: AdminVenue }) {
   if (venue.segment === "suspended")
     return (
@@ -17,8 +17,14 @@ export function SegmentBadge({ venue }: { venue: AdminVenue }) {
     );
   if (venue.segment === "paying")
     return (
+      <span className="badge badge-ok">
+        <CheckCircle2 aria-hidden /> Paying
+      </span>
+    );
+  if (venue.segment === "free")
+    return (
       <span className="badge badge-pro">
-        <Crown aria-hidden /> Pro
+        <Gift aria-hidden /> Free access
       </span>
     );
   if (venue.segment === "trial")
@@ -27,5 +33,9 @@ export function SegmentBadge({ venue }: { venue: AdminVenue }) {
         <Clock aria-hidden /> Trial{venue.trialDays !== null ? ` · ${venue.trialDays}d left` : ""}
       </span>
     );
-  return <span className="badge">Free</span>;
+  return (
+    <span className="badge badge-danger">
+      <PowerOff aria-hidden /> Unpaid · offline
+    </span>
+  );
 }

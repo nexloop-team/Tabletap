@@ -17,7 +17,8 @@ const SEGMENTS: { key: VenueSegment | "all"; label: string }[] = [
   { key: "all", label: "All" },
   { key: "paying", label: "Paying" },
   { key: "trial", label: "Trial" },
-  { key: "free", label: "Free" },
+  { key: "unpaid", label: "Unpaid" },
+  { key: "free", label: "Free access" },
   { key: "suspended", label: "Suspended" },
 ];
 
@@ -36,11 +37,11 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Platform admin" title="Venues" description="Search, open, suspend or comp any venue on the platform." />
+      <PageHeader eyebrow="Platform admin" title="Venues" description="Search, open or suspend any venue, extend a trial or give free access." />
 
       <section className="card card-flush">
         <div className="toolbar">
-          <nav className="filter-tabs" aria-label="Filter by plan">
+          <nav className="filter-tabs" aria-label="Filter by subscription">
             {SEGMENTS.map((s) => (
               <Link key={s.key} href={href(s.key)} aria-current={s.key === segment ? "true" : undefined}>
                 {s.label} <span className="count">{countFor(s.key)}</span>
@@ -71,7 +72,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                 <tr>
                   <th scope="col">Venue</th>
                   <th scope="col">Owner</th>
-                  <th scope="col">Plan</th>
+                  <th scope="col">Subscription</th>
                   <th scope="col" className="num">
                     Guests
                   </th>
@@ -121,7 +122,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                         name={venue.name}
                         guestUrl={guestPageUrl(origin, venue.shortCode)}
                         status={venue.status}
-                        plan={venue.paying ? "pro" : "free"}
+                        segment={venue.segment}
                       />
                     </td>
                   </tr>

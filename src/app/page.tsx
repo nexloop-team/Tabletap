@@ -2,7 +2,7 @@ import { Check, Heart, MessageCircle, Palette, QrCode, Star, Users, BookOpen, Wi
 import Link from "next/link";
 import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
-import { PLANS, planPriceParts, TRIAL_DAYS } from "@/lib/plans";
+import { BILLING_PERIOD, formatInr, GST_RATE, PLAN_FEATURES, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS } from "@/lib/plans";
 import { isLightColor } from "@/lib/theme";
 import { currentUser } from "@/server/auth/session";
 import { uiFont } from "@/app/fonts";
@@ -17,13 +17,13 @@ const DEMO_NOTES: Record<string, string> = {
 
 const FEATURES = [
   { icon: BookOpen, title: "Your menu, with allergens", text: "Search, the UK 14 allergens and dietary tags. Or link to the menu you already have." },
-  { icon: Wifi, title: "Wi-Fi without the questions", text: "Network and password, one tap to copy. On Pro, ask for an email first." },
+  { icon: Wifi, title: "Wi-Fi without the questions", text: "Network and password, one tap to copy. Optionally ask for an email first." },
   { icon: Heart, title: "A stamp card on their phone", text: "Staff stamp it at the till. No paper cards, no app to download." },
   { icon: MessageCircle, title: "Hear it first", text: "A private feedback box, so problems reach you before they reach the internet." },
   { icon: Star, title: "More Google reviews", text: "Every guest gets a friendly nudge to review you on Google." },
   { icon: Users, title: "A guest list you own", text: "Names, emails and birthdays, with consent done properly. Export any time." },
   { icon: QrCode, title: "QR codes for every table", text: "Print-ready table cards. See which tables get scanned most." },
-  { icon: Palette, title: "Looks like your place", text: `Your colours, logo and cover photo. ${BRAND.name} stays quietly in the footer.` },
+  { icon: Palette, title: "Looks like your place", text: "Your colours, logo and cover photo. No one else's logo on your page." },
 ];
 
 const STEPS = [
@@ -52,7 +52,7 @@ export default async function Home() {
             <>
               <Link href="/login">Sign in</Link>
               <Link className="mk-btn mk-btn-ink" href="/signup">
-                Start free
+                Start free trial
               </Link>
             </>
           )}
@@ -67,13 +67,13 @@ export default async function Home() {
             <p className="lede">Menu, Wi-Fi, a stamp card and a private feedback box on one page that looks like your place. Set it up yourself in ten minutes. No designer, no developer, no waiting on us.</p>
             <div className="cta">
               <Link className="mk-btn mk-btn-lg mk-btn-accent" href={startHref}>
-                {user ? "Go to your dashboard" : "Create your page free"}
+                {user ? "Go to your dashboard" : "Start your free trial"}
               </Link>
               <a className="mk-btn mk-btn-lg mk-btn-outline" href="#demos">
                 See live examples
               </a>
             </div>
-            <p className="hero-note">Free forever plan · {TRIAL_DAYS}-day Pro trial · No card needed</p>
+            <p className="hero-note">{TRIAL_DAYS}-day free trial · No card needed · {formatInr(PRICE_INR)} a year after that</p>
           </div>
           <div className="phone" aria-hidden>
             <div className="phone-screen">
@@ -120,36 +120,35 @@ export default async function Home() {
         <section className="mk-band" id="pricing">
           <div className="mk-wrap mk-narrow">
             <div className="mk-head mk-center">
-              <h2>Simple pricing, per venue</h2>
-              <p>Start on Pro for {TRIAL_DAYS} days. Drop to Free whenever you like.</p>
+              <h2>One plan. Everything included.</h2>
+              <p>Try every feature free for {TRIAL_DAYS} days, no card needed. Then one yearly payment per venue.</p>
             </div>
-            <div className="pricing">
-              {PLANS.map((plan) => {
-                const pro = plan.id === "pro";
-                const [amount, per] = planPriceParts(plan);
-                return (
-                  <section key={plan.id} className={`price-card ${pro ? "featured" : ""}`}>
-                    <div className="price-top">
-                      <h3>{plan.name}</h3>
-                      {pro && <span className="price-flag">{TRIAL_DAYS} days free</span>}
-                    </div>
-                    <div className="price">
-                      {amount}
-                      {per && <span> {per}</span>}
-                    </div>
-                    <ul>
-                      {plan.features.map((feature) => (
-                        <li key={feature}>
-                          <Check aria-hidden /> {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Link className={`mk-btn mk-btn-lg ${pro ? "mk-btn-light" : "mk-btn-outline"}`} href={startHref}>
-                      {pro ? "Start your free trial" : "Create your page free"}
-                    </Link>
-                  </section>
-                );
-              })}
+            <div className="pricing pricing-single">
+              <section className="price-card featured">
+                <div className="price-top">
+                  <h3>{BRAND.name}</h3>
+                  <span className="price-flag">{TRIAL_DAYS} days free</span>
+                </div>
+                <div>
+                  <div className="price">
+                    {formatInr(PRICE_INR)}
+                    <span> / {BILLING_PERIOD} per venue</span>
+                  </div>
+                  <p className="price-gst">
+                    + {GST_RATE * 100}% GST ({formatInr(PRICE_WITH_GST_INR)} in total)
+                  </p>
+                </div>
+                <ul>
+                  {PLAN_FEATURES.map((feature) => (
+                    <li key={feature}>
+                      <Check aria-hidden /> {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link className="mk-btn mk-btn-lg mk-btn-light" href={startHref}>
+                  Start your free trial
+                </Link>
+              </section>
             </div>
           </div>
         </section>
@@ -183,7 +182,7 @@ export default async function Home() {
       <footer className="site-footer">
         <div className="mk-wrap">
           <span>
-            © {new Date().getFullYear()} {BRAND.name} · Made for UK hospitality
+            © {new Date().getFullYear()} {BRAND.name} · Made for independent hospitality
           </span>
           <nav aria-label="Footer">
             <Link href="/terms">Terms</Link>

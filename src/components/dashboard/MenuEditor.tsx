@@ -7,7 +7,7 @@ import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConf
 import type { MenuLayout } from "@/lib/venue/types";
 import { useConfirm } from "./confirm";
 import { MenuAiTools } from "./MenuAiTools";
-import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField, UpgradeHint } from "./ui";
+import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField } from "./ui";
 import { MobilePreview } from "./MobilePreview";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
@@ -52,7 +52,6 @@ export function MenuEditor({
   currencyCode,
   ai,
   importLimits,
-  canUseLayouts,
   previewUrl,
 }: {
   venueId: string;
@@ -60,10 +59,8 @@ export function MenuEditor({
   previewUrl: string;
   menus: VenueConfig["menus"];
   currencyCode: string;
-  /** Pro: menu layout presets. */
-  canUseLayouts: boolean;
-  /** "upgrade": shown with an upgrade hint; "off": AI isn't configured on this server. */
-  ai: "on" | "upgrade" | "off";
+  /** "off": AI isn't configured on this server. */
+  ai: "on" | "off";
   importLimits: { maxImages: number; pdf: boolean };
 }) {
   const editor = useVenueDraft<{ menus: VenueConfig["menus"] }>(venueId, { menus });
@@ -162,7 +159,7 @@ export function MenuEditor({
                 <TextField label="Welcome note" value={menu.welcomeText} onChange={(value) => setMenu({ welcomeText: value })} placeholder="Food served 12 – 9pm" maxLength={200} />
                 <div className="field">
                   <span className="field-label" id="menu-layout-label">
-                    Layout {!canUseLayouts && <span className="nav-pro">Pro</span>}
+                    Layout
                   </span>
                   <div className="preset-grid" role="group" aria-labelledby="menu-layout-label">
                     {MENU_LAYOUTS.map((option) => (
@@ -181,7 +178,6 @@ export function MenuEditor({
                       </button>
                     ))}
                   </div>
-                  {!canUseLayouts && menu.layout && <UpgradeHint venueId={venueId}>Menu layouts show on your live menu with Pro. Your choice is saved for when you upgrade.</UpgradeHint>}
                 </div>
                 <SwitchRow title="Show calories" description="Print each item's kcal where you've entered it." checked={!!menu.showCalories} onChange={(on) => setMenu({ showCalories: on })} />
               </>
@@ -193,7 +189,6 @@ export function MenuEditor({
               {ai !== "off" && (
                 <MenuAiTools
                   venueId={venueId}
-                  ai={ai}
                   importLimits={importLimits}
                   sections={menu.sections}
                   onImport={(sections, mode, flagged) => {

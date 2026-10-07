@@ -4,7 +4,6 @@ import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Spa
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LanguageSwitch } from "@/components/landing/LanguageSwitch";
 import { VenueHeader } from "@/components/landing/VenueHeader";
-import { BRAND } from "@/config/brand";
 import { createTracker } from "@/lib/analytics";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
 import { computeTheme } from "@/lib/theme";
@@ -69,11 +68,9 @@ interface MenuViewProps {
   locale: Locale;
   source: string;
   backHref: string;
-  /** Pro venues can hide the Tabletap footer line. */
-  showPoweredBy: boolean;
 }
 
-export function MenuView({ venueId, venueName, branding, currencyCode, menus, locale, source, backHref, showPoweredBy }: MenuViewProps) {
+export function MenuView({ venueId, venueName, branding, currencyCode, menus, locale, source, backHref }: MenuViewProps) {
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
   const track = useMemo(() => createTracker({ venueId, source, page: "menu" }), [venueId, source]);
   const formatPrice = useMemo(() => priceFormatter(locale, currencyCode), [locale, currencyCode]);
@@ -357,12 +354,6 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
             <LanguageSwitch locale={locale} />
             <p className="menu-note small">
               {t("menu_allergen_note")}
-              {showPoweredBy && (
-                <>
-                  <br />
-                  {tf("powered_by", { brand: BRAND.name })}
-                </>
-              )}
             </p>
           </>
         )}

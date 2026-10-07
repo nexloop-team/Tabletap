@@ -761,25 +761,6 @@
   width: 22px;
   height: 22px;
 }
-.powered-by {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 44px;
-  margin-top: 10px;
-  padding: 0 16px 16px;
-  font-size: 13px;
-  color: var(--text-tertiary);
-  text-decoration: none;
-  /* Monochrome mark: the venue colour shows through the tile. */
-  --mark-ink: var(--page-bg);
-  --mark-dot: var(--page-bg);
-}
-.powered-by svg {
-  width: 16px;
-  height: 16px;
-}
 
 /* ───────────────────────── Error view ───────────────────────── */
 

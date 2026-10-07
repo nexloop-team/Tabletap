@@ -35,8 +35,7 @@ import { ToastProvider } from "./toast";
 export interface ShellVenue {
   id: string;
   name: string;
-  isPro: boolean;
-  /** "Free", "Pro" or "Pro trial", shown under the name in the switcher. */
+  /** "Active", "Trial · 3 days left" or "Unpaid", shown under the name in the switcher. */
   planLabel?: string;
   logoUrl: string | null;
 }
@@ -70,7 +69,7 @@ function venueNav(base: string): NavGroup[] {
       items: [
         { href: `${base}/design`, label: "Guest page", icon: Palette },
         { href: `${base}/menu`, label: "Menu", icon: UtensilsCrossed },
-        { href: `${base}/loyalty`, label: "Loyalty & capture", icon: Gift, badge: "Pro" },
+        { href: `${base}/loyalty`, label: "Loyalty & capture", icon: Gift },
         { href: `${base}/qr`, label: "QR codes", icon: QrCode },
       ],
     },
@@ -84,7 +83,7 @@ function venueNav(base: string): NavGroup[] {
     {
       label: "Venue",
       items: [
-        { href: `${base}/billing`, label: "Plan & billing", icon: CreditCard },
+        { href: `${base}/billing`, label: "Subscription", icon: CreditCard },
         { href: `${base}/settings`, label: "Settings", icon: Settings },
       ],
     },

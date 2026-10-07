@@ -112,7 +112,7 @@ export async function requireStaffDevice(): Promise<StaffDevice> {
 // ─── Stamping ────────────────────────────────────────────────────────────────
 
 function stampVenue(device: StaffDevice): PublicVenue {
-  // findVenue applies the plan, so a lapsed Pro venue can't keep stamping.
+  // findVenue checks the subscription, so a lapsed venue can't keep stamping.
   const venue = findVenue(device.venueId);
   if (!venue || !hasLoyaltyProgram(venue)) throw new ServiceError(400, "This venue has no active stamp card");
   return venue;

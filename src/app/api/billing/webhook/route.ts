@@ -1,17 +1,17 @@
-import { handleStripeEvent, verifyStripeSignature } from "@/server/services/billing";
+import { handleRazorpayEvent, verifyWebhookSignature } from "@/server/services/billing";
 
-/** Stripe → us. Signed with STRIPE_WEBHOOK_SECRET; anything unsigned is refused. */
+/** Razorpay → us. Signed with RAZORPAY_WEBHOOK_SECRET; anything unsigned is refused. */
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
   if (!secret) return new Response("Webhook not configured", { status: 503 });
   const payload = await request.text();
-  if (!verifyStripeSignature(payload, request.headers.get("stripe-signature"), secret)) {
+  if (!verifyWebhookSignature(payload, request.headers.get("x-razorpay-signature"), secret)) {
     return new Response("Bad signature", { status: 400 });
   }
   try {
-    handleStripeEvent(JSON.parse(payload));
+    handleRazorpayEvent(JSON.parse(payload));
   } catch (error) {
-    // A 500 makes Stripe retry, which is what we want for a transient failure.
+    // A 5xx makes Razorpay retry, which is what we want for a transient failure.
     console.error("[billing] webhook failed", error);
     return new Response("Handler error", { status: 500 });
   }

@@ -31,7 +31,7 @@ function plural(n: number, one: string, many: string): string {
 export default async function VenueOverview({ params, searchParams }: PageProps<"/dashboard/[venueId]">) {
   const { venueId } = await params;
   const query = await searchParams;
-  const { venue, plan } = await loadDashboardVenue(venueId);
+  const { venue } = await loadDashboardVenue(venueId);
   const stats = venueStats(venue.id, WINDOW_DAYS);
   const fortnight = venueStats(venue.id, WINDOW_DAYS * 2);
   const url = guestPageUrl(await serverOrigin(), venue.shortCode);
@@ -47,9 +47,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
     { done: hostedItems > 0 || config.menus.some((menu) => !!menu.externalUrl), label: "Add your menu", cta: "Add", href: `${base}/menu` },
     { done: !!config.wifi?.ssid, label: "Share your Wi-Fi", cta: "Add", href: `${base}/design#wifi` },
     { done: !!config.socialLinks.google && !!config.branding.showGoogleReviewButton, label: "Link your Google reviews", cta: "Link", href: `${base}/design#google` },
-    ...(plan === "pro"
-      ? [{ done: !!config.loyaltyProgram && (config.loyaltyProgram.stampsEnabled === false || !!config.loyaltyProgram.rewardName), label: "Set up a loyalty card", cta: "Set up", href: `${base}/loyalty` }]
-      : []),
+    { done: !!config.loyaltyProgram && (config.loyaltyProgram.stampsEnabled === false || !!config.loyaltyProgram.rewardName), label: "Set up a loyalty card", cta: "Set up", href: `${base}/loyalty` },
     { done: stats.scans > 0 || fortnight.scans > 0, label: "Print your QR codes and get a first scan", cta: "Print", href: `${base}/qr` },
   ];
   const done = checklist.filter((item) => item.done).length;

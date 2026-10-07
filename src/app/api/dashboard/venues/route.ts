@@ -3,7 +3,7 @@ import { requireApiUser } from "@/server/auth/session";
 import { assertSameOrigin, handle, parseBody, rateLimit } from "@/server/http";
 import { createVenueForUser } from "@/server/services/venue-admin";
 
-/** Onboarding: creates a venue owned by the signed-in merchant, on a Pro trial. */
+/** Onboarding: creates a venue owned by the signed-in merchant, with the free trial running. */
 export const POST = handle(async (request) => {
   assertSameOrigin(request);
   rateLimit(request, "create-venue", 10);

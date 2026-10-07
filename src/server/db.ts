@@ -205,6 +205,8 @@ const MIGRATIONS: string[] = [
   // Till devices remember which staff login opened them, so removing the person locks the device too.
   `ALTER TABLE staff_pairings ADD COLUMN user_id TEXT;
    ALTER TABLE staff_devices ADD COLUMN user_id TEXT;`,
+  // One plan, billed yearly through Razorpay; a cancellation takes effect when the paid year ends.
+  `ALTER TABLE subscriptions ADD COLUMN cancel_at_period_end INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 function migrate(db: DatabaseSync) {

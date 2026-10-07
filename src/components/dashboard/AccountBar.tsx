@@ -19,7 +19,7 @@ function snoozedNow(): boolean {
 
 /**
  * One slim bar for account housekeeping instead of a stack of notices: the
- * Pro trial countdown and, until it's done, "confirm your email" (which can
+ * free-trial countdown and, until it's done, "confirm your email" (which can
  * be snoozed for a day).
  */
 export function AccountBar({ unverifiedEmail, trialDays, billingHref }: { unverifiedEmail: string | null; trialDays: number | null; billingHref: string }) {
@@ -35,12 +35,12 @@ export function AccountBar({ unverifiedEmail, trialDays, billingHref }: { unveri
           <Clock aria-hidden />
           <span>
             <strong>
-              Pro trial · {trialDays} day{trialDays === 1 ? "" : "s"} left.
+              Free trial · {trialDays} day{trialDays === 1 ? "" : "s"} left.
             </strong>{" "}
-            <span className="account-bar-more">Keep loyalty, Wi-Fi capture and guest emails after it ends.</span>
+            <span className="account-bar-more">Subscribe to keep your guest page online after it ends.</span>
           </span>
           <Link className="btn btn-primary btn-sm" href={billingHref}>
-            Choose a plan
+            Subscribe
           </Link>
         </span>
       )}

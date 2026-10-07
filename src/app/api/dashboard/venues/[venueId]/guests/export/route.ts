@@ -1,7 +1,6 @@
 import { venueFromRequest } from "@/server/dashboard";
-import { handle, ServiceError } from "@/server/http";
+import { handle } from "@/server/http";
 import { listGuests } from "@/server/repositories/insights";
-import { entitlementsFor } from "@/server/repositories/subscriptions";
 
 /** Spreadsheet apps execute cells starting with these; prefix them so a guest's name can't become a formula. */
 function cell(value: string | number | null): string {
@@ -12,7 +11,6 @@ function cell(value: string | number | null): string {
 
 export const GET = handle(async (request, ctx: RouteContext<"/api/dashboard/venues/[venueId]/guests/export">) => {
   const { venue } = await venueFromRequest(request, (await ctx.params).venueId);
-  if (!entitlementsFor(venue.id).can.guestExport) throw new ServiceError(402, "CSV export is part of the Pro plan");
   const { rows } = listGuests(venue.id, { limit: 100_000 });
   const header = ["email", "first_name", "name", "marketing_consent", "birthday_dd_mm", "stamps", "visits", "source", "joined_utc"];
   const lines = [header.join(",")];

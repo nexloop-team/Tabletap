@@ -269,7 +269,7 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
           {step === 3 && (
             <>
               <h1>Bring guests back</h1>
-              <p>A digital stamp card that lives on their phone. Included in your free Pro trial.</p>
+              <p>A digital stamp card that lives on their phone. Included in your subscription.</p>
               <div className="choice-grid" style={{ marginBottom: 16 }}>
                 <button type="button" className="choice" aria-pressed={loyaltyOn} onClick={() => setLoyaltyOn(true)}>
                   Yes, add a stamp card

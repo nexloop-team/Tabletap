@@ -1,7 +1,6 @@
 "use client";
 
 import { ImagePlus, Loader2, X } from "lucide-react";
-import Link from "next/link";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 
@@ -103,17 +102,6 @@ export function Card({ id, title, description, actions, children, className }: {
       )}
       {children}
     </section>
-  );
-}
-
-export function UpgradeHint({ venueId, children }: { venueId: string; children: ReactNode }) {
-  return (
-    <div className="upgrade">
-      <span>{children}</span>
-      <Link className="btn btn-primary btn-sm" href={`/dashboard/${venueId}/billing`}>
-        Upgrade to Pro
-      </Link>
-    </div>
   );
 }
 

@@ -8,7 +8,7 @@ import { appOrigin } from "../origin";
 import { findCardById, setCardStamps } from "../repositories/loyalty-cards";
 import { claimGuestEmail, claimReferralReward, referralRewardsInLast, releaseGuestEmail } from "../repositories/retention";
 import { recordStampEvent } from "../repositories/stamps";
-import { entitlementsFor } from "../repositories/subscriptions";
+import { venueHasAccess } from "../repositories/subscriptions";
 import { getVenueSettings } from "../repositories/venues";
 import { sendMail } from "./mailer";
 
@@ -38,7 +38,7 @@ export function onStaffStamp(event: { venue: PublicVenue; cardId: string; before
  * past a reward. At most once per reward per card per day.
  */
 export function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before: number, after: number): boolean {
-  if (!entitlementsFor(venue.id).can.automations || !getVenueSettings(venue.id).automations.rewardReady) return false;
+  if (!venueHasAccess(venue.id) || !getVenueSettings(venue.id).automations.rewardReady) return false;
   const unlocked = programTiers(venue.loyaltyProgram).filter((tier) => before < tier.stampsRequired && after >= tier.stampsRequired);
   const tier = unlocked[unlocked.length - 1];
   if (!tier) return false;

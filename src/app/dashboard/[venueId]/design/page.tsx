@@ -9,7 +9,7 @@ import { guestPageUrl } from "@/server/services/qr";
 export const metadata: Metadata = { title: "Guest page" };
 
 export default async function DesignPage({ params }: PageProps<"/dashboard/[venueId]/design">) {
-  const { venue, can } = await loadDashboardVenue((await params).venueId);
+  const { venue } = await loadDashboardVenue((await params).venueId);
   const url = guestPageUrl(await serverOrigin(), venue.shortCode);
   return (
     <>
@@ -22,7 +22,7 @@ export default async function DesignPage({ params }: PageProps<"/dashboard/[venu
           </a>
         }
       />
-      <DesignEditor venueId={venue.id} shortCode={venue.shortCode} config={venue.config} canUseStyles={can.stylePresets} canUseLayouts={can.layouts} />
+      <DesignEditor venueId={venue.id} shortCode={venue.shortCode} config={venue.config} />
     </>
   );
 }

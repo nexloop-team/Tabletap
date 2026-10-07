@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/config/brand";
-import { TRIAL_DAYS } from "@/lib/plans";
+import { formatInr, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS } from "@/lib/plans";
 import "@/styles/pages.css";
 
 export const metadata: Metadata = { title: "Terms of service" };
@@ -41,9 +41,11 @@ export default function TermsPage() {
 
       <h2>Plans and payment</h2>
       <p>
-        The Free plan is free. New venues get a {TRIAL_DAYS}-day trial of Pro with no card required; when it ends, Pro features switch off
-        unless you subscribe. Pro is billed per venue, in advance, each month, and renews until you cancel. Cancelling stops the next
-        renewal and your venue returns to the Free plan at the end of the paid period. Prices may change with 30 days&apos; notice.
+        There is one plan, billed per venue, in advance, once a year: {formatInr(PRICE_INR)} plus GST ({formatInr(PRICE_WITH_GST_INR)} in total). New
+        venues get a {TRIAL_DAYS}-day free trial with no card required. If the trial ends, or a renewal can&apos;t be collected, without an active
+        subscription, the venue&apos;s guest page goes offline until you subscribe; your settings and guest list are kept and you can still sign in.
+        Payments are processed by Razorpay. The subscription renews each year until you cancel; cancelling stops the next renewal, and the page
+        stays live until the end of the year you paid for. Prices may change with 30 days&apos; notice.
       </p>
 
       <h2>Deleting your data</h2>
