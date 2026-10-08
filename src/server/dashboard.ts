@@ -4,18 +4,52 @@ import { cache } from "react";
 import { currentUser, isAdmin, requireApiUser, requireUser } from "./auth/session";
 import { assertSameOrigin, ServiceError } from "./http";
 import { accessState } from "@/lib/plans";
+import { editGrantExpiry, logAdminAction } from "./repositories/admin-actions";
 import { getSubscription } from "./repositories/subscriptions";
 import { getVenueRecord, isManagerRole, venueRole } from "./repositories/venues";
 import { requireVenueAccess } from "./services/venue-admin";
 
-/** Route handlers under /api/dashboard/venues/[venueId]: signed in, owner (or operator), and same-origin for writes. */
-export async function venueFromRequest(request: Request, venueId: string, options: { write?: boolean } = {}) {
+/**
+ * Route handlers under /api/dashboard/venues/[venueId]: signed in, owner (or
+ * operator), and same-origin for writes.
+ *
+ * Admins can look at any venue, but only change it while "Edit for owner" is
+ * on, and every change they make is logged. Billing and deleting the venue
+ * (`write: "owner"`) stay with its own team.
+ */
+export async function venueFromRequest(request: Request, venueId: string, options: { write?: boolean | "owner" } = {}) {
   if (options.write) assertSameOrigin(request);
   const user = await requireApiUser();
   const venue = requireVenueAccess(user, venueId);
-  // Platform admins can look at any venue for support, but only its own team changes it.
-  if (options.write && !isManagerRole(venueRole(user.id, venueId))) throw new ServiceError(403, "This is a read-only support view. Ask the owner to make the change.");
+  if (options.write && !isManagerRole(venueRole(user.id, venueId))) {
+    if (options.write === "owner") throw new ServiceError(403, "Only the venue's owner can do this.");
+    if (!isAdmin(user) || !editGrantExpiry(user.id, venueId)) throw new ServiceError(403, "This is a read-only support view. Turn on \"Edit for owner\" to make changes.");
+    logAdminAction(user, "Edited for owner", { type: "venue", id: venueId, label: venue.config.name }, await describeWrite(request, venueId));
+  }
   return { user, venue };
+}
+
+const WRITE_LABELS: Record<string, string> = {
+  "/settings": "venue settings",
+  "/media": "uploaded an image",
+  "/restore": "undid the last save",
+  "/staff-members": "staff logins",
+  "/staff-devices": "till devices",
+  "/ai/menu-import": "AI menu import",
+  "/ai/explain": "AI dish notes",
+};
+
+/** For the activity log: "saved branding, menus", "staff logins (DELETE)" and so on. */
+async function describeWrite(request: Request, venueId: string): Promise<string> {
+  const path = new URL(request.url).pathname.replace(`/api/dashboard/venues/${venueId}`, "") || "/";
+  if (path === "/") {
+    const body = (await request.clone().json().catch(() => null)) as Record<string, unknown> | null;
+    const sections = body ? Object.keys(body).filter((key) => body[key] !== undefined) : [];
+    return sections.length ? `saved ${sections.join(", ")}` : "saved the venue";
+  }
+  const base = Object.keys(WRITE_LABELS).find((key) => path === key || path.startsWith(`${key}/`));
+  const label = base ? WRITE_LABELS[base] : path;
+  return request.method === "DELETE" ? `${label} (removed)` : label;
 }
 
 /** Server pages under /dashboard/[venueId]: the venue with its subscription, or a 404 for anyone else. */

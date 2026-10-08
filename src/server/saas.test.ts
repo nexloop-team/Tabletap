@@ -331,4 +331,18 @@ describe("operator console", () => {
     m.operator.updateUserAsAdmin(boss, helper.id, { action: "remove_admin" }, "http://localhost");
     expect(m.users.findUserById(helper.id)?.adminRole).toBe(false);
   });
+
+  it("switches edit-for-owner on for one admin and venue, and logs it", async () => {
+    process.env.ADMIN_EMAILS = "boss6@example.com";
+    const boss = await account("boss6@example.com");
+    const owner = await account("edited@example.com");
+    const venue = m.admin.createVenueForUser(owner, m.schema.createVenueRequest.parse({ name: "Edited Cafe", venueType: "cafe", currencyCode: "GBP" }));
+    expect(m.log.editGrantExpiry(boss.id, venue.id)).toBeNull();
+    m.operator.setEditMode(boss, venue.id, true);
+    expect(m.log.editGrantExpiry(boss.id, venue.id)).not.toBeNull();
+    expect(m.log.editGrantExpiry(owner.id, venue.id)).toBeNull();
+    m.operator.setEditMode(boss, venue.id, false);
+    expect(m.log.editGrantExpiry(boss.id, venue.id)).toBeNull();
+    expect(m.log.listAdminActions({ target: { type: "venue", id: venue.id } }).map((entry) => entry.action)).toEqual(["Stopped editing for owner", "Started editing for owner"]);
+  });
 });

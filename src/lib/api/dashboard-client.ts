@@ -1,5 +1,6 @@
 import type {
   AdminDeleteUserRequest,
+  AdminEditModeRequest,
   AdminUserRequest,
   AdminVenueRequest,
   ChangePasswordRequest,
@@ -80,6 +81,7 @@ export const dashboardApi = {
   },
 
   adminUpdateVenue: (venueId: string, body: AdminVenueRequest) => send<{ ok: true }>("PATCH", `/api/admin/venues/${venueId}`, body),
+  adminEditMode: (venueId: string, body: AdminEditModeRequest) => send<{ ok: true }>("POST", `/api/admin/venues/${venueId}/edit-mode`, body),
   adminUpdateUser: (userId: string, body: AdminUserRequest) => send<{ ok: true }>("PATCH", `/api/admin/users/${userId}`, body),
   adminDeleteUser: (userId: string, body: AdminDeleteUserRequest) => send<{ ok: true }>("DELETE", `/api/admin/users/${userId}`, body),
 

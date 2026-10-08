@@ -1,10 +1,12 @@
-import { PowerOff, Shield } from "lucide-react";
+import { PowerOff } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AccountBar } from "@/components/dashboard/AccountBar";
+import { AdminEditBar } from "@/components/dashboard/AdminEditBar";
 import { HashFocus } from "@/components/dashboard/HashFocus";
 import { trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
+import { EDIT_GRANT_MINUTES, editGrantExpiry } from "@/server/repositories/admin-actions";
 import { isManagerRole, venueRole } from "@/server/repositories/venues";
 
 export async function generateMetadata({ params }: LayoutProps<"/dashboard/[venueId]">) {
@@ -21,19 +23,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
 
   return (
     <div className="page">
-      {operatorView && (
-        <div className="notice notice-admin">
-          <span className="inline">
-            <Shield aria-hidden />
-            <span>
-              You&apos;re viewing <strong>{venue.config.name}</strong> as a platform admin. This is a read-only support view: saving is switched off.
-            </span>
-          </span>
-          <Link className="btn btn-sm" href="/admin/venues">
-            Back to admin
-          </Link>
-        </div>
-      )}
+      {operatorView && <AdminEditBar venueId={venue.id} venueName={venue.config.name} editingUntil={editGrantExpiry(user.id, venue.id)} minutes={EDIT_GRANT_MINUTES} />}
       {venue.status === "suspended" && (
         <div className="notice notice-error">This venue is suspended, so its guest page is offline. Contact support to restore it.</div>
       )}

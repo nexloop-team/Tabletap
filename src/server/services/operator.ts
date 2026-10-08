@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type { adminUserRequest, adminVenueRequest } from "@/lib/api/account-contracts";
 import { destroyAllSessions, isAdmin, isSuperAdmin } from "../auth/session";
 import { ServiceError } from "../http";
-import { logAdminAction } from "../repositories/admin-actions";
+import { EDIT_GRANT_MINUTES, endEditGrant, logAdminAction, startEditGrant } from "../repositories/admin-actions";
 import { extendTrial, getSubscription, updateSubscription } from "../repositories/subscriptions";
 import { findUserById, setAdminRole, setUserBlocked, type User } from "../repositories/users";
 import { getVenueRecord, setVenueStatus } from "../repositories/venues";
@@ -38,6 +38,20 @@ export function updateVenueAsAdmin(admin: User, venueId: string, input: z.output
   if (input.status && input.status !== venue.status) {
     setVenueStatus(venueId, input.status);
     logAdminAction(admin, input.status === "suspended" ? "Suspended venue" : "Restored venue", target);
+  }
+}
+
+/** "Edit for owner": lets this admin save changes to the venue for a while. Switching it on is logged, and so is every save. */
+export function setEditMode(admin: User, venueId: string, on: boolean) {
+  const venue = getVenueRecord(venueId);
+  if (!venue) throw new ServiceError(404, "Venue not found");
+  const target = { type: "venue" as const, id: venueId, label: venue.config.name };
+  if (on) {
+    startEditGrant(admin.id, venueId);
+    logAdminAction(admin, "Started editing for owner", target, `for ${EDIT_GRANT_MINUTES} minutes`);
+  } else {
+    endEditGrant(admin.id, venueId);
+    logAdminAction(admin, "Stopped editing for owner", target);
   }
 }
 

@@ -49,3 +49,22 @@ export function listAdminActions(options: { limit?: number; target?: { type: "ve
     createdAt: row.created_at,
   }));
 }
+
+/** How long "Edit for owner" stays on before it switches itself off. */
+export const EDIT_GRANT_MINUTES = 30;
+
+export function startEditGrant(adminId: string, venueId: string): string {
+  const expires = new Date(Date.now() + EDIT_GRANT_MINUTES * 60_000).toISOString();
+  getDb().prepare("INSERT INTO admin_edit_grants (admin_id, venue_id, expires_at) VALUES (?, ?, ?) ON CONFLICT (admin_id, venue_id) DO UPDATE SET expires_at = excluded.expires_at").run(adminId, venueId, expires);
+  return expires;
+}
+
+export function endEditGrant(adminId: string, venueId: string) {
+  getDb().prepare("DELETE FROM admin_edit_grants WHERE admin_id = ? AND venue_id = ?").run(adminId, venueId);
+}
+
+/** When this admin's edit mode for the venue ends, or null when it's off. */
+export function editGrantExpiry(adminId: string, venueId: string): string | null {
+  const row = getDb().prepare("SELECT expires_at FROM admin_edit_grants WHERE admin_id = ? AND venue_id = ?").get(adminId, venueId) as { expires_at: string } | undefined;
+  return row && Date.parse(row.expires_at) > Date.now() ? row.expires_at : null;
+}

@@ -199,6 +199,7 @@ Newest first. One line per change: what changed and why.
 - Added (admin): an activity log of every admin change, with who made it.
 - Added (admin): super admins (`ADMIN_EMAILS`) can make other verified accounts admins, or remove them, from Accounts.
 - Changed: sign-ins last 90 days from the last visit, so people who come back stay signed in.
+- Added (admin): "Edit for owner". The support view stays read-only until an admin switches editing on for that venue (30 minutes, then it switches itself off). Every save is logged with what changed; billing and deleting the venue stay with the owner.
 - Fixed: deleting a venue or an account now cancels its Razorpay subscription too.
 - Added (admin): Paying / Trial / Unpaid / Free access / Suspended filters, "Extend trial by 7 days", "Give free access", and a revenue panel (yearly and monthly recurring, churn, won't-renew, failing payments).
 

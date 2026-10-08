@@ -224,6 +224,13 @@ const MIGRATIONS: string[] = [
    ALTER TABLE users ADD COLUMN blocked_at TEXT;`,
   // Admins granted in the app by a super admin (besides ADMIN_EMAILS).
   `ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;`,
+  // "Edit for owner": an admin switches it on for one venue, for a short while.
+  `CREATE TABLE admin_edit_grants (
+     admin_id TEXT NOT NULL,
+     venue_id TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     PRIMARY KEY (admin_id, venue_id)
+   );`,
 ];
 
 function migrate(db: DatabaseSync) {
