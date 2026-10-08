@@ -5,7 +5,7 @@ import { destroyAllSessions, isAdmin, isSuperAdmin } from "../auth/session";
 import { ServiceError } from "../http";
 import { logAdminAction } from "../repositories/admin-actions";
 import { extendTrial, getSubscription, updateSubscription } from "../repositories/subscriptions";
-import { findUserById, setUserBlocked, type User } from "../repositories/users";
+import { findUserById, setAdminRole, setUserBlocked, type User } from "../repositories/users";
 import { getVenueRecord, setVenueStatus } from "../repositories/venues";
 import { removeAccount, sendPasswordResetEmail, sendVerificationEmail } from "./accounts";
 
@@ -52,6 +52,12 @@ function assertCanLockOut(admin: User, user: User) {
   if (isAdmin(user) && !isSuperAdmin(admin)) throw new ServiceError(403, "Only a super admin can do that to another admin");
 }
 
+/** Admin roles: super admins only, never on themselves or another super admin. */
+function assertSuperAdminChange(admin: User, user: User) {
+  if (!isSuperAdmin(admin)) throw new ServiceError(403, "Only a super admin (ADMIN_EMAILS) can do that");
+  if (user.id === admin.id || isSuperAdmin(user)) throw new ServiceError(400, "Super admins are managed in ADMIN_EMAILS");
+}
+
 export function updateUserAsAdmin(admin: User, userId: string, input: z.output<typeof adminUserRequest>, origin: string) {
   const user = findUserById(userId);
   if (!user) throw new ServiceError(404, "Account not found");
@@ -76,6 +82,13 @@ export function updateUserAsAdmin(admin: User, userId: string, input: z.output<t
     case "unblock":
       setUserBlocked(user.id, false);
       logAdminAction(admin, "Unblocked account", target);
+      return;
+    case "make_admin":
+    case "remove_admin":
+      assertSuperAdminChange(admin, user);
+      if (input.action === "make_admin" && !user.emailVerified) throw new ServiceError(400, "They need to confirm their email first");
+      setAdminRole(user.id, input.action === "make_admin");
+      logAdminAction(admin, input.action === "make_admin" ? "Made admin" : "Removed admin", target);
       return;
   }
 }

@@ -222,6 +222,8 @@ const MIGRATIONS: string[] = [
    CREATE INDEX admin_actions_created ON admin_actions(created_at);
    CREATE INDEX admin_actions_target ON admin_actions(target_type, target_id);
    ALTER TABLE users ADD COLUMN blocked_at TEXT;`,
+  // Admins granted in the app by a super admin (besides ADMIN_EMAILS).
+  `ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 function migrate(db: DatabaseSync) {

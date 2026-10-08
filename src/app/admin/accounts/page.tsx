@@ -16,6 +16,7 @@ const FILTERS = [
   { key: "unverified", label: "Unverified" },
   { key: "no-venue", label: "No venue" },
   { key: "blocked", label: "Blocked" },
+  { key: "admins", label: "Admins" },
 ] as const;
 
 export default async function AdminAccountsPage({ searchParams }: PageProps<"/admin/accounts">) {
@@ -26,7 +27,7 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
 
   const all = adminUsers();
   const searched = all.filter((user) => matches(q, user.name, user.email));
-  const inFilter = (key: string) => (user: (typeof all)[number]) => (key === "unverified" ? !user.emailVerified : key === "no-venue" ? user.venueCount === 0 : key === "blocked" ? user.blocked : true);
+  const inFilter = (key: string) => (user: (typeof all)[number]) => (key === "unverified" ? !user.emailVerified : key === "no-venue" ? user.venueCount === 0 : key === "blocked" ? user.blocked : key === "admins" ? isAdmin(user) : true);
   const rows = searched.filter(inFilter(filter));
   const href = (key: string) => `/admin/accounts?${new URLSearchParams({ ...(q ? { q } : {}), ...(key !== "all" ? { filter: key } : {}) })}`;
 
@@ -100,7 +101,9 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
                             <Lock aria-hidden /> Blocked
                           </span>
                         )}
-                        {isAdmin(user) && <span className="badge badge-admin">{isSuperAdmin(user) ? "Super admin" : "Admin"}</span>}
+                        {isAdmin(user) && (
+                          <span className="badge badge-admin">{isSuperAdmin(user) ? "Super admin" : "Admin"}</span>
+                        )}
                       </span>
                     </td>
                     <td className="num">
@@ -122,6 +125,8 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
                         verified={user.emailVerified}
                         blocked={user.blocked}
                         protectedAccount={user.id === admin.id || isSuperAdmin(user) || (isAdmin(user) && !isSuperAdmin(admin))}
+                        canManageAdmins={isSuperAdmin(admin) && user.id !== admin.id && !isSuperAdmin(user) && (user.emailVerified || user.adminRole)}
+                        adminRole={user.adminRole}
                       />
                     </td>
                   </tr>

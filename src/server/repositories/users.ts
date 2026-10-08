@@ -9,6 +9,8 @@ export interface User {
   emailVerified: boolean;
   /** Blocked by an operator: can't sign in, and existing sessions stop working. */
   blocked: boolean;
+  /** Made an admin from the console (super admins come from ADMIN_EMAILS instead). */
+  adminRole: boolean;
   createdAt: string;
 }
 
@@ -19,11 +21,20 @@ interface UserRow {
   password_hash: string;
   email_verified_at: string | null;
   blocked_at: string | null;
+  is_admin: number;
   created_at: string;
 }
 
 function toUser(row: UserRow): User {
-  return { id: row.id, email: row.email, name: row.name, emailVerified: !!row.email_verified_at, blocked: !!row.blocked_at, createdAt: row.created_at };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    emailVerified: !!row.email_verified_at,
+    blocked: !!row.blocked_at,
+    adminRole: !!row.is_admin,
+    createdAt: row.created_at,
+  };
 }
 
 export function findUserById(id: string): User | null {
@@ -68,6 +79,10 @@ export function setUserBlocked(userId: string, blocked: boolean) {
   getDb().prepare("UPDATE users SET blocked_at = CASE WHEN ? THEN COALESCE(blocked_at, datetime('now')) ELSE NULL END WHERE id = ?").run(blocked ? 1 : 0, userId);
 }
 
+export function setAdminRole(userId: string, admin: boolean) {
+  getDb().prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(admin ? 1 : 0, userId);
+}
+
 export interface AdminUserRow extends User {
   venueCount: number;
 }
@@ -75,7 +90,7 @@ export interface AdminUserRow extends User {
 export function listUsersForAdmin(limit = 200): AdminUserRow[] {
   const rows = getDb()
     .prepare(
-      `SELECT u.id, u.email, u.name, u.email_verified_at, u.blocked_at, u.created_at, COUNT(m.venue_id) AS venue_count
+      `SELECT u.id, u.email, u.name, u.email_verified_at, u.blocked_at, u.is_admin, u.created_at, COUNT(m.venue_id) AS venue_count
        FROM users u LEFT JOIN venue_members m ON m.user_id = u.id
        GROUP BY u.id ORDER BY u.created_at DESC LIMIT ?`,
     )

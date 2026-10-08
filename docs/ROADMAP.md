@@ -197,6 +197,8 @@ Newest first. One line per change: what changed and why.
 - Removed: the "Powered by" footer on guest pages and menus.
 - Added (admin): account actions: resend the confirmation email, email a password reset link, block / unblock (signs them out everywhere), delete with the email typed to confirm. Admins and super admins are protected.
 - Added (admin): an activity log of every admin change, with who made it.
+- Added (admin): super admins (`ADMIN_EMAILS`) can make other verified accounts admins, or remove them, from Accounts.
+- Changed: sign-ins last 90 days from the last visit, so people who come back stay signed in.
 - Fixed: deleting a venue or an account now cancels its Razorpay subscription too.
 - Added (admin): Paying / Trial / Unpaid / Free access / Suspended filters, "Extend trial by 7 days", "Give free access", and a revenue panel (yearly and monthly recurring, churn, won't-renew, failing payments).
 

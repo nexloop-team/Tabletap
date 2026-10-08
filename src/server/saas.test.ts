@@ -315,4 +315,20 @@ describe("operator console", () => {
     m.operator.updateVenueAsAdmin(boss, venue.id, { extendTrialDays: 7, status: "suspended" });
     expect(m.log.listAdminActions({ target: { type: "venue", id: venue.id } }).map((entry) => entry.action).sort()).toEqual(["Extended trial", "Suspended venue"]);
   });
+
+  it("lets only super admins make or remove admins", async () => {
+    process.env.ADMIN_EMAILS = "boss5@example.com";
+    const boss = await account("boss5@example.com");
+    const helper = await account("helper@example.com");
+    const other = await account("other@example.com");
+    m.operator.updateUserAsAdmin(boss, helper.id, { action: "make_admin" }, "http://localhost");
+    const promoted = m.users.findUserById(helper.id)!;
+    expect(promoted.adminRole).toBe(true);
+    expect(() => m.operator.updateUserAsAdmin(promoted, other.id, { action: "make_admin" }, "http://localhost")).toThrow(/super admin/);
+    // A plain admin can't lock out another admin either.
+    m.operator.updateUserAsAdmin(boss, other.id, { action: "make_admin" }, "http://localhost");
+    expect(() => m.operator.updateUserAsAdmin(promoted, other.id, { action: "block" }, "http://localhost")).toThrow(/super admin/);
+    m.operator.updateUserAsAdmin(boss, helper.id, { action: "remove_admin" }, "http://localhost");
+    expect(m.users.findUserById(helper.id)?.adminRole).toBe(false);
+  });
 });

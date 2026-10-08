@@ -14,7 +14,11 @@ import { findUserById, type User } from "../repositories/users";
  * session can be revoked by deleting its row.
  */
 export const SESSION_COOKIE = "tt_session";
-const SESSION_DAYS = 30;
+/** A session ends after this many days without a visit; every visit pushes the end back. */
+const SESSION_DAYS = 90;
+/** The cookie outlives the session so coming back extends it (browsers cap cookies at 400 days). */
+const COOKIE_DAYS = 400;
+const DAY_MS = 86_400_000;
 
 function digest(token: string): string {
   return createHash("sha256").update(token).digest("base64url");
@@ -22,14 +26,14 @@ function digest(token: string): string {
 
 export async function createSession(userId: string) {
   const token = newToken();
-  const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+  const expires = new Date(Date.now() + SESSION_DAYS * DAY_MS);
   getDb().prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)").run(digest(token), userId, expires.toISOString());
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires,
+    expires: new Date(Date.now() + COOKIE_DAYS * DAY_MS),
   });
 }
 
@@ -45,6 +49,10 @@ export const currentUser = cache(async (): Promise<User | null> => {
     | { user_id: string; expires_at: string }
     | undefined;
   if (!row || Date.parse(row.expires_at) <= Date.now()) return null;
+  // Coming back keeps you signed in: slide the end forward, at most one write a day.
+  if (Date.parse(row.expires_at) < Date.now() + (SESSION_DAYS - 1) * DAY_MS) {
+    getDb().prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(new Date(Date.now() + SESSION_DAYS * DAY_MS).toISOString(), digest(token));
+  }
   const user = findUserById(row.user_id);
   return user && !user.blocked ? user : null;
 });
@@ -94,9 +102,9 @@ export function isSuperAdmin(user: User | null): boolean {
   return admins.includes(user.email);
 }
 
-/** May use the operator console. */
+/** May use the operator console: a super admin, or someone a super admin made an admin. */
 export function isAdmin(user: User | null): boolean {
-  return isSuperAdmin(user);
+  return !!user && user.emailVerified && (user.adminRole || isSuperAdmin(user));
 }
 
 export type AuthTokenPurpose = "verify_email" | "reset_password";

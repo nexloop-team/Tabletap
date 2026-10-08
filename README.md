@@ -61,7 +61,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 |---|---|
 | `APP_URL` | Public origin encoded into QR codes and links (falls back to the request host) |
 | `DATA_DIR` | Where the SQLite database, media and feedback photos are stored |
-| `ADMIN_EMAILS` | Comma-separated emails allowed into `/admin` (the email must be verified) |
+| `ADMIN_EMAILS` | Comma-separated super admins (the email must be verified). They can make other accounts admins from `/admin/accounts` |
 | `RESEND_API_KEY` | Sends email through Resend; without it emails only go to the `outbox` table and log |
 | `MAIL_FROM` | Sender for all emails, e.g. `Tabletap <hello@tabletap.app>` |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID` | Razorpay Subscriptions for the yearly plan |

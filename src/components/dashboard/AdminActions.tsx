@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CalendarPlus, ExternalLink, Gift, KeyRound, LayoutDashboard, Loader2, Lock, LockOpen, Mail, MoreHorizontal, RotateCcw, Trash2, XCircle, type LucideIcon } from "lucide-react";
+import { Ban, CalendarPlus, ExternalLink, Gift, KeyRound, LayoutDashboard, Loader2, Lock, LockOpen, Mail, MoreHorizontal, RotateCcw, Shield, ShieldOff, Trash2, XCircle, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ReactNode, type ToggleEvent } from "react";
@@ -180,7 +180,24 @@ export function AdminVenueActions({ venueId, name, guestUrl, status, segment }: 
 }
 
 /** Row actions for an account: emails, block or unblock, delete. */
-export function AdminUserActions({ userId, email, verified, blocked, protectedAccount }: { userId: string; email: string; verified: boolean; blocked: boolean; protectedAccount: boolean }) {
+export function AdminUserActions({
+  userId,
+  email,
+  verified,
+  blocked,
+  protectedAccount,
+  canManageAdmins,
+  adminRole,
+}: {
+  userId: string;
+  email: string;
+  verified: boolean;
+  blocked: boolean;
+  protectedAccount: boolean;
+  /** Only super admins (ADMIN_EMAILS) can make or remove admins. */
+  canManageAdmins: boolean;
+  adminRole: boolean;
+}) {
   const typed = useRef("");
   const confirmId = useId();
   const update = (action: AdminUserRequest["action"]) => () => dashboardApi.adminUpdateUser(userId, { action });
@@ -208,6 +225,29 @@ export function AdminUserActions({ userId, email, verified, blocked, protectedAc
           },
           done: "Password reset link sent.",
         },
+        canManageAdmins && { kind: "separator" },
+        canManageAdmins &&
+          (adminRole
+            ? {
+                kind: "action",
+                label: "Remove admin",
+                icon: ShieldOff,
+                run: update("remove_admin"),
+                question: { title: `Remove ${email} as an admin?`, body: "They lose access to the admin console straight away.", confirmLabel: "Remove admin", danger: true },
+                done: "Admin removed.",
+              }
+            : {
+                kind: "action",
+                label: "Make admin",
+                icon: Shield,
+                run: update("make_admin"),
+                question: {
+                  title: `Make ${email} an admin?`,
+                  body: "They can see every venue and account, suspend venues, extend trials and block accounts. Every change they make is logged.",
+                  confirmLabel: "Make admin",
+                },
+                done: "Admin added.",
+              }),
         !protectedAccount && { kind: "separator" },
         !protectedAccount &&
           (blocked

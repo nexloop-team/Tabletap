@@ -73,7 +73,7 @@ export const adminVenueRequest = z.object({
 export type AdminVenueRequest = z.input<typeof adminVenueRequest>;
 
 export const adminUserRequest = z.object({
-  action: z.enum(["resend_verification", "send_reset", "block", "unblock"]),
+  action: z.enum(["resend_verification", "send_reset", "block", "unblock", "make_admin", "remove_admin"]),
 });
 export type AdminUserRequest = z.input<typeof adminUserRequest>;
 
