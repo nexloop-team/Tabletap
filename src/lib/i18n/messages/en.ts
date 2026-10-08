@@ -203,6 +203,16 @@ export const en = {
   consent_confirmed_body: "Thanks for confirming. Every email has an unsubscribe link if you change your mind.",
   consent_invalid_title: "This link can't be used",
   consent_invalid_body: "It may have been used already or expired. Nothing has changed - you won't get marketing emails unless you confirm.",
+  tile_menu_sub: "Food and drinks",
+  tile_wifi_copy: "Tap to copy",
+  tile_wifi_connect: "Tap to connect",
+  tile_wifi_copied: "Password copied",
+  tile_feedback_sub: "Only the owner reads it",
+  tile_stamps_more: "{count} more → {reward}",
+  tile_reward_ready: "Reward ready",
+  tile_join: "Join free",
+  tile_collect: "{count} stamps → {reward}",
+  tile_sudoku: "Play Sudoku",
 };
 
 export type MessageKey = keyof typeof en;

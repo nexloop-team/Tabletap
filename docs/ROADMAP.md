@@ -190,6 +190,10 @@ Newest first. One line per change: what changed and why.
 - Added / Changed / Fixed: what, and why
 ```
 
+### 2026-10-09
+- Changed: the Grid layout is now **Bento**: the venue name big over the cover like a poster, then colourful tiles (loyalty with stamps out of total, a tall menu tile, a bright Wi-Fi tile that copies the password in one tap, feedback, Google review, Sudoku). Tiles open as bottom sheets. Their three shades come from one "Tile colour" (default: the page colour, or deep green), and always keep text readable.
+- Removed: the English / Español switch on the guest page and menu. Guests still get Spanish when their phone is set to it.
+
 ### 2026-10-08 (later)
 - Changed: one plan instead of Free and Pro: ₹999 + 18% GST a year per venue, every feature included, 7-day free trial with no card. Pro markers and upgrade hints are gone.
 - Changed: when a venue has no paid subscription and no trial left, its guest page goes offline; the owner can still sign in and subscribe, and the page comes back as it was.

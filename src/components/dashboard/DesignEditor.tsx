@@ -26,6 +26,17 @@ const SWATCHES: [name: string, hex: string][] = [
   ["Black", "#111111"],
 ];
 
+/** Bento tile colours: deep shades that white text reads on. */
+const TILE_SWATCHES: [name: string, hex: string][] = [
+  ["Forest", "#1F3D2B"],
+  ["Olive", "#3E4A1E"],
+  ["Navy", "#1F3A5F"],
+  ["Plum", "#4A2545"],
+  ["Espresso", "#3B2A20"],
+  ["Brick", "#8C3B26"],
+  ["Charcoal", "#222222"],
+];
+
 const APPEARANCES = [
   { value: null, label: "Auto" },
   { value: "light", label: "Light" },
@@ -41,7 +52,7 @@ const PRESETS = [
 
 const LAYOUTS: { value: PageLayout; label: string; hint: string; icon: LucideIcon }[] = [
   { value: "list", label: "List", hint: "One card per row", icon: List },
-  { value: "grid", label: "Grid", hint: "Two tiles per row", icon: LayoutGrid },
+  { value: "grid", label: "Bento", hint: "Big colourful tiles", icon: LayoutGrid },
   { value: "compact", label: "Compact", hint: "Shorter rows", icon: Rows4 },
 ];
 
@@ -337,7 +348,7 @@ export function DesignEditor({
           </div>
         </Card>
 
-        <Card title="Layout" description="How the cards and header are arranged. Colours always follow your background.">
+        <Card title="Layout" description="How the cards and header are arranged. Bento shows the name big over your cover, with tiles that open as pop-ups.">
           <div className="field">
             <span className="field-label" id="layout-label">
               Cards
@@ -360,24 +371,56 @@ export function DesignEditor({
               ))}
             </div>
           </div>
-          <div className="row">
+          {branding.layout === "grid" && (
             <div className="field">
-              <span className="field-label" id="header-style-label">
-                Header
-              </span>
-              <div className="segmented" role="group" aria-labelledby="header-style-label">
-                {HEADER_STYLES.map((option) => (
+              <span className="field-label">Tile colour</span>
+              <div className="swatches">
+                <button type="button" className="btn btn-sm" aria-pressed={!branding.tileColorHex} onClick={() => setBranding({ tileColorHex: null })}>
+                  Auto
+                </button>
+                {TILE_SWATCHES.map(([name, swatch]) => (
                   <button
-                    key={option.value}
+                    key={swatch}
                     type="button"
-                    aria-pressed={(branding.headerStyle ?? "cover") === option.value}
-                    onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
-                  >
-                    {option.label}
-                  </button>
+                    className="swatch"
+                    style={{ background: swatch }}
+                    aria-label={name}
+                    title={name}
+                    aria-pressed={(branding.tileColorHex ?? "").toUpperCase() === swatch}
+                    onClick={() => setBranding({ tileColorHex: swatch })}
+                  />
                 ))}
+                <input
+                  className="color-input"
+                  type="color"
+                  aria-label="Pick a custom tile colour"
+                  value={branding.tileColorHex ?? "#1F3D2B"}
+                  onChange={(event) => setBranding({ tileColorHex: event.target.value.toUpperCase() })}
+                />
               </div>
+              <span className="hint">Use your logo&apos;s main colour. The loyalty and review tiles use it; the others are brighter and paler shades of it. Auto uses your background colour.</span>
             </div>
+          )}
+          <div className="row">
+            {branding.layout !== "grid" && (
+              <div className="field">
+                <span className="field-label" id="header-style-label">
+                  Header
+                </span>
+                <div className="segmented" role="group" aria-labelledby="header-style-label">
+                  {HEADER_STYLES.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={(branding.headerStyle ?? "cover") === option.value}
+                      onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="field">
               <span className="field-label" id="shape-label">
                 Corners

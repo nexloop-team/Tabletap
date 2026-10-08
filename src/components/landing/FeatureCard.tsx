@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { createContext, useCallback, useContext, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useLanding } from "./LandingContext";
 
 /**
  * 44px tinted circle: the feature colour behind the glyph in full colour. The
@@ -34,6 +35,68 @@ function RowContent({ label, icon, tint, chevron = "right" }: RowProps) {
   );
 }
 
+/**
+ * Grid layout: a bento tile instead of a row. `tone` picks the shade (from
+ * the venue's tile palette) and `size` how much of the two-column grid it takes.
+ */
+export interface TileSpec {
+  tone: "hero" | "pop" | "pale";
+  size: "wide" | "tall" | "small";
+  content: ReactNode;
+}
+
+function tileClass(tile: TileSpec): string {
+  return `feature-wrapper tile-wrap tile-${tile.tone} tile-${tile.size}`;
+}
+
+/**
+ * Grid tiles open their content in a bottom sheet rather than inline, so
+ * the bento stays in place. Closes on the scrim, the ✕ or Escape, and hands
+ * focus back to the tile.
+ */
+function TileSheet({ open, label, onClose, children }: { open: boolean; label: string; onClose: () => void; children: ReactNode }) {
+  const { t } = useLanding();
+  const panel = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement as HTMLElement | null;
+    // Let a field inside (the feedback box) take focus first if it wants it.
+    const focusTimer = setTimeout(() => {
+      if (!panel.current?.contains(document.activeElement)) panel.current?.focus({ preventScroll: true });
+    }, 60);
+    const scroll = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(focusTimer);
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = scroll;
+      opener?.focus({ preventScroll: true });
+    };
+  }, [open, onClose]);
+
+  return (
+    <div className={`bottom-sheet tile-sheet${open ? " open" : ""}`} aria-hidden={!open} inert={!open}>
+      <div className="bottom-sheet-scrim" onClick={onClose} />
+      <div ref={panel} className="bottom-sheet-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+        <div className="bottom-sheet-handle" aria-hidden />
+        <div className="tile-sheet-head">
+          <h2 id={titleId}>{label}</h2>
+          <button type="button" className="tile-sheet-close" aria-label={t("close")} onClick={onClose}>
+            <X aria-hidden />
+          </button>
+        </div>
+        <div className="tile-sheet-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 interface SheetControls {
   isOpen: boolean;
   close: () => void;
@@ -48,6 +111,8 @@ export function useSheet() {
 
 interface ExpandableCardProps extends RowProps {
   feature: string;
+  /** Grid layout: show as a tile that opens a bottom sheet. */
+  tile?: TileSpec;
   /** Called synchronously inside the tap, so it can grab focus for the iOS keyboard. */
   onToggle?: (open: boolean, event: MouseEvent<HTMLButtonElement>) => void;
   /** Don't mount the content until first opened (e.g. the Sudoku board). */
@@ -60,7 +125,7 @@ interface ExpandableCardProps extends RowProps {
  * can be open at once. Opening scrolls the card to the top once the sheet
  * has started to grow.
  */
-export function ExpandableCard({ feature, label, icon, tint, onToggle, lazy = false, children }: ExpandableCardProps) {
+export function ExpandableCard({ feature, label, icon, tint, onToggle, lazy = false, tile, children }: ExpandableCardProps) {
   const [isOpen, setOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(!lazy);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -73,9 +138,22 @@ export function ExpandableCard({ feature, label, icon, tint, onToggle, lazy = fa
     setOpen(next);
     if (next) setHasOpened(true);
     onToggle?.(next, event);
-    if (next) {
+    if (next && !tile) {
       setTimeout(() => wrapperRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 350);
     }
+  }
+
+  if (tile) {
+    return (
+      <div className={tileClass(tile)} data-feature={feature}>
+        <button type="button" className="tile" aria-haspopup="dialog" aria-expanded={isOpen} onClick={toggle}>
+          {tile.content}
+        </button>
+        <TileSheet open={isOpen} label={label} onClose={close}>
+          <SheetContext.Provider value={{ isOpen, close }}>{hasOpened && children}</SheetContext.Provider>
+        </TileSheet>
+      </div>
+    );
   }
 
   return (
@@ -93,7 +171,16 @@ export function ExpandableCard({ feature, label, icon, tint, onToggle, lazy = fa
 }
 
 /** A card that does something immediately (navigate, open a link) instead of expanding. */
-export function ActionCard({ feature, onActivate, ...row }: RowProps & { feature: string; onActivate: () => void }) {
+export function ActionCard({ feature, onActivate, tile, ...row }: RowProps & { feature: string; onActivate: () => void; tile?: TileSpec }) {
+  if (tile) {
+    return (
+      <div className={tileClass(tile)} data-feature={feature}>
+        <button type="button" className="tile" onClick={onActivate} aria-label={row.label}>
+          {tile.content}
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="feature-wrapper" data-feature={feature}>
       <button type="button" className="feature-card" onClick={onActivate}>
@@ -104,7 +191,16 @@ export function ActionCard({ feature, onActivate, ...row }: RowProps & { feature
 }
 
 /** A merchant's custom link: a real anchor, opened in a new tab, no chevron. */
-export function LinkCard({ href, onClick, ...row }: RowProps & { href: string; onClick: () => void }) {
+export function LinkCard({ href, onClick, tile, ...row }: RowProps & { href: string; onClick: () => void; tile?: TileSpec }) {
+  if (tile) {
+    return (
+      <div className={tileClass(tile)} data-feature="link">
+        <a className="tile" href={href} target="_blank" rel="noopener noreferrer" onClick={onClick}>
+          {tile.content}
+        </a>
+      </div>
+    );
+  }
   return (
     <div className="feature-wrapper" data-feature="link">
       <a className="feature-card" href={href} target="_blank" rel="noopener noreferrer" onClick={onClick}>

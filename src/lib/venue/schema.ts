@@ -91,6 +91,7 @@ export const brandingSchema = z.object({
   titleOverride: z.string().max(80).nullish(),
   tagline: optionalText(120),
   backgroundColorHex: hexColor,
+  tileColorHex: hexColor,
   appearance: z.enum(["light", "dark"]).nullish(),
   style: z.enum(["classic", "editorial", "modern"]).nullish(),
   showGoogleReviewButton: z.boolean().optional(),

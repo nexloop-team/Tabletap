@@ -85,6 +85,8 @@ export interface VenueBranding {
   titleOverride?: string | null;
   tagline?: string | null;
   backgroundColorHex?: string | null;
+  /** Grid layout: the colour its tiles are shaded from. Absent means the page colour, or a deep green on white or black pages. */
+  tileColorHex?: string | null;
   /** Forces the card chrome light or dark regardless of the page colour. */
   appearance?: "light" | "dark" | null;
   style?: LandingStyle | null;

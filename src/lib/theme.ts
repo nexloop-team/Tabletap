@@ -74,6 +74,81 @@ const DARK_CARDS: Record<string, string> = {
   "--sudoku-line-strong": "rgba(235,235,245,0.50)",
 };
 
+function rgbToHsl({ r, g, b }: { r: number; g: number; b: number }): { h: number; s: number; l: number } {
+  const [rn, gn, bn] = [r / 255, g / 255, b / 255];
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === rn ? (gn - bn) / d + (gn < bn ? 6 : 0) : max === gn ? (bn - rn) / d + 2 : (rn - gn) / d + 4;
+  return { h: h * 60, s, l };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const hue = ((h % 360) + 360) % 360;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    const value = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(value * 255)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${channel(0)}${channel(8)}${channel(4)}`.toUpperCase();
+}
+
+/** Black-ish or white text, whichever contrasts more with the colour. */
+function textOn(hex: string): string {
+  const l = relativeLuminance(hex);
+  return 1.05 / (l + 0.05) >= (l + 0.05) / 0.06 ? "#FFFFFF" : "#1A1A1A";
+}
+
+/** Deep green: the grid's tile colour when the page is white, black or grey and the owner hasn't picked one. */
+const DEFAULT_TILE = "#2F5D3A";
+
+/**
+ * The grid layout's three tile shades, all from one colour: a deep "hero"
+ * shade for the loyalty and review tiles, a bright "pop" shade (the hue
+ * nudged towards yellow) for Wi-Fi, and a pale wash for everything else.
+ * Text on each is whichever of black or white reads better.
+ */
+export function tilePalette(branding: VenueBranding, isLightCards: boolean): Record<string, string> {
+  const picked = branding.tileColorHex?.trim() ?? "";
+  const pageHex = branding.backgroundColorHex?.trim() ?? "";
+  const page = hexToRgb(pageHex);
+  const pageHsl = page ? rgbToHsl(page) : null;
+  const base = hexToRgb(picked) ? picked : pageHsl && pageHsl.s > 0.15 && pageHsl.l > 0.08 && pageHsl.l < 0.92 ? pageHex : DEFAULT_TILE;
+  const { h, s } = rgbToHsl(hexToRgb(base)!);
+  const grey = s < 0.1;
+  const sat = grey ? 0 : Math.max(s, 0.35);
+  // Tiles must stand off the page: on a dark page they're lighter than it, on a pale one darker.
+  const pageL = pageHsl?.l ?? 1;
+  const darkPage = !isLightColor(page ? pageHex : "#FFFFFF");
+  const floor = Math.max(pageL, 0.1);
+  const pickedHero = hexToRgb(picked) && relativeLuminance(picked) <= 0.18 ? `#${picked.replace(/^#/, "").toUpperCase()}` : null;
+  // A picked colour is used as-is for the hero tiles when white text reads on it (and, on a dark page, it isn't the page itself).
+  const hero = pickedHero && !(darkPage && Math.abs(rgbToHsl(hexToRgb(pickedHero)!).l - pageL) < 0.08) ? pickedHero : darkPage ? hslToHex(h, Math.min(sat, 0.5), Math.min(floor + 0.16, 0.38)) : hslToHex(h, Math.min(sat, 0.6), 0.2);
+  const popHue = grey ? 85 : h - 35;
+  const popSat = grey ? 0.6 : Math.min(Math.max(sat, 0.55), 0.75);
+  // Bright, but light enough that dark text on it passes AA (some hues sit at a mid-tone where neither does).
+  let popLight = 0.56;
+  while (popLight < 0.85 && (relativeLuminance(hslToHex(popHue, popSat, popLight)) + 0.05) / 0.06 < 4.5) popLight += 0.02;
+  const pop = hslToHex(popHue, popSat, popLight);
+  const pale = isLightCards
+    ? hslToHex(h - 15, grey ? 0 : Math.min(sat, 0.45), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))
+    : hslToHex(h, Math.min(sat, 0.25), darkPage ? Math.min(floor + 0.08, 0.3) : 0.17);
+  return {
+    "--tile-hero": hero,
+    "--tile-on-hero": textOn(hero),
+    "--tile-pop": pop,
+    "--tile-on-pop": textOn(pop),
+    "--tile-pale": pale,
+    "--tile-on-pale": isLightCards ? hslToHex(h, grey ? 0 : Math.min(sat, 0.5), 0.14) : "#F2F2F2",
+  };
+}
+
 export interface Theme {
   vars: Record<string, string>;
   isLightCards: boolean;
@@ -102,6 +177,7 @@ export function computeTheme(branding: VenueBranding): Theme {
       ...textVars("text", isLightReal),
       ...textVars("card-text", isLightCards),
       ...cards,
+      ...tilePalette(branding, isLightCards),
     },
     isLightCards,
     accentBlue: cards["--accent-blue"],

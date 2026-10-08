@@ -102,7 +102,7 @@ Below the header there can be an **announcement banner** (for example "Pumpkin s
 
 The owner controls the cards:
 - They can show, hide, rename and reorder every card.
-- **Layout:** List (one card per row, the default), Grid (two tiles per row), or Compact (shorter rows).
+- **Layout:** List (one card per row, the default), Bento (see below), or Compact (shorter rows).
 - **Button shape:** Rounded, Pill or Square.
 
 Each card has a tinted icon circle (44px), a 15px label and a chevron. Tapping a card either opens an inline sheet with an animated height change, or goes to another page.
@@ -117,10 +117,19 @@ Each card has a tinted icon circle (44px), a 15px label and a chevron. Tapping a
 | **Custom links** | Purple `#9C27B0` | The owner's own links (website, booking and so on), each with an icon they choose. |
 | **Sudoku** | Purple `#7D59D9` | Opens a playable Sudoku grid. |
 
+#### Bento layout
+
+- **Header:** the venue name in big bold capitals over the cover, poster-style, with the tagline small above it.
+- **Tiles** in three shades of one **tile colour** (the owner picks it, or it comes from the page colour, or deep green):
+  - **Hero (deep):** the loyalty tile across the full width ("3/8", "5 more → Free coffee", stamp segments, "Show to staff" or "Join free"), and the Google review tile (three stars).
+  - **Pop (bright):** Wi-Fi ("Tap to copy" copies the password in one tap, plus the network name).
+  - **Pale:** Menu (tall, with a faint knife and fork and an arrow), Suggestion box ("Only the owner reads it"), Sudoku (a corner of a board), custom links.
+- Tiles open their content in a **bottom sheet** instead of expanding in place.
+- The arrangement never leaves gaps: a tile left without a partner takes the full row.
+
 #### Footer
 
-- A row of social icons in single-colour glyphs: Google, Facebook, Instagram, TripAdvisor, YouTube.
-- An **English / Español** language switch.
+A row of social icons in single-colour glyphs: Google, Facebook, Instagram, TripAdvisor, YouTube. There's no language switch; guests get Spanish when their phone is set to it.
 
 #### States
 
@@ -172,7 +181,7 @@ Tapping a dish opens a **bottom sheet** with a large photo, the full description
 
 #### Footer
 
-The allergen note and the language switch.
+The allergen note.
 
 ### 4.3 Member web card: `/card/<id>`
 

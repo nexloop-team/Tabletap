@@ -2,7 +2,7 @@
 
 import { Megaphone } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createTracker } from "@/lib/analytics";
 import { deviceMemory, parseCardCredentials, subscribeNever, type CardCredentials } from "@/lib/browser";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -17,13 +17,15 @@ import {
   menuExternalUrl,
   primaryMenu,
   sanitiseExternalUrl,
+  wifiGateActive,
   type FeatureKey,
   type LinkFeature,
 } from "@/lib/venue/features";
 import type { PublicVenue } from "@/lib/venue/types";
 import { FeatureGlyphs, FilledHeart, GoogleG, LINK_ICON_TOKENS, LinkIconGlyph, MenuGlyph, type LinkIconToken } from "../icons";
 import { AppDialog } from "./AppDialog";
-import { ActionCard, ExpandableCard, LinkCard, useSheet } from "./FeatureCard";
+import { ActionCard, ExpandableCard, LinkCard, useSheet, type TileSpec } from "./FeatureCard";
+import { FeedbackTile, LinkTile, LoyaltyTile, MenuTile, ReviewTile, SudokuTile, tileSizes, useWifiCopy, WifiTile } from "./tiles";
 import { MyCard } from "./loyalty/MyCard";
 import { FEEDBACK_TEXTAREA_ID, FeedbackSheet } from "./feedback/FeedbackSheet";
 import { LandingContext, useLanding, type DialogContent, type LandingSession, type Membership } from "./LandingContext";
@@ -32,7 +34,6 @@ import { RewardsSheet } from "./loyalty/RewardsJoinForm";
 import { SocialLinks } from "./SocialLinks";
 import { SudokuSheet } from "./sudoku/SudokuSheet";
 import { useGoogleReview } from "./useGoogleReview";
-import { LanguageSwitch } from "./LanguageSwitch";
 import { VenueHeader } from "./VenueHeader";
 import { WifiSheet } from "./wifi/WifiSheet";
 
@@ -113,9 +114,15 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
   const [cardGone, setCardGone] = useState(false);
   const storedCard = useMemo(() => (cardGone ? null : parseCardCredentials(storedCardRaw)), [storedCardRaw, cardGone]);
   const forgetCard = useCallback(() => setCardGone(true), []);
+  const wifiCopy = useWifiCopy();
+
+  // Grid layout: bento tiles in the venue's tile shades, opening bottom sheets.
+  const bento = venue.branding.layout === "grid";
+  const sizes = useMemo(() => (bento ? tileSizes(features) : {}), [bento, features]);
+  const tile = (feature: string, tone: TileSpec["tone"], content: ReactNode): TileSpec | undefined => (bento ? { tone, size: sizes[feature] ?? "small", content } : undefined);
 
   return (
-    <div className="feature-grid">
+    <div className={`feature-grid${bento ? " bento" : ""}`}>
       {features.map((feature, position) => {
         const tapped = () => track("feature_card_tapped", { feature: feature.startsWith("link:") ? "link" : feature });
 
@@ -129,6 +136,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
                   label={t("feature_my_card")}
                   icon={<FilledHeart />}
                   tint={TINT.loyalty}
+                  tile={tile(feature, "hero", <LoyaltyTile label={t("feature_my_card")} credentials={storedCard} />)}
                   lazy
                   onToggle={(open) => {
                     if (open) tapped();
@@ -138,13 +146,15 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
                 </ExpandableCard>
               );
             }
+            const loyaltyLabel = customFeatureLabel(venue, "loyalty") ?? t(isRewardsOnly(venue) ? "feature_members_club" : "feature_loyalty");
             return (
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={customFeatureLabel(venue, "loyalty") ?? t(isRewardsOnly(venue) ? "feature_members_club" : "feature_loyalty")}
+                label={loyaltyLabel}
                 icon={<FilledHeart />}
                 tint={TINT.loyalty}
+                tile={tile(feature, "hero", <LoyaltyTile label={loyaltyLabel} credentials={null} />)}
                 onToggle={(open) => {
                   if (!open) return;
                   tapped();
@@ -160,13 +170,15 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
             const menu = primaryMenu(venue);
             const external = sanitiseExternalUrl(menuExternalUrl(venue));
             const custom = !!menu?.linkLabelCustom?.trim();
+            const menuLabel = customFeatureLabel(venue, "menu") ?? linkLabel(menu?.linkLabelToken, menu?.linkLabelCustom, t, "feature_menu");
             return (
               <ActionCard
                 key={feature}
                 feature={feature}
-                label={customFeatureLabel(venue, "menu") ?? linkLabel(menu?.linkLabelToken, menu?.linkLabelCustom, t, "feature_menu")}
+                label={menuLabel}
                 icon={<MenuCardIcon token={menu?.linkLabelToken} custom={custom} />}
                 tint={TINT.menu}
+                tile={tile(feature, "pale", <MenuTile label={menuLabel} />)}
                 onActivate={() => {
                   tapped();
                   if (external) {
@@ -183,12 +195,39 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
             );
           }
 
-          case "wifi":
+          case "wifi": {
+            const wifiLabel = customFeatureLabel(venue, "wifi") ?? t("feature_wifi");
+            // A tile with nothing to ask first just copies the password.
+            if (bento && wifiCopy.canCopy && !wifiGateActive(venue)) {
+              return (
+                <ActionCard
+                  key={feature}
+                  feature={feature}
+                  label={`${wifiLabel}: ${wifiCopy.status}`}
+                  icon={null}
+                  tint={null}
+                  tile={tile(feature, "pop", <WifiTile label={wifiLabel} status={wifiCopy.status} />)}
+                  onActivate={() => {
+                    tapped();
+                    void wifiCopy.copy();
+                  }}
+                />
+              );
+            }
             return (
-              <ExpandableCard key={feature} feature={feature} label={customFeatureLabel(venue, "wifi") ?? t("feature_wifi")} icon={<FeatureGlyphs.wifi aria-hidden strokeWidth={2} />} tint={TINT.wifi} onToggle={(open) => open && tapped()}>
+              <ExpandableCard
+                key={feature}
+                feature={feature}
+                label={wifiLabel}
+                icon={<FeatureGlyphs.wifi aria-hidden strokeWidth={2} />}
+                tint={TINT.wifi}
+                tile={tile(feature, "pop", <WifiTile label={wifiLabel} status={t("tile_wifi_connect")} />)}
+                onToggle={(open) => open && tapped()}
+              >
                 <WifiSheet />
               </ExpandableCard>
             );
+          }
 
           case "sudoku":
             return (
@@ -198,6 +237,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
                 label={customFeatureLabel(venue, "sudoku") ?? t("feature_sudoku")}
                 icon={<FeatureGlyphs.sudoku aria-hidden strokeWidth={2} />}
                 tint={theme.isLightCards ? "#7D59D9" : "#B79BFF"}
+                tile={tile(feature, "pale", <SudokuTile label={customFeatureLabel(venue, "sudoku") ?? t("tile_sudoku")} />)}
                 lazy
                 onToggle={(open) => open && tapped()}
               >
@@ -207,13 +247,15 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
 
           case "feedback": {
             const Glyph = feedbackVariant === "anon" ? FeatureGlyphs.feedback : FeatureGlyphs.suggestionBox;
+            const feedbackLabel = customFeatureLabel(venue, "feedback") ?? t(feedbackVariant === "anon" ? "feature_feedback_anon" : "feature_feedback_box");
             return (
               <ExpandableCard
                 key={feature}
                 feature={feature}
-                label={customFeatureLabel(venue, "feedback") ?? t(feedbackVariant === "anon" ? "feature_feedback_anon" : "feature_feedback_box")}
+                label={feedbackLabel}
                 icon={<Glyph aria-hidden strokeWidth={2} />}
                 tint={theme.accentBlue}
+                tile={tile(feature, "pale", <FeedbackTile label={feedbackLabel} />)}
                 onToggle={(open) => {
                   if (!open) return;
                   focusFeedbackKeepingKeyboard();
@@ -227,33 +269,38 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
             );
           }
 
-          case "google_review":
+          case "google_review": {
+            const reviewLabel = customFeatureLabel(venue, "google_review") ?? t("feature_google_review");
             return (
               <ActionCard
                 key={feature}
                 feature={feature}
-                label={customFeatureLabel(venue, "google_review") ?? t("feature_google_review")}
+                label={reviewLabel}
                 icon={<GoogleG />}
                 tint={null}
+                tile={tile(feature, "hero", <ReviewTile label={reviewLabel} />)}
                 onActivate={() => {
                   tapped();
                   review.open("landing_page");
                 }}
               />
             );
+          }
 
           default: {
             const link = findExternalLink(venue, feature as LinkFeature);
             const href = sanitiseExternalUrl(link?.url);
             if (!link || !href) return null;
             const isCustom = !!link.labelCustom?.trim();
+            const label = linkLabel(link.labelToken, link.labelCustom, t, "feature_menu_website");
             return (
               <LinkCard
                 key={feature}
                 href={href}
-                label={linkLabel(link.labelToken, link.labelCustom, t, "feature_menu_website")}
+                label={label}
                 icon={<LinkIconGlyph token={linkIconToken(link.icon)} />}
                 tint={TINT.link}
+                tile={tile(feature, "pale", <LinkTile label={label} icon={<LinkIconGlyph token={linkIconToken(link.icon)} />} />)}
                 onClick={() => {
                   tapped();
                   track("external_link_tapped", { link_id: link.id, label_token: link.labelToken ?? null, is_custom: isCustom, position });
@@ -343,7 +390,7 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
         data-shape={venue.branding.buttonShape ?? "rounded"}
       >
         <main className="page-wrapper">
-          <VenueHeader branding={venue.branding} name={venue.name} />
+          <VenueHeader branding={venue.branding} name={venue.name} poster={venue.branding.layout === "grid"} />
           {venue.announcement?.text && (
             <p className="announcement" role="note">
               <Megaphone aria-hidden />
@@ -353,7 +400,6 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
           )}
           <FeatureList features={features} />
           <SocialLinks context="landing" className="landing-row" />
-          <LanguageSwitch locale={locale} />
         </main>
       </div>
       <AppDialog content={dialog} okLabel={t("ok")} onClose={() => setDialog(null)} />
