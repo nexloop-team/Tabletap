@@ -91,10 +91,12 @@ A4 sheets of QR table cards, printed at 100%.
 
 #### Header
 
-There are three header styles:
-- **Logo beside the name** (default): an optional full-width cover image (about 200px tall), then a circular logo (100px) that overlaps the cover, with a ring in the page colour. The venue name (22px) and tagline (15px) sit beside the logo, or are centred when there's no logo.
-- **Centred:** the logo is centred under the cover, with the name and tagline centred below it.
-- **No logo:** the name and tagline only.
+The venue name is set big and bold in capitals **over the cover photo** (with a dark fade so it reads), with the tagline small above it. This applies to every layout. The Header setting arranges it:
+- **Logo left** (default): the logo beside the name.
+- **Centred:** the logo on top, everything centred (the cover is a little taller).
+- **No logo:** just the name.
+
+Without a cover photo, the same text sits on the page colour.
 
 Below the header there can be an **announcement banner** (for example "Pumpkin spice is back today"). It can have an end date, after which it hides itself.
 
@@ -119,7 +121,6 @@ Each card has a tinted icon circle (44px), a 15px label and a chevron. Tapping a
 
 #### Bento layout
 
-- **Header:** the venue name in big bold capitals over the cover, poster-style, with the tagline small above it.
 - **Tiles** in three shades of one **tile colour** (the owner picks it, or it comes from the page colour, or deep green):
   - **Hero (deep):** the loyalty tile across the full width ("3/8", "5 more → Free coffee", stamp segments, "Show to staff" or "Join free"), and the Google review tile (three stars).
   - **Pop (bright):** Wi-Fi ("Tap to copy" copies the password in one tap, plus the network name).

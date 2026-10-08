@@ -390,7 +390,7 @@ export function LandingApp({ venue, locale, source, feedbackVariant, persistVari
         data-shape={venue.branding.buttonShape ?? "rounded"}
       >
         <main className="page-wrapper">
-          <VenueHeader branding={venue.branding} name={venue.name} poster={venue.branding.layout === "grid"} />
+          <VenueHeader branding={venue.branding} name={venue.name} poster />
           {venue.announcement?.text && (
             <p className="announcement" role="note">
               <Megaphone aria-hidden />

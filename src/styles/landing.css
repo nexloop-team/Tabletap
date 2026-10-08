@@ -1930,6 +1930,35 @@ svg.tile-glyph {
   text-transform: uppercase;
   opacity: 0.9;
 }
+/* Logo left (default): the logo beside the name, both over the photo. */
+.venue-header.poster-align-cover.has-logo .poster-text {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.venue-header.poster-align-cover.has-logo .poster-logo {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 0;
+}
+.poster-words {
+  min-width: 0;
+}
+/* Centred: logo on top, everything centred over the photo. */
+.venue-header.poster-align-centered.has-logo .poster-cover {
+  height: 290px;
+}
+.venue-header.poster-align-centered .poster-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.venue-header.poster-align-centered .poster-logo {
+  width: 72px;
+  height: 72px;
+}
 .poster-logo {
   width: 48px;
   height: 48px;

@@ -17,7 +17,7 @@ export function VenueHeader({
   name: string;
   tagline?: boolean;
   overlay?: ReactNode;
-  /** Grid layout: the name big and bold over the cover, like a poster. */
+  /** Guest page: the name big and bold over the cover, like a poster, arranged by the header style. */
   poster?: boolean;
 }) {
   const cover = safeImageUrl(branding.coverImageUrl);
@@ -26,8 +26,10 @@ export function VenueHeader({
   const line = tagline ? resolvedTagline(branding) : null;
 
   if (poster) {
+    const arrangement = branding.headerStyle ?? "cover";
+    const showLogo = !!logo && arrangement !== "minimal";
     return (
-      <header className={`venue-header poster${cover ? "" : " no-cover"}`}>
+      <header className={`venue-header poster poster-align-${arrangement}${cover ? "" : " no-cover"}${showLogo ? " has-logo" : ""}`}>
         {cover && (
           <div className="poster-cover">
             {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
@@ -36,14 +38,16 @@ export function VenueHeader({
         )}
         {overlay}
         <div className="poster-text">
-          {logo && (
+          {showLogo && (
             <div className="poster-logo">
               {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
               <img src={logo} alt="" />
             </div>
           )}
-          {line && <p className="poster-tagline">{line}</p>}
-          {title && <h1>{title}</h1>}
+          <div className="poster-words">
+            {line && <p className="poster-tagline">{line}</p>}
+            {title && <h1>{title}</h1>}
+          </div>
         </div>
       </header>
     );

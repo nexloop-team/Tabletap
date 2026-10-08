@@ -100,7 +100,7 @@ export interface VenueBranding {
   featureLabels?: Partial<Record<"loyalty" | "menu" | "wifi" | "sudoku" | "feedback" | "google_review", string>>;
   /** how the cards are laid out. Absent means "list". */
   layout?: PageLayout | null;
-  /** logo beside the name ("cover", the default), centred under the cover, or no logo circle. */
+  /** Logo beside the name ("cover", the default), centred, or no logo circle. The guest page keeps the name over the cover photo in all three. */
   headerStyle?: HeaderStyle | null;
   /** corner shape of cards and buttons. Absent means "rounded". */
   buttonShape?: ButtonShape | null;

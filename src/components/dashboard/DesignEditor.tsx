@@ -57,7 +57,7 @@ const LAYOUTS: { value: PageLayout; label: string; hint: string; icon: LucideIco
 ];
 
 const HEADER_STYLES: { value: HeaderStyle; label: string }[] = [
-  { value: "cover", label: "Logo beside name" },
+  { value: "cover", label: "Logo left" },
   { value: "centered", label: "Centred" },
   { value: "minimal", label: "No logo" },
 ];
@@ -348,7 +348,7 @@ export function DesignEditor({
           </div>
         </Card>
 
-        <Card title="Layout" description="How the cards and header are arranged. Bento shows the name big over your cover, with tiles that open as pop-ups.">
+        <Card title="Layout" description="How the cards and header are arranged. Your name sits big over your cover photo; Bento adds colourful tiles that open as pop-ups.">
           <div className="field">
             <span className="field-label" id="layout-label">
               Cards
@@ -402,25 +402,23 @@ export function DesignEditor({
             </div>
           )}
           <div className="row">
-            {branding.layout !== "grid" && (
-              <div className="field">
-                <span className="field-label" id="header-style-label">
-                  Header
-                </span>
-                <div className="segmented" role="group" aria-labelledby="header-style-label">
-                  {HEADER_STYLES.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={(branding.headerStyle ?? "cover") === option.value}
-                      onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="field">
+              <span className="field-label" id="header-style-label">
+                Header
+              </span>
+              <div className="segmented" role="group" aria-labelledby="header-style-label">
+                {HEADER_STYLES.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={(branding.headerStyle ?? "cover") === option.value}
+                    onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
             <div className="field">
               <span className="field-label" id="shape-label">
                 Corners

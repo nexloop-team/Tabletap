@@ -192,6 +192,7 @@ Newest first. One line per change: what changed and why.
 
 ### 2026-10-09
 - Changed: the Grid layout is now **Bento**: the venue name big over the cover like a poster, then colourful tiles (loyalty with stamps out of total, a tall menu tile, a bright Wi-Fi tile that copies the password in one tap, feedback, Google review, Sudoku). Tiles open as bottom sheets. Their three shades come from one "Tile colour" (default: the page colour, or deep green), and always keep text readable.
+- Changed: on every layout, the guest page shows the venue name big over the cover photo. The Header setting (Logo left, Centred, No logo) now arranges it, including on Bento, where it used to be ignored.
 - Removed: the English / Español switch on the guest page and menu. Guests still get Spanish when their phone is set to it.
 
 ### 2026-10-08 (later)
