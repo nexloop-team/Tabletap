@@ -8,7 +8,8 @@ import { deviceMemory, parseCardCredentials, subscribeNever, type CardCredential
 import { createTranslator, type Locale } from "@/lib/i18n";
 import { linkLabel } from "@/lib/landing-copy";
 import { rememberReferral } from "@/lib/referral";
-import { computeTheme } from "@/lib/theme";
+import { usePreviewDraft } from "@/lib/live-preview";
+import { computeTheme, STYLE_FONT_HREF } from "@/lib/theme";
 import {
   buildFeatures,
   customFeatureLabel,
@@ -329,10 +330,27 @@ export interface LandingAppProps {
  * The venue arrives server-rendered, so there is no loading flash and the
  * theme is already applied by the time this hydrates.
  */
-export function LandingApp({ venue, locale, source, feedbackVariant, persistVariant }: LandingAppProps) {
+export function LandingApp({ venue: savedVenue, locale, source, feedbackVariant, persistVariant }: LandingAppProps) {
+  // In the editor's preview frame, the owner's unsaved changes show straight away.
+  const draft = usePreviewDraft<Partial<PublicVenue>>(source === "preview");
+  const venue = useMemo<PublicVenue>(() => (draft ? { ...savedVenue, ...draft, announcement: draft.announcement?.text ? draft.announcement : null } : savedVenue), [savedVenue, draft]);
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
   const track = useMemo(() => createTracker({ venueId: venue.id, source, page: "s" }), [venue.id, source]);
   const theme = useMemo(() => computeTheme(venue.branding), [venue.branding]);
+
+  // The saved colours arrive as a :root rule from the server; a draft overrides them in place.
+  useEffect(() => {
+    if (!draft) return;
+    const root = document.documentElement;
+    for (const [name, value] of Object.entries(theme.vars)) root.style.setProperty(name, value);
+    if (theme.style && !document.querySelector(`link[data-preview-font="${theme.style}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = STYLE_FONT_HREF[theme.style];
+      link.dataset.previewFont = theme.style;
+      document.head.appendChild(link);
+    }
+  }, [draft, theme]);
   const features = useMemo(() => buildFeatures(venue), [venue]);
 
   // Device memory lives in localStorage, which the server can't see.

@@ -9,6 +9,7 @@ import { expandSocialLink } from "@/lib/venue/social";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
 import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
+import { useLivePreview } from "@/lib/live-preview";
 import { MobilePreview } from "./MobilePreview";
 import { TileColours } from "./TileColours";
 import { moveTo, useDragReorder } from "./useDragReorder";
@@ -35,10 +36,10 @@ const APPEARANCES = [
 ] as const;
 
 const PRESETS = [
-  { value: null, label: "Default", font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
-  { value: "classic", label: "Classic", font: "'Playfair Display SC', Georgia, serif" },
-  { value: "editorial", label: "Editorial", font: "Petrona, Georgia, serif" },
-  { value: "modern", label: "Modern", font: "Outfit, system-ui, sans-serif" },
+  { value: null, label: "Default", hint: "Fastest to load", font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
+  { value: "classic", label: "Classic", hint: "Pubs, bistros", font: "'Playfair Display SC', Georgia, serif" },
+  { value: "editorial", label: "Editorial", hint: "Warm and bookish", font: "Petrona, Georgia, serif" },
+  { value: "modern", label: "Modern", hint: "Clean and round", font: "Outfit, system-ui, sans-serif" },
 ] as const;
 
 const LAYOUTS: { value: PageLayout; label: string; hint: string; icon: LucideIcon }[] = [
@@ -130,6 +131,7 @@ export function DesignEditor({
     announcement: config.announcement ?? null,
   });
   const { draft, update } = editor;
+  useLivePreview(draft);
   const branding = draft.branding;
   const setBranding = (patch: Partial<Draft["branding"]>) => update("branding", { ...branding, ...patch });
   const links = draft.externalLinks;
@@ -245,7 +247,14 @@ export function DesignEditor({
               maxLength={80}
               hint="Leave blank to use your venue name."
             />
-            <TextField label="Tagline" value={branding.tagline} onChange={(value) => setBranding({ tagline: value })} placeholder="Slow coffee, good company" maxLength={120} />
+            <TextField
+              label="Tagline"
+              value={branding.tagline}
+              onChange={(value) => setBranding({ tagline: value })}
+              placeholder="Slow coffee, good company"
+              maxLength={Math.max(60, branding.tagline?.length ?? 0)}
+              hint={`${branding.tagline?.length ?? 0} / 60 · short lines read best over your photo`}
+            />
           </div>
           <SwitchRow
             title="Hide the title"
@@ -332,7 +341,10 @@ export function DesignEditor({
                   <span className="preset-sample" style={{ fontFamily: preset.font }} aria-hidden>
                     Aa
                   </span>
-                  <span>{preset.label}</span>
+                  <span>
+                    {preset.label}
+                    <span className="preset-hint">{preset.hint}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -570,10 +582,15 @@ export function DesignEditor({
         <span className="preview-label">Live preview</span>
         <div className="phone">
           <div className="phone-screen">
-            <iframe key={editor.version} src={`/s?i=${encodeURIComponent(shortCode)}&s=preview&embed=1`} title="Live page preview" />
+            <iframe key={editor.version} data-live-preview src={`/s?i=${encodeURIComponent(shortCode)}&s=preview&embed=1`} title="Live page preview" />
           </div>
         </div>
-        <p className="hint">{editor.dirty ? "Save to update the preview." : "Reloads when you save."}</p>
+        <p className="hint preview-foot">
+          <span>390 px · changes show straight away</span>
+          <a href={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} target="_blank" rel="noreferrer">
+            Open full-size preview
+          </a>
+        </p>
       </aside>
 
       <SaveBar dirty={editor.dirty} saving={editor.saving} error={editor.error} onSave={editor.save} onReset={editor.reset} />

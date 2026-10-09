@@ -35,12 +35,12 @@ export function MobilePreview({ src, label, dirty }: { src: string; label: strin
         createPortal(
           <div className="app mobile-preview" role="dialog" aria-modal="true" aria-label={label}>
             <div className="mobile-preview-bar">
-              <span>{dirty ? "Showing your last save. Save to see new changes." : "This is what guests see."}</span>
+              <span>{dirty ? "Showing your unsaved changes. Save to put them live." : "This is what guests see."}</span>
               <button ref={closeButton} type="button" className="btn btn-sm" onClick={() => setOpen(false)}>
                 <X aria-hidden /> Close
               </button>
             </div>
-            <iframe src={src} title={label} />
+            <iframe data-live-preview src={src} title={label} />
           </div>,
           document.body,
         )}

@@ -5024,3 +5024,13 @@ body:has(.app) {
   width: 15px;
   height: 15px;
 }
+
+.preview-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.preview-foot a {
+  font-weight: 600;
+}
