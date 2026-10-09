@@ -2580,7 +2580,7 @@ svg.tile-glyph {
   padding-top: 22px;
 }
 .menu-page[data-layout="list"] .menu-section-head h2 {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: var(--fw-display);
   letter-spacing: var(--display-tracking);
 }
@@ -2588,161 +2588,184 @@ svg.tile-glyph {
   display: none;
 }
 
+/* A row per dish, as the food apps do it: words on the left, the photo on the
+   right, rows split by a hairline instead of boxed into cards. Labels are
+   small coloured text, not badges or ribbons. */
 .dish-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  margin-top: 2px;
   list-style: none;
 }
+.dish + .dish {
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 11%, transparent);
+}
 .dish-open {
-  position: relative;
-  display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  gap: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   width: 100%;
-  padding: 8px;
+  padding: 18px 0;
   border: 0;
-  border-radius: 20px;
-  background: var(--card-bg);
-  color: var(--card-text-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: none;
+  color: var(--text-primary);
   font: inherit;
   text-align: start;
   cursor: pointer;
-  overflow: hidden;
-  transition: transform 0.15s ease;
-}
-.dish-open:active {
-  transform: scale(0.99);
 }
 .dish-open:focus-visible {
-  outline: 3px solid var(--text-primary);
+  outline: 2px solid var(--text-primary);
   outline-offset: 2px;
-}
-.dish.no-photo .dish-open {
-  grid-template-columns: minmax(0, 1fr);
-  padding: 14px 16px;
-}
-.dish-photo {
-  width: 128px;
-  height: 128px;
-  border-radius: 14px;
-  object-fit: cover;
-  background: var(--text-tint);
+  border-radius: 12px;
 }
 .dish-body {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 4px 4px 0;
+  gap: 3px;
+}
+.dish-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 3px;
+}
+.dish-top .veg-mark {
+  margin: 0;
+}
+.dish-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #a4480b;
+}
+.dish-label svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+.dish-label.popular svg {
+  fill: currentColor;
+}
+.dish-label.chef,
+.dish-label.spicy {
+  color: #b42318;
+}
+.dish-label.new {
+  color: #6941c6;
+}
+.dish-label.vegan,
+.dish-label.vegetarian {
+  color: #1e7b36;
+}
+.dish-label.gluten_free {
+  color: #855400;
 }
 .dish-name {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: var(--fw-title);
   letter-spacing: var(--display-tracking);
-  line-height: 1.2;
+  line-height: 1.25;
 }
-/* Room for the ribbon. */
-.dish-open:has(.dish-ribbon) .dish-name {
-  padding-inline-end: 76px;
+.dish-price-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 15px;
+}
+.dish-price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dish-sold-out {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.dish-kcal {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.dish-kcal::before {
+  content: "·";
+  margin-inline-end: 8px;
 }
 .dish-desc {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 14.5px;
-  line-height: 1.4;
-  color: var(--card-text-secondary);
+  margin-top: 5px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary);
 }
-.dish-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-.dish-price {
-  font-size: 17px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.dish-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-size: 13.5px;
-  color: var(--card-text-secondary);
-}
-.dish-meta > span {
+.dish-whats {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  white-space: nowrap;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
-.dish-meta svg {
-  width: 17px;
-  height: 17px;
+.dish-whats svg {
+  width: 14px;
+  height: 14px;
+}
+.dish-photo {
   flex: none;
+  width: 112px;
+  height: 112px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: var(--text-tint);
+  outline: 1px solid rgba(0, 0, 0, 0.06);
+  outline-offset: -1px;
 }
-.dish-ribbon {
-  position: absolute;
-  top: 0;
-  inset-inline-end: 0;
-  padding: 4px 12px;
-  border-end-start-radius: 12px;
-  background: var(--tile-hero);
-  color: var(--tile-on-hero);
-  font-size: 12px;
-  font-weight: var(--fw-label);
-  line-height: 1.4;
+.dish.unavailable .dish-name,
+.dish.unavailable .dish-desc {
+  opacity: 0.6;
 }
-.dish-ribbon.chef {
-  background: #c62f2f;
-  color: #fff;
-}
-.dish-ribbon.spicy {
-  background: #b8400e;
-  color: #fff;
-}
-.dish-ribbon.new {
-  background: var(--tile-pop);
-  color: var(--tile-on-pop);
-}
-.dish-ribbon.vegan,
-.dish-ribbon.vegetarian {
-  background: #237a3b;
-  color: #fff;
-}
-.dish-ribbon.gluten_free {
-  background: #8a5a00;
-  color: #fff;
-}
-.dish-ribbon.sold-out {
-  background: #5f5f5f;
-  color: #fff;
-}
-.dish.unavailable .dish-photo,
-.dish.unavailable .dish-body {
+.dish.unavailable .dish-photo {
+  filter: grayscale(1);
   opacity: 0.55;
 }
 @media (max-width: 360px) {
-  .dish-open {
-    grid-template-columns: 104px minmax(0, 1fr);
-  }
   .dish-photo {
-    width: 104px;
-    height: 104px;
+    width: 96px;
+    height: 96px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .dish-open {
-    transition: none;
-  }
+
+/* Specials on the list layout: a quiet strip of photos, like the rows below it. */
+.menu-page[data-layout="list"] .menu-special {
+  width: 148px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-primary);
+}
+.menu-page[data-layout="list"] .menu-special-photo {
+  height: 112px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.menu-page[data-layout="list"] .menu-special-text {
+  gap: 2px;
+  padding: 8px 2px 0;
+}
+.menu-page[data-layout="list"] .menu-special-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.menu-page[data-layout="list"] .menu-special-price {
+  font-size: 13.5px;
+  color: var(--text-secondary);
 }
 
 .menu-badges-top {
@@ -2756,28 +2779,6 @@ svg.tile-glyph {
   text-transform: none;
   letter-spacing: 0;
   opacity: 0.7;
-}
-.menu-page[data-layout="list"] .menu-special {
-  background: var(--tile-pale);
-  color: var(--tile-on-pale);
-  box-shadow: none;
-  border-radius: 20px;
-}
-.menu-page[data-layout="list"] .menu-special:nth-child(3n + 1) {
-  background: var(--tile-hero);
-  color: var(--tile-on-hero);
-}
-.menu-page[data-layout="list"] .menu-special:nth-child(3n + 2) {
-  background: var(--tile-pop);
-  color: var(--tile-on-pop);
-}
-.menu-page[data-layout="list"] .menu-special-name {
-  font-weight: var(--fw-title);
-  color: inherit;
-}
-.menu-page[data-layout="list"] .menu-special-price {
-  font-weight: 700;
-  color: inherit;
 }
 .menu-copyright {
   margin-top: 0;

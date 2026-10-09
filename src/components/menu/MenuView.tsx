@@ -222,52 +222,53 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const layout = menu?.layout === "classic" ? "classic" : "list";
   const logo = safeImageUrl(branding.logoUrl);
 
-  /** One label in the card's corner: sold out first, then a badge, then a dietary tag. */
-  function ribbon(item: MenuItem): { label: string; kind: string } | null {
-    if (!item.isAvailable) return { label: t("menu_unavailable"), kind: "sold-out" };
-    const badge = (item.badges ?? [])[0];
-    if (badge) return { label: badgeLabel(badge), kind: badge };
-    if (indian) return null;
-    const diet = item.dietaryTags.map(dietKey).find((tag) => DIETS[tag]);
-    return diet ? { label: t(DIETS[diet].key), kind: diet } : null;
+  /** The dish's labels, as small coloured text over its name: badges first, then (outside India) dietary tags. */
+  function labels(item: MenuItem): { key: string; label: string; icon: LucideIcon }[] {
+    const badges = (item.badges ?? []).map((badge) => ({ key: badge, label: badgeLabel(badge), icon: BADGES[badge].icon }));
+    const diets = indian ? [] : item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag]).map((tag) => ({ key: tag, label: t(DIETS[tag].key), icon: DIETS[tag].icon }));
+    return [...badges, ...diets].slice(0, 2);
   }
 
-  /** List layout: photo on the left, name and two lines of description, price and kcal along the bottom. */
-  function dishCard(item: MenuItem) {
+  /**
+   * List layout, the way food apps do it: a row per dish with the words on
+   * the left (labels, name, price, two lines of description) and the photo
+   * on the right, rows split by a hairline rather than boxed in cards.
+   */
+  function dishRow(item: MenuItem) {
     const image = safeImageUrl(item.imageUrl);
-    const corner = ribbon(item);
     const showKcal = !!menu?.showCalories && typeof item.calories === "number";
-    // Dietary tags not already in the corner, as small icons by the price.
-    const diets = indian ? [] : item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag] && tag !== corner?.kind);
+    const tags = labels(item);
+    const mark = vegMark(item);
     return (
-      <li key={item.id} id={`item-${item.id}`} className={`dish${item.isAvailable ? "" : " unavailable"}${image ? "" : " no-photo"}`}>
+      <li key={item.id} id={`item-${item.id}`} className={`dish${item.isAvailable ? "" : " unavailable"}`}>
         <button type="button" className="dish-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-          {image && <img className="dish-photo" src={image} alt="" loading="lazy" />}
           <span className="dish-body">
-            <span className="dish-name">
-              {vegMark(item)}
-              {item.name}
+            {(mark || tags.length > 0) && (
+              <span className="dish-top">
+                {mark}
+                {tags.map(({ key, label, icon: Icon }) => (
+                  <span key={key} className={`dish-label ${key}`}>
+                    <Icon aria-hidden />
+                    {label}
+                  </span>
+                ))}
+              </span>
+            )}
+            <span className="dish-name">{item.name}</span>
+            <span className="dish-price-line">
+              {item.isAvailable ? <span className="dish-price">{formatPrice(item.priceInPence)}</span> : <span className="dish-sold-out">{t("menu_unavailable")}</span>}
+              {showKcal && <span className="dish-kcal">{tf("menu_kcal", { kcal: item.calories as number })}</span>}
             </span>
             {item.description && <span className="dish-desc">{item.description}</span>}
-            <span className="dish-foot">
-              <span className="dish-price">{formatPrice(item.priceInPence)}</span>
-              <span className="dish-meta">
-                {showKcal && (
-                  <span>
-                    <Flame aria-hidden />
-                    {tf("menu_kcal", { kcal: item.calories as number })}
-                  </span>
-                )}
-                {diets.map((tag) => {
-                  const Icon = DIETS[tag].icon;
-                  return <Icon key={tag} role="img" aria-label={t(DIETS[tag].key)} />;
-                })}
-                {item.explainer?.trim() && <Info role="img" aria-label={t("menu_whats_this")} />}
+            {item.explainer?.trim() && (
+              <span className="dish-whats">
+                <Info aria-hidden />
+                {t("menu_whats_this")}
               </span>
-            </span>
+            )}
           </span>
-          {corner && <span className={`dish-ribbon ${corner.kind}`}>{corner.label}</span>}
+          {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
+          {image && <img className="dish-photo" src={image} alt="" loading="lazy" />}
         </button>
       </li>
     );
@@ -429,7 +430,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
                   </div>
                   {section.description?.trim() && <p className="menu-section-desc">{section.description.trim()}</p>}
                   {layout === "list" ? (
-                    <ul className="dish-list">{section.items.map(dishCard)}</ul>
+                    <ul className="dish-list">{section.items.map(dishRow)}</ul>
                   ) : (
                     <ul className="menu-list">
                       {section.items.map((item) => {
