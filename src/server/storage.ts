@@ -24,6 +24,8 @@ export interface Storage {
   remove(key: string): Promise<void>;
   /** How many files sit under a prefix (capped at `max`). */
   count(prefix: string, max: number): Promise<number>;
+  /** Every file under a prefix, with when it was last written (ms). */
+  list(prefix: string): Promise<{ key: string; modified: number }[]>;
 }
 
 /** "uploads\\x.jpg" (older Windows saves) and "/uploads/x.jpg" → "uploads/x.jpg"; anything climbing out is refused. */
@@ -57,6 +59,15 @@ function diskStorage(): Storage {
         return 0;
       }
     },
+    async list(prefix) {
+      const dir = prefix.replace(/\/$/, "");
+      try {
+        const names = await fs.promises.readdir(file(dir));
+        return await Promise.all(names.map(async (name) => ({ key: `${dir}/${name}`, modified: (await fs.promises.stat(file(`${dir}/${name}`))).mtimeMs })));
+      } catch {
+        return [];
+      }
+    },
   };
 }
 
@@ -74,10 +85,20 @@ function s3Storage(): Storage {
   const fail = async (response: Response, action: string) => {
     throw new Error(`Storage ${action} failed: ${response.status} ${(await response.text()).slice(0, 200)}`);
   };
-  async function list(prefix: string, max: number): Promise<string[]> {
-    const response = await client.fetch(`${url()}?list-type=2&max-keys=${max}&prefix=${encodeURIComponent(prefix)}`);
+  async function listPage(prefix: string, max: number, token?: string) {
+    const query = `list-type=2&max-keys=${max}&prefix=${encodeURIComponent(prefix)}${token ? `&continuation-token=${encodeURIComponent(token)}` : ""}`;
+    const response = await client.fetch(`${url()}?${query}`);
     if (!response.ok) await fail(response, "list");
-    return [...(await response.text()).matchAll(/<Key>([^<]+)<\/Key>/g)].map((m) => m[1]);
+    const xml = await response.text();
+    const files = [...xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)].map((m) => ({
+      key: /<Key>([^<]+)<\/Key>/.exec(m[1])?.[1] ?? "",
+      modified: Date.parse(/<LastModified>([^<]+)<\/LastModified>/.exec(m[1])?.[1] ?? "") || 0,
+    }));
+    const next = /<IsTruncated>true<\/IsTruncated>/.test(xml) ? /<NextContinuationToken>([^<]+)<\/NextContinuationToken>/.exec(xml)?.[1] : undefined;
+    return { files: files.filter((f) => f.key), next };
+  }
+  async function list(prefix: string, max: number): Promise<string[]> {
+    return (await listPage(prefix, max)).files.map((f) => f.key);
   }
   return {
     async put(key, bytes, contentType) {
@@ -99,6 +120,16 @@ function s3Storage(): Storage {
     },
     async count(prefix, max) {
       return (await list(prefix, max)).length;
+    },
+    async list(prefix) {
+      const all: { key: string; modified: number }[] = [];
+      let token: string | undefined;
+      do {
+        const page = await listPage(prefix, 1000, token);
+        all.push(...page.files);
+        token = page.next;
+      } while (token);
+      return all;
     },
   };
 }

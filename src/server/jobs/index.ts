@@ -1,6 +1,7 @@
 import "server-only";
 import { runWeeklyDigest } from "./digest";
 import { runGuestAutomations } from "./guest-emails";
+import { runMediaCleanup } from "./media-cleanup";
 
 /**
  * Background jobs. One in-process ticker per server (started from
@@ -17,6 +18,7 @@ export async function runDueJobs(now = new Date()): Promise<Record<string, numbe
   for (const [name, job] of [
     ["weeklyDigest", runWeeklyDigest],
     ["guestAutomations", runGuestAutomations],
+    ["mediaCleanup", runMediaCleanup],
   ] as const) {
     try {
       results[name] = await job(now);
