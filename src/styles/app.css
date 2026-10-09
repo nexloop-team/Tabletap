@@ -3107,10 +3107,62 @@ body:has(.app) {
   border: 2px solid var(--a-accent);
   background: var(--a-accent-soft);
 }
-.preset-sample {
-  font-size: 26px;
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.type-option {
+  display: grid;
+  grid-template-rows: 64px auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--a-border-strong);
+  border-radius: 12px;
+  background: var(--a-surface);
+  color: var(--a-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.type-option:hover {
+  border-color: var(--a-text-3);
+}
+.type-option[aria-pressed="true"] {
+  border-color: var(--a-accent);
+  box-shadow: 0 0 0 1px var(--a-accent);
+}
+/* Every sample sits on the same baseline, whatever the face. */
+.type-sample {
+  display: block;
+  min-width: 0;
+  padding: 0 14px;
+  background: var(--a-surface-2);
+  font-size: 21px;
+  line-height: 64px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.type-label {
+  padding: 10px 14px 12px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.1;
+}
+@media (max-width: 600px) {
+  .type-option {
+    grid-template-rows: 52px auto;
+  }
+  .type-sample {
+    font-size: 19px;
+    line-height: 52px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .type-option {
+    transition: none;
+  }
 }
 .feature-rows {
   list-style: none;
@@ -3848,7 +3900,7 @@ body:has(.app) {
   font-weight: 700;
 }
 .print-sheets[data-style="classic"] :is(.a6-name, .sticker-name) {
-  font-family: "Playfair Display SC", Georgia, serif;
+  font-family: "Playfair Display", Georgia, serif;
 }
 .print-sheets[data-style="editorial"] :is(.a6-name, .sticker-name) {
   font-family: Petrona, Georgia, serif;

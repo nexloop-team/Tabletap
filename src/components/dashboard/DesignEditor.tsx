@@ -16,10 +16,10 @@ import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
 const PRESETS = [
-  { value: null, label: "Default", hint: "Fastest to load", font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
-  { value: "classic", label: "Classic", hint: "Pubs, bistros", font: "'Playfair Display SC', Georgia, serif" },
-  { value: "editorial", label: "Editorial", hint: "Warm and bookish", font: "Petrona, Georgia, serif" },
-  { value: "modern", label: "Modern", hint: "Clean and round", font: "Outfit, system-ui, sans-serif" },
+  { value: null, label: "Default", hint: "Phone's own font, fastest to load", font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif", weight: 700 },
+  { value: "classic", label: "Classic", hint: "Playfair Display, for bistros and pubs", font: "'Playfair Display', Georgia, serif", weight: 600 },
+  { value: "editorial", label: "Editorial", hint: "Petrona, warm and bookish", font: "Petrona, Georgia, serif", weight: 600 },
+  { value: "modern", label: "Modern", hint: "Outfit, clean and round", font: "Outfit, system-ui, sans-serif", weight: 600 },
 ] as const;
 
 const LAYOUTS: { value: PageLayout; label: string; hint: string; icon: LucideIcon }[] = [
@@ -277,13 +277,14 @@ export function DesignEditor({
             <span className="field-label" id="style-label">
               Typography
             </span>
-            <div className="preset-grid" role="group" aria-labelledby="style-label">
+            <div className="type-grid" role="group" aria-labelledby="style-label">
               {PRESETS.map((preset) => (
-                <button key={preset.label} type="button" className="preset" aria-pressed={(branding.style ?? null) === preset.value} onClick={() => setBranding({ style: preset.value })}>
-                  <span className="preset-sample" style={{ fontFamily: preset.font }} aria-hidden>
-                    Aa
+                <button key={preset.label} type="button" className="type-option" aria-pressed={(branding.style ?? null) === preset.value} onClick={() => setBranding({ style: preset.value })}>
+                  {/* The venue's own name in this face, as guests will see it. */}
+                  <span className="type-sample" style={{ fontFamily: preset.font, fontWeight: preset.weight }} aria-hidden>
+                    {branding.titleOverride?.trim() || config.name}
                   </span>
-                  <span>
+                  <span className="type-label">
                     {preset.label}
                     <span className="preset-hint">{preset.hint}</span>
                   </span>
