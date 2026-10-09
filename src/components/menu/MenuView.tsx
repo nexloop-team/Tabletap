@@ -4,6 +4,7 @@ import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Spa
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VenueHeader } from "@/components/landing/VenueHeader";
 import { createTracker } from "@/lib/analytics";
+import { initials } from "@/lib/format";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
 import { usePreviewDraft } from "@/lib/live-preview";
 import { computeTheme } from "@/lib/theme";
@@ -205,21 +206,99 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   }
 
   const current = activeSection ?? visibleSections[0]?.id ?? null;
+  // Two looks: the card list (also what the retired "photo" layout shows) and the printed classic.
+  const layout = menu?.layout === "classic" ? "classic" : "list";
+  const logo = safeImageUrl(branding.logoUrl);
+
+  /** One label in the card's corner: sold out first, then a badge, then a dietary tag. */
+  function ribbon(item: MenuItem): { label: string; kind: string } | null {
+    if (!item.isAvailable) return { label: t("menu_unavailable"), kind: "sold-out" };
+    const badge = (item.badges ?? [])[0];
+    if (badge) return { label: t(BADGES[badge].key), kind: badge };
+    const diet = item.dietaryTags.map(dietKey).find((tag) => DIETS[tag]);
+    return diet ? { label: t(DIETS[diet].key), kind: diet } : null;
+  }
+
+  /** List layout: photo on the left, name and two lines of description, price and kcal along the bottom. */
+  function dishCard(item: MenuItem) {
+    const image = safeImageUrl(item.imageUrl);
+    const corner = ribbon(item);
+    const showKcal = !!menu?.showCalories && typeof item.calories === "number";
+    // Dietary tags not already in the corner, as small icons by the price.
+    const diets = item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag] && tag !== corner?.kind);
+    return (
+      <li key={item.id} id={`item-${item.id}`} className={`dish${item.isAvailable ? "" : " unavailable"}${image ? "" : " no-photo"}`}>
+        <button type="button" className="dish-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
+          {image && <img className="dish-photo" src={image} alt="" loading="lazy" />}
+          <span className="dish-body">
+            <span className="dish-name">{item.name}</span>
+            {item.description && <span className="dish-desc">{item.description}</span>}
+            <span className="dish-foot">
+              <span className="dish-price">{formatPrice(item.priceInPence)}</span>
+              <span className="dish-meta">
+                {showKcal && (
+                  <span>
+                    <Flame aria-hidden />
+                    {tf("menu_kcal", { kcal: item.calories as number })}
+                  </span>
+                )}
+                {diets.map((tag) => {
+                  const Icon = DIETS[tag].icon;
+                  return <Icon key={tag} role="img" aria-label={t(DIETS[tag].key)} />;
+                })}
+                {item.explainer?.trim() && <Info role="img" aria-label={t("menu_whats_this")} />}
+              </span>
+            </span>
+          </span>
+          {corner && <span className={`dish-ribbon ${corner.kind}`}>{corner.label}</span>}
+        </button>
+      </li>
+    );
+  }
+
+  const sectionNav =
+    visibleSections.length > 1 ? (
+      <nav className={`menu-jump${layout === "list" ? " menu-cats" : ""}`} aria-label={t("menu_sections")}>
+        {visibleSections.map((section) => (
+          <button key={section.id} type="button" className={layout === "list" ? "menu-cat" : "menu-chip"} aria-current={section.id === current ? "true" : undefined} onClick={() => jumpTo(section.id)}>
+            {section.name}
+          </button>
+        ))}
+      </nav>
+    ) : null;
 
   return (
-    <div className="menu-page landing" data-style={style ?? undefined} data-layout={menu?.layout ?? "list"} data-header={branding.headerStyle ?? "cover"} data-shape={branding.buttonShape ?? "rounded"}>
+    <div className="menu-page landing" data-style={style ?? undefined} data-layout={layout} data-header={branding.headerStyle ?? "cover"} data-shape={branding.buttonShape ?? "rounded"}>
       <main className="page-wrapper menu-body">
-        <VenueHeader
-          branding={branding}
-          name={venueName}
-          tagline={false}
-          overlay={
-            <a className={`menu-back${hasCover ? " on-cover" : ""}`} href={backHref}>
+        {layout === "list" ? (
+          <header className="menu-topbar">
+            <a className="menu-back" href={backHref} aria-label={t("menu_back")}>
               <ChevronLeft aria-hidden />
-              <span>{t("menu_back")}</span>
             </a>
-          }
-        />
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- merchant image on any host
+              <img className="menu-topbar-logo" src={logo} alt="" />
+            ) : (
+              <span className="menu-topbar-logo" aria-hidden>
+                {initials(venueName)}
+              </span>
+            )}
+            <h1>{venueName}</h1>
+          </header>
+        ) : (
+          <VenueHeader
+            branding={branding}
+            name={venueName}
+            tagline={false}
+            overlay={
+              <a className={`menu-back${hasCover ? " on-cover" : ""}`} href={backHref}>
+                <ChevronLeft aria-hidden />
+                <span>{t("menu_back")}</span>
+              </a>
+            }
+          />
+        )}
 
         {!menu ? (
           <div className="menu-empty">
@@ -228,10 +307,12 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
           </div>
         ) : (
           <>
-            <div className="menu-head">
-              <h2 className="menu-title">{menus.length > 1 ? menu.name : t("menu_title")}</h2>
-              {menu.welcomeText?.trim() && <p className="menu-welcome">{menu.welcomeText.trim()}</p>}
-            </div>
+            {(layout === "classic" || menu.welcomeText?.trim()) && (
+              <div className="menu-head">
+                {layout === "classic" && <h2 className="menu-title">{menus.length > 1 ? menu.name : t("menu_title")}</h2>}
+                {menu.welcomeText?.trim() && <p className="menu-welcome">{menu.welcomeText.trim()}</p>}
+              </div>
+            )}
 
             {menus.length > 1 && (
               <div className="menu-chip-row menu-tabs" role="tablist">
@@ -243,20 +324,14 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
               </div>
             )}
 
+            {layout === "list" && sectionNav}
+
             <label className="menu-search">
               <Search aria-hidden />
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("menu_search")} aria-label={t("menu_search")} />
             </label>
 
-            {visibleSections.length > 1 && (
-              <nav className="menu-jump" aria-label={t("menu_sections")}>
-                {visibleSections.map((section) => (
-                  <button key={section.id} type="button" className="menu-chip" aria-current={section.id === current ? "true" : undefined} onClick={() => jumpTo(section.id)}>
-                    {section.name}
-                  </button>
-                ))}
-              </nav>
-            )}
+            {layout === "classic" && sectionNav}
 
             {(allergens.length > 0 || dietOptions.length > 0) && (
               <div className="menu-filters">
@@ -336,48 +411,52 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
                     <span>{section.items.length === 1 ? t("menu_items_one") : tf("menu_items", { count: section.items.length })}</span>
                   </div>
                   {section.description?.trim() && <p className="menu-section-desc">{section.description.trim()}</p>}
-                  <ul className="menu-list">
-                    {section.items.map((item) => {
-                      const image = safeImageUrl(item.imageUrl);
-                      return (
-                        <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
-                          <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
-                            <span className="menu-item-text">
-                              {(item.badges ?? []).length > 0 && (
-                                <span className="menu-badges-top">
-                                  {(item.badges ?? []).map((badge) => (
-                                    <span key={badge} className={`menu-badge-chip ${badge}`}>
-                                      {t(BADGES[badge].key)}
-                                    </span>
-                                  ))}
+                  {layout === "list" ? (
+                    <ul className="dish-list">{section.items.map(dishCard)}</ul>
+                  ) : (
+                    <ul className="menu-list">
+                      {section.items.map((item) => {
+                        const image = safeImageUrl(item.imageUrl);
+                        return (
+                          <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
+                            <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
+                              <span className="menu-item-text">
+                                {(item.badges ?? []).length > 0 && (
+                                  <span className="menu-badges-top">
+                                    {(item.badges ?? []).map((badge) => (
+                                      <span key={badge} className={`menu-badge-chip ${badge}`}>
+                                        {t(BADGES[badge].key)}
+                                      </span>
+                                    ))}
+                                  </span>
+                                )}
+                                <span className="menu-item-head">
+                                  <span className="menu-item-name">{item.name}</span>
+                                  {/* The classic layout prints the price on the name line, with dotted leaders. */}
+                                  <span className="menu-leader" aria-hidden />
+                                  <span className="menu-price head-price">{formatPrice(item.priceInPence)}</span>
                                 </span>
-                              )}
-                              <span className="menu-item-head">
-                                <span className="menu-item-name">{item.name}</span>
-                                {/* The classic layout prints the price on the name line, with dotted leaders. */}
-                                <span className="menu-leader" aria-hidden />
-                                <span className="menu-price head-price">{formatPrice(item.priceInPence)}</span>
-                              </span>
-                              {item.description && <span className="menu-desc">{item.description}</span>}
-                              <span className="menu-item-foot">
-                                <span className="menu-price foot-price">{formatPrice(item.priceInPence)}</span>
-                                {!item.isAvailable && <span className="menu-tag sold-out">{t("menu_unavailable")}</span>}
-                              </span>
-                              {tagList(item)}
-                              {item.allergens.length > 0 && <span className="menu-allergens">{tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })}</span>}
-                              {item.explainer?.trim() && (
-                                <span className="menu-whats">
-                                  <Info aria-hidden /> {t("menu_whats_this")}
+                                {item.description && <span className="menu-desc">{item.description}</span>}
+                                <span className="menu-item-foot">
+                                  <span className="menu-price foot-price">{formatPrice(item.priceInPence)}</span>
+                                  {!item.isAvailable && <span className="menu-tag sold-out">{t("menu_unavailable")}</span>}
                                 </span>
-                              )}
-                            </span>
-                            {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-                            {image && <img className="menu-item-thumb" src={image} alt="" loading="lazy" />}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                                {tagList(item)}
+                                {item.allergens.length > 0 && <span className="menu-allergens">{tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })}</span>}
+                                {item.explainer?.trim() && (
+                                  <span className="menu-whats">
+                                    <Info aria-hidden /> {t("menu_whats_this")}
+                                  </span>
+                                )}
+                              </span>
+                              {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
+                              {image && <img className="menu-item-thumb" src={image} alt="" loading="lazy" />}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </section>
               ))
             )}

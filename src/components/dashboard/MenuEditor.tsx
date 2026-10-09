@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronDown, GripVertical, Image as ImageIcon, List, Loader2, Plus, ScrollText, Sparkles, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, GripVertical, List, Loader2, Plus, ScrollText, Sparkles, Trash2, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLivePreview } from "@/lib/live-preview";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
@@ -31,8 +31,7 @@ const BUTTON_LABELS: Record<(typeof LINK_LABEL_TOKENS)[number], string> = {
 };
 
 const MENU_LAYOUTS: { value: MenuLayout; label: string; hint: string; icon: LucideIcon }[] = [
-  { value: "list", label: "List", hint: "Rows with small photos", icon: List },
-  { value: "photo", label: "Photo cards", hint: "Big photo per dish", icon: ImageIcon },
+  { value: "list", label: "List", hint: "A card per dish, photo beside it", icon: List },
   { value: "classic", label: "Classic", hint: "Like a printed menu", icon: ScrollText },
 ];
 
@@ -235,7 +234,7 @@ export function MenuEditor({
                           key={option.value}
                           type="button"
                           className="preset"
-                          aria-pressed={(menu.layout ?? "list") === option.value}
+                          aria-pressed={(menu.layout === "classic" ? "classic" : "list") === option.value}
                           onClick={() => setMenu({ layout: option.value === "list" ? null : option.value })}
                         >
                           <option.icon className="preset-icon" aria-hidden />

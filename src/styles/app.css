@@ -2063,6 +2063,34 @@ body:has(.app) {
   color: var(--a-text);
   box-shadow: var(--a-shadow-md);
 }
+/* One editor, top to bottom, its cards numbered in the order to set them up. */
+.editor-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.editor-flow > .card {
+  margin: 0;
+  scroll-margin-top: 80px;
+}
+.step-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.step-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--a-accent-soft);
+  color: var(--a-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .editor-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

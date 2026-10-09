@@ -850,7 +850,7 @@
 }
 
 /* ───────────────────────── Menu layouts (Pro) ─────────────────────────
-   data-layout on .menu-page: "list" (default), "photo" or "classic". */
+   data-layout on .menu-page: "list" (default) or "classic". */
 
 .menu-item-head {
   display: flex;
@@ -861,39 +861,6 @@
 .menu-leader,
 .menu-price.head-price {
   display: none;
-}
-
-/* Photo: one card per dish, the photo full width on top. */
-.menu-page[data-layout="photo"] .menu-list {
-  display: grid;
-  gap: 12px;
-  overflow: visible;
-  background: none;
-  box-shadow: none;
-}
-.menu-page[data-layout="photo"] .menu-item {
-  border-top: 0;
-  border-radius: var(--shape-card, 16px);
-  overflow: hidden;
-  background: var(--card-bg);
-  box-shadow: var(--card-elevation);
-}
-.menu-page[data-layout="photo"] .menu-item-open {
-  flex-direction: column-reverse;
-  gap: 0;
-  padding: 0;
-}
-.menu-page[data-layout="photo"] .menu-item-thumb {
-  width: 100%;
-  height: 190px;
-  border-radius: 0;
-}
-.menu-page[data-layout="photo"] .menu-item-text {
-  align-self: stretch;
-  padding: 14px 16px;
-}
-.menu-page[data-layout="photo"] .menu-desc {
-  -webkit-line-clamp: 3;
 }
 
 /* Classic: a printed menu. No cards or photos, centred section titles,

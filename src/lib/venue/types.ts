@@ -116,6 +116,7 @@ export interface VenueBranding {
 export type PageLayout = "list" | "grid" | "compact";
 export type HeaderStyle = "cover" | "centered" | "minimal";
 export type ButtonShape = "rounded" | "pill" | "square";
+/** "photo" is retired: older saves show as the list. */
 export type MenuLayout = "list" | "photo" | "classic";
 
 export interface SocialLinks {

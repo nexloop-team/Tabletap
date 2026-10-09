@@ -2493,110 +2493,260 @@ svg.tile-glyph {
   pointer-events: none;
 }
 
-/* ───────────────────────── Menu, List layout, in the venue's tile colours ─────────────────────────
-   Each dish is its own pale card; badges sit above the name as deep chips and
-   dietary tags are bright ones, like the bento tiles. */
+/* ───────────────────────── Menu, List layout ─────────────────────────
+   A slim bar with the logo (no cover photo), the sections as underlined tabs
+   that stay at the top, and one card per dish: photo on the left, name and
+   two lines of description, price and kcal along the bottom, and a coloured
+   ribbon in the corner for a badge, a dietary tag or "sold out". */
 
-.menu-page[data-layout="list"] .menu-section-head h2 {
-  font-size: 26px;
-  font-weight: var(--fw-display);
-  letter-spacing: -0.01em;
+.menu-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 6px;
 }
-.menu-page[data-layout="list"] .menu-list {
+.menu-topbar .menu-back {
+  flex: none;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--text-tint);
+}
+.menu-topbar-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--tile-hero);
+  color: var(--tile-on-hero);
+  font-size: 17px;
+  font-weight: 700;
+}
+.menu-topbar h1 {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: var(--fw-display);
+  letter-spacing: var(--display-tracking);
+  line-height: 1.15;
+}
+
+.menu-page[data-layout="list"] .menu-cats {
+  gap: 24px;
+  margin-top: 6px;
+  padding: 0 16px;
+}
+.menu-cat {
+  position: relative;
+  flex: none;
+  min-height: 50px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.72;
+}
+.menu-cat[aria-current="true"] {
+  color: var(--tile-hero);
+  opacity: 1;
+}
+.menu-cat[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: currentColor;
+}
+.menu-cat:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -2px;
+}
+
+.menu-page[data-layout="list"] .menu-section {
+  padding-top: 22px;
+}
+.menu-page[data-layout="list"] .menu-section-head h2 {
+  font-size: 28px;
+  font-weight: var(--fw-display);
+  letter-spacing: var(--display-tracking);
+}
+.menu-page[data-layout="list"] .menu-section-head span {
+  display: none;
+}
+
+.dish-list {
   display: grid;
   gap: 10px;
-  background: transparent;
-  box-shadow: none;
+  margin-top: 12px;
+  list-style: none;
+}
+.dish-open {
+  position: relative;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 8px;
   border: 0;
-  overflow: visible;
+  border-radius: 20px;
+  background: var(--card-bg);
+  color: var(--card-text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.15s ease;
 }
-.menu-page[data-layout="list"] .menu-item {
-  border: 0;
-  border-radius: 22px;
-  background: var(--tile-pale);
-  color: var(--tile-on-pale);
+.dish-open:active {
+  transform: scale(0.99);
 }
-.menu-page[data-layout="list"] .menu-item + .menu-item {
-  border-top: 0;
+.dish-open:focus-visible {
+  outline: 3px solid var(--text-primary);
+  outline-offset: 2px;
 }
-.menu-page[data-layout="list"] .menu-item-open {
-  padding: 16px;
-  color: inherit;
+.dish.no-photo .dish-open {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 14px 16px;
 }
-.menu-page[data-layout="list"] .menu-item-text {
+.dish-photo {
+  width: 128px;
+  height: 128px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--text-tint);
+}
+.dish-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  padding: 6px 4px 4px 0;
 }
-.menu-page[data-layout="list"] .menu-item-head {
-  order: 1;
-}
-.menu-page[data-layout="list"] .menu-desc {
-  order: 2;
-  color: inherit;
-  opacity: 0.78;
-}
-.menu-page[data-layout="list"] .menu-tags {
-  order: 3;
-}
-.menu-page[data-layout="list"] .menu-allergens {
-  order: 4;
-  color: inherit;
-  opacity: 0.7;
-}
-.menu-page[data-layout="list"] .menu-whats {
-  order: 5;
-}
-.menu-page[data-layout="list"] .menu-item-foot {
-  order: 6;
-}
-.menu-page[data-layout="list"] .menu-item-name {
-  font-size: 17px;
+.dish-name {
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: var(--fw-title);
+  letter-spacing: var(--display-tracking);
+  line-height: 1.2;
 }
-.menu-page[data-layout="list"] .foot-price {
-  font-size: 17px;
-  font-weight: var(--fw-title);
-  color: inherit;
+/* Room for the ribbon. */
+.dish-open:has(.dish-ribbon) .dish-name {
+  padding-inline-end: 76px;
 }
-.menu-page[data-layout="list"] .menu-tag.badge {
-  display: none;
+.dish-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--card-text-secondary);
 }
-.menu-badges-top {
-  display: none;
-}
-.menu-page[data-layout="list"] .menu-badges-top {
+.dish-foot {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  order: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
 }
-.menu-badge-chip {
-  padding: 3px 10px;
-  border-radius: 999px;
+.dish-price {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dish-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--card-text-secondary);
+}
+.dish-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.dish-meta svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+.dish-ribbon {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  padding: 4px 12px;
+  border-end-start-radius: 12px;
   background: var(--tile-hero);
   color: var(--tile-on-hero);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: var(--fw-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  line-height: 1.4;
 }
-.menu-page[data-layout="list"] .menu-tag.diet {
-  padding: 3px 10px;
-  border-radius: 8px;
+.dish-ribbon.chef {
+  background: #c62f2f;
+  color: #fff;
+}
+.dish-ribbon.spicy {
+  background: #b8400e;
+  color: #fff;
+}
+.dish-ribbon.new {
   background: var(--tile-pop);
   color: var(--tile-on-pop);
-  font-weight: var(--fw-label);
 }
-.menu-page[data-layout="list"] .menu-tag.diet svg {
+.dish-ribbon.vegan,
+.dish-ribbon.vegetarian {
+  background: #237a3b;
+  color: #fff;
+}
+.dish-ribbon.gluten_free {
+  background: #8a5a00;
+  color: #fff;
+}
+.dish-ribbon.sold-out {
+  background: #5f5f5f;
+  color: #fff;
+}
+.dish.unavailable .dish-photo,
+.dish.unavailable .dish-body {
+  opacity: 0.55;
+}
+@media (max-width: 360px) {
+  .dish-open {
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+  .dish-photo {
+    width: 104px;
+    height: 104px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-open {
+    transition: none;
+  }
+}
+
+.menu-badges-top {
   display: none;
-}
-.menu-page[data-layout="list"] .menu-item-thumb {
-  border-radius: 16px;
-}
-.menu-page[data-layout="list"] .menu-item.unavailable .menu-tag.sold-out {
-  background: var(--tile-hero);
-  color: var(--tile-on-hero);
 }
 
 /* Specials as coloured tiles: deep, bright, pale in turn. */
@@ -2631,4 +2781,9 @@ svg.tile-glyph {
 }
 .menu-copyright {
   margin-top: 0;
+}
+/* On the list layout the search sits in the card colour, like the dishes. */
+.menu-page[data-layout="list"] .menu-search {
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
