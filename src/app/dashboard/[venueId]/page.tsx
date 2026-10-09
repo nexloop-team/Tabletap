@@ -1,9 +1,12 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleHelp, ExternalLink, Inbox, PartyPopper, Printer, Star } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DailyBars, PageHeader, Stat } from "@/components/dashboard/blocks";
+import { DismissButton, ShowAgainButton } from "@/components/dashboard/Dismiss";
 import { CopyButton } from "@/components/dashboard/ui";
 import { parseDbDate } from "@/lib/plans";
+import { venueUtcOffsetMinutes } from "@/lib/venue/region";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { unreadFeedback } from "@/server/repositories/feedback";
 import { venueStats } from "@/server/repositories/insights";
@@ -62,10 +65,16 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const query = await searchParams;
   const { venue, user } = await loadDashboardVenue(venueId);
   const days = PERIODS.find((p) => String(p) === firstParam(query.days)) ?? 30;
-  const stats = venueStats(venue.id, days);
-  const both = venueStats(venue.id, days * 2);
-  const url = guestPageUrl(await serverOrigin(), venue.shortCode);
   const config = venue.config;
+  const offset = venueUtcOffsetMinutes(config.currencyCode);
+  const stats = venueStats(venue.id, days, offset);
+  const both = venueStats(venue.id, days * 2, offset);
+  const url = guestPageUrl(await serverOrigin(), venue.shortCode);
+  // Opened from here in preview mode, so the owner's own look doesn't count as a scan.
+  const viewUrl = `${url}&s=preview`;
+  // Parts of this page the owner has closed, per venue (see Dismiss).
+  const hideCookie = `tt_hide_${venue.id}`;
+  const hidden = new Set(((await cookies()).get(hideCookie)?.value ?? "").split(",").filter(Boolean));
   const base = `/dashboard/${venue.id}`;
   const unread = unreadFeedback(venue.id, user.id);
 
@@ -91,7 +100,10 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const done = checklist.filter((item) => item.done).length;
   const next = checklist.find((item) => !item.done) ?? null;
   // A new venue gets the whole checklist; an established one a short "what to do next".
-  const settingUp = done <= 3 || (firstWeek && done < checklist.length);
+  const setupHidden = hidden.has("setup") || done === checklist.length;
+  const settingUp = !setupHidden && (done <= 3 || (firstWeek && done < checklist.length));
+  const nextStep = setupHidden ? null : next;
+  const showNext = !settingUp && (unread.count > 0 || !!nextStep);
 
   const sources = [...stats.sources].sort((a, b) => b.scans - a.scans);
   const topSources = sources.slice(0, 5);
@@ -116,13 +128,14 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
       {firstParam(query.welcome) && <div className="notice notice-ok">Your page is live. Open it on your phone, then work through the checklist below.</div>}
       {firstParam(query.verified) === "1" && <div className="notice notice-ok">Your email is confirmed. Thanks!</div>}
       {firstParam(query.verified) === "0" && <div className="notice notice-error">That confirmation link has expired or was already used.</div>}
-      {firstWeek && !firstParam(query.welcome) && (
+      {firstWeek && !firstParam(query.welcome) && !hidden.has("live") && (
         <div className="live-card">
           <PartyPopper aria-hidden />
           <span>
             <strong>Your page is live</strong>
             <span>Guests can open it now. Put a QR code on each table so they find it.</span>
           </span>
+          <DismissButton cookie={hideCookie} part="live" label="Close" />
         </div>
       )}
 
@@ -130,30 +143,41 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
         title="Overview"
         description={firstWeek ? `${config.name} · your first week` : `${config.name} · last ${days} days`}
         actions={
-          <>
-            <div className="share-pill">
-              <span className="share-pill-url">{url.replace(/^https?:\/\//, "")}</span>
-              <CopyButton text={url} label="Copy" />
-            </div>
-            <a className="btn" href={url} target="_blank" rel="noreferrer">
-              View page <ExternalLink aria-hidden />
-            </a>
-            <nav className="segmented period-switch" aria-label="Period">
-              {PERIODS.map((p) => (
-                <Link key={p} href={p === 30 ? base : `${base}?days=${p}`} aria-current={p === days ? "true" : undefined}>
-                  {p} days
-                </Link>
-              ))}
-            </nav>
-          </>
+          <nav className="segmented period-switch" aria-label="Period">
+            {PERIODS.map((p) => (
+              <Link key={p} href={p === 30 ? base : `${base}?days=${p}`} aria-current={p === days ? "true" : undefined}>
+                {p} days
+              </Link>
+            ))}
+          </nav>
         }
       />
+
+      <div className="share-bar">
+        <span className="share-bar-label">Your page</span>
+        <div className="share-pill">
+          <span className="share-pill-url">{url.replace(/^https?:\/\//, "")}</span>
+          <CopyButton text={url} label="Copy" />
+        </div>
+        <a className="btn btn-sm" href={viewUrl} target="_blank" rel="noreferrer">
+          View page <ExternalLink aria-hidden />
+        </a>
+        <Link className="btn btn-sm btn-ghost" href={`${base}/qr`}>
+          <Printer aria-hidden /> QR codes
+        </Link>
+        {hidden.has("setup") && done < checklist.length && (
+          <ShowAgainButton cookie={hideCookie} part="setup">
+            Setup guide · {done} of {checklist.length}
+          </ShowAgainButton>
+        )}
+      </div>
 
       {settingUp ? (
         <section className="card setup-card">
           <div className="setup-head">
             <h2 className="card-title">Get set up</h2>
             <span className="muted num">{`${done} of ${checklist.length} done`}</span>
+            <DismissButton cookie={hideCookie} part="setup" label="Hide the setup guide" />
           </div>
           <div className="progress" role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={checklist.length} aria-valuenow={done}>
             <div style={{ width: `${(done / checklist.length) * 100}%` }} />
@@ -192,16 +216,19 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               ))}
           </ul>
         </section>
-      ) : (
+      ) : showNext ? (
         <section className="card next-card">
           <div className="card-head">
             <h2>What to do next</h2>
-            <span className="next-setup">
-              Setup {done} of {checklist.length} done
-              <span className="progress small" aria-hidden>
-                <span style={{ width: `${(done / checklist.length) * 100}%` }} />
+            {nextStep && (
+              <span className="next-setup">
+                Setup {done} of {checklist.length} done
+                <span className="progress small" aria-hidden>
+                  <span style={{ width: `${(done / checklist.length) * 100}%` }} />
+                </span>
+                <DismissButton cookie={hideCookie} part="setup" label="Hide the setup guide" />
               </span>
-            </span>
+            )}
           </div>
           <div className="next-grid">
             {unread.count > 0 && (
@@ -220,20 +247,20 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
                 </div>
               </div>
             )}
-            {next && (
+            {nextStep && (
               <div className="next-tile">
                 <span className="next-icon" aria-hidden>
                   <Star />
                 </span>
                 <div>
-                  <strong>{next.label}</strong>
-                  <p>{next.why}</p>
+                  <strong>{nextStep.label}</strong>
+                  <p>{nextStep.why}</p>
                   <span className="inline">
-                    <Link className="btn btn-sm" href={next.href}>
-                      {next.cta}
+                    <Link className="btn btn-sm" href={nextStep.href}>
+                      {nextStep.cta}
                     </Link>
-                    {next.help && (
-                      <Link className="link-quiet inline" href={next.help}>
+                    {nextStep.help && (
+                      <Link className="link-quiet inline" href={nextStep.help}>
                         <CircleHelp aria-hidden /> How do I find it?
                       </Link>
                     )}
@@ -241,20 +268,9 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
                 </div>
               </div>
             )}
-            {unread.count === 0 && !next && (
-              <div className="next-tile">
-                <span className="next-icon" aria-hidden>
-                  <Check />
-                </span>
-                <div>
-                  <strong>You’re all set</strong>
-                  <p>No new feedback, and every setup step is done. Check back after the weekend.</p>
-                </div>
-              </div>
-            )}
           </div>
         </section>
-      )}
+      ) : null}
 
       <div className="stats">
         <Stat label="Scans" value={stats.scans} sub={firstWeek ? sinceDay : <Delta current={stats.scans} previous={previous.scans} days={days} />} />

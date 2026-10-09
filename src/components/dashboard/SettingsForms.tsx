@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { CURRENCIES, VENUE_TYPES, type VenueConfig } from "@/lib/venue/schema";
 import { useConfirm } from "./confirm";
@@ -157,17 +157,21 @@ export function DigestSwitches({ venues }: { venues: { id: string; name: string;
   );
 }
 
-export function AccountForms({ name, email }: { name: string; email: string }) {
+/** Profile, then `notifications`, then password and deletion (which stays last). */
+export function AccountForms({ name, email, notifications }: { name: string; email: string; notifications?: ReactNode }) {
   const router = useRouter();
   const profile = useAction();
   const password = useAction();
   const removal = useAction();
   const ask = useConfirm();
   const [displayName, setDisplayName] = useState(name);
+  // Password and deletion stay folded until asked for: most visits only need the profile.
+  const [changing, setChanging] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <>
-      <Card title="Profile">
+      <Card title="Profile" description="How you appear to your team and in emails.">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -193,59 +197,98 @@ export function AccountForms({ name, email }: { name: string; email: string }) {
         </form>
       </Card>
 
-      <Card title="Password">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            const target = event.currentTarget;
-            void password.run(async () => {
-              if (form.get("new") !== form.get("confirm")) throw new Error("The new passwords don't match");
-              await dashboardApi.changePassword({ currentPassword: String(form.get("current")), newPassword: String(form.get("new")) });
-              target.reset();
-              return "Password changed. Other devices have been signed out.";
-            });
-          }}
-        >
-          <Field label="Current password" htmlFor="pw-current">
-            <input id="pw-current" name="current" className="input" type="password" autoComplete="current-password" required />
-          </Field>
-          <div className="row" style={{ marginTop: 14 }}>
-            <Field label="New password" htmlFor="pw-new" hint="At least 8 characters.">
-              <input id="pw-new" name="new" className="input" type="password" autoComplete="new-password" minLength={8} required />
+      {notifications}
+
+      <Card
+        title="Password"
+        description={changing ? "Changing it signs you out on your other devices." : "Sign-ins stay active on this device for 90 days."}
+        actions={
+          !changing && (
+            <button type="button" className="btn btn-sm" onClick={() => setChanging(true)}>
+              Change password
+            </button>
+          )
+        }
+      >
+        {changing && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              const target = event.currentTarget;
+              void password.run(async () => {
+                if (form.get("new") !== form.get("confirm")) throw new Error("The new passwords don't match");
+                await dashboardApi.changePassword({ currentPassword: String(form.get("current")), newPassword: String(form.get("new")) });
+                target.reset();
+                setChanging(false);
+                return "Password changed. Other devices have been signed out.";
+              });
+            }}
+          >
+            <Field label="Current password" htmlFor="pw-current">
+              <input id="pw-current" name="current" className="input" type="password" autoComplete="current-password" required />
             </Field>
-            <Field label="Confirm new password" htmlFor="pw-confirm">
-              <input id="pw-confirm" name="confirm" className="input" type="password" autoComplete="new-password" minLength={8} required />
-            </Field>
-          </div>
-          <button className="btn" type="submit" style={{ marginTop: 12 }} disabled={password.pending}>
-            Change password
-          </button>
-          <Status error={password.error} done={password.done} />
-        </form>
+            <div className="row" style={{ marginTop: 14 }}>
+              <Field label="New password" htmlFor="pw-new" hint="At least 8 characters.">
+                <input id="pw-new" name="new" className="input" type="password" autoComplete="new-password" minLength={8} required />
+              </Field>
+              <Field label="Confirm new password" htmlFor="pw-confirm">
+                <input id="pw-confirm" name="confirm" className="input" type="password" autoComplete="new-password" minLength={8} required />
+              </Field>
+            </div>
+            <div className="inline" style={{ marginTop: 12 }}>
+              <button className="btn btn-primary" type="submit" disabled={password.pending}>
+                Change password
+              </button>
+              <button className="btn btn-ghost" type="button" onClick={() => setChanging(false)}>
+                Cancel
+              </button>
+            </div>
+            <Status error={password.error} done={null} />
+          </form>
+        )}
+        {!changing && <Status error={null} done={password.done} />}
       </Card>
 
-      <Card title="Delete account" description="Deletes your account and every venue you own alone, with all of their guest data. This can't be undone." className="danger-zone">
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            if (!(await ask({ title: "Delete your account?", body: "Your account and every venue you own alone are deleted for good, with all their guest data.", confirmLabel: "Delete account", danger: true }))) return;
-            void removal.run(async () => {
-              await dashboardApi.deleteAccount({ password: String(form.get("password")) });
-              router.replace("/");
-              router.refresh();
-            });
-          }}
-        >
-          <Field label="Your password" htmlFor="delete-password">
-            <input id="delete-password" name="password" className="input" type="password" autoComplete="current-password" required />
-          </Field>
-          <button className="btn btn-danger" type="submit" style={{ marginTop: 12 }} disabled={removal.pending}>
-            Delete my account
-          </button>
-          <Status error={removal.error} done={null} />
-        </form>
+      <Card
+        title="Delete account"
+        description="Deletes your account and every venue you own alone, with all of their guest data. This can't be undone."
+        className="danger-zone"
+        actions={
+          !deleting && (
+            <button type="button" className="btn btn-sm btn-danger" onClick={() => setDeleting(true)}>
+              Delete account
+            </button>
+          )
+        }
+      >
+        {deleting && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              if (!(await ask({ title: "Delete your account?", body: "Your account and every venue you own alone are deleted for good, with all their guest data.", confirmLabel: "Delete account", danger: true }))) return;
+              void removal.run(async () => {
+                await dashboardApi.deleteAccount({ password: String(form.get("password")) });
+                router.replace("/");
+                router.refresh();
+              });
+            }}
+          >
+            <Field label="Your password" htmlFor="delete-password">
+              <input id="delete-password" name="password" className="input" type="password" autoComplete="current-password" required />
+            </Field>
+            <div className="inline" style={{ marginTop: 12 }}>
+              <button className="btn btn-danger" type="submit" disabled={removal.pending}>
+                Delete my account
+              </button>
+              <button className="btn btn-ghost" type="button" onClick={() => setDeleting(false)}>
+                Cancel
+              </button>
+            </div>
+            <Status error={removal.error} done={null} />
+          </form>
+        )}
       </Card>
     </>
   );

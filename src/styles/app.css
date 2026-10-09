@@ -6144,3 +6144,255 @@ body:has(.app) {
     display: none;
   }
 }
+
+/* Overview: things the owner can close, and the page link on its own row. */
+.dismiss-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--a-text-3);
+  cursor: pointer;
+}
+.dismiss-btn:hover {
+  background: color-mix(in srgb, var(--a-text) 7%, transparent);
+  color: var(--a-text);
+}
+.dismiss-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.live-card .dismiss-btn {
+  align-self: flex-start;
+}
+.setup-head {
+  align-items: center;
+}
+.setup-head .muted {
+  margin-inline-start: auto;
+}
+.setup-head .dismiss-btn {
+  margin-inline-start: 0;
+}
+.next-setup .dismiss-btn {
+  margin-inline-start: 4px;
+}
+.share-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 16px;
+}
+.share-bar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--a-text-2);
+}
+.share-bar .share-pill {
+  flex: 0 1 380px;
+}
+.share-bar .btn svg {
+  width: 15px;
+  height: 15px;
+}
+.show-again {
+  margin-inline-start: auto;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Account: who's signed in, at a glance. */
+.account-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 16px;
+}
+.account-avatar {
+  width: 52px;
+  height: 52px;
+  background: var(--a-accent);
+  color: var(--a-on-accent);
+  font-size: 18px;
+}
+.account-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.account-who strong {
+  font-size: 17px;
+}
+.account-who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  color: var(--a-text-2);
+}
+.account-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--a-ok);
+}
+.account-verified svg {
+  width: 16px;
+  height: 16px;
+}
+.account-unverified {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  font-size: 13px;
+  color: var(--a-warm-text);
+}
+
+/* Help & contact */
+.help-contact {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.help-contact-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--a-accent-soft);
+  color: var(--a-accent);
+}
+.help-contact-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.help-contact h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+.help-contact p {
+  margin: 4px 0 14px;
+  font-size: 14px;
+  color: var(--a-text-2);
+}
+.help-section {
+  margin-top: 28px;
+}
+.help-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.help-heading svg {
+  width: 18px;
+  height: 18px;
+  color: var(--a-text-3);
+}
+.help-guides {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.help-guide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius);
+  background: var(--a-surface);
+  color: var(--a-text);
+  text-decoration: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.help-guide:hover {
+  border-color: var(--a-border-strong);
+  box-shadow: var(--a-shadow-md);
+}
+.help-guide-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--a-surface-2);
+  color: var(--a-text-2);
+}
+.help-guide-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.help-guide-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.help-guide-text strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.help-guide-text span {
+  font-size: 13px;
+  color: var(--a-text-3);
+}
+.help-guide-arrow {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--a-text-3);
+}
+.help-faq {
+  padding: 4px 20px;
+}
+.help-faq details {
+  border-bottom: 1px solid var(--a-border);
+}
+.help-faq details:last-child {
+  border-bottom: 0;
+}
+.help-faq summary {
+  padding: 16px 0;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.help-faq details p {
+  margin: -4px 0 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--a-text-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .help-guide {
+    transition: none;
+  }
+}
+.app .help-guide,
+.app .help-guide:hover {
+  color: var(--a-text);
+}
+/* A card that is only its heading (a folded section) has no gap under it. */
+.card > .card-head:last-child {
+  margin-bottom: 0;
+}

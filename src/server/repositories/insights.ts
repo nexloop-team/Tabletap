@@ -28,13 +28,26 @@ export interface VenueStats {
   sources: { source: string; scans: number }[];
 }
 
-export function venueStats(venueId: string, days = 30): VenueStats {
+/**
+ * A scan is a visit: one guest opening the page counts once, however many
+ * times they refresh or go to the menu and back (see lib/analytics visitId).
+ * Days are the venue's own, given its offset from UTC in minutes.
+ */
+export function venueStats(venueId: string, days = 30, utcOffsetMinutes = 0): VenueStats {
   const db = getDb();
   const since = `-${days} days`;
+  const local = `${utcOffsetMinutes >= 0 ? "+" : "-"}${Math.abs(utcOffsetMinutes)} minutes`;
   const count = (name: string) =>
     (
       db
         .prepare(`SELECT COUNT(*) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}`)
+        .get(venueId, name, since) as { n: number }
+    ).n;
+  // Page views count once per visit, so a refresh isn't a second view.
+  const visits = (name: string) =>
+    (
+      db
+        .prepare(`SELECT COUNT(DISTINCT json_extract(params, '$.session_id')) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}`)
         .get(venueId, name, since) as { n: number }
     ).n;
 
@@ -65,21 +78,21 @@ export function venueStats(venueId: string, days = 30): VenueStats {
 
   const dailyRows = db
     .prepare(
-      `SELECT date(created_at) AS day, COUNT(*) AS scans FROM events
+      `SELECT date(created_at, ?) AS day, COUNT(DISTINCT json_extract(params, '$.session_id')) AS scans FROM events
        WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
        GROUP BY day`,
     )
-    .all(venueId, since) as { day: string; scans: number }[];
+    .all(local, venueId, since) as { day: string; scans: number }[];
   const byDay = new Map(dailyRows.map((row) => [row.day, row.scans]));
   const daily: VenueStats["daily"] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const day = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+    const day = new Date(Date.now() + utcOffsetMinutes * 60_000 - i * 86_400_000).toISOString().slice(0, 10);
     daily.push({ day, scans: byDay.get(day) ?? 0 });
   }
 
   const sources = db
     .prepare(
-      `SELECT COALESCE(json_extract(params, '$.source'), 'unknown') AS source, COUNT(*) AS scans FROM events
+      `SELECT COALESCE(json_extract(params, '$.source'), 'unknown') AS source, COUNT(DISTINCT json_extract(params, '$.session_id')) AS scans FROM events
        WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
        GROUP BY source ORDER BY scans DESC LIMIT 8`,
     )
@@ -87,9 +100,9 @@ export function venueStats(venueId: string, days = 30): VenueStats {
 
   return {
     days,
-    scans: count("landing_opened"),
+    scans: visitors,
     visitors,
-    menuViews: count("menu_viewed"),
+    menuViews: visits("menu_viewed"),
     wifiOpens: count("wifi_sheet_opened"),
     reviewTaps: count("google_review_tapped"),
     feedbackCount: feedback.n,

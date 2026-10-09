@@ -274,10 +274,10 @@ export function AppShell({ mode, venues, user, counts, children }: { mode: "venu
               user.isAdmin && <NavLink item={{ href: "/admin", label: "Platform admin", icon: Shield }} pathname={pathname} />
             )}
             <li>
-              <a className="nav-link" href={`mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(`${BRAND.name} help`)}`}>
+              <Link className="nav-link" href={`/dashboard/help${venueId ? `?v=${venueId}` : ""}`} aria-current={pathname === "/dashboard/help" ? "page" : undefined}>
                 <LifeBuoy aria-hidden />
                 <span className="nav-label">Help &amp; contact</span>
-              </a>
+              </Link>
             </li>
             <NavLink item={{ href: "/dashboard/account", label: "Account", icon: UserRound }} pathname={pathname} />
             <SignOutButton />
