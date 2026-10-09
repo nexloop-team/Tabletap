@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { MenuEditor } from "@/components/dashboard/MenuEditor";
+import { isIndianMenu } from "@/lib/venue/region";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { aiConfigured, aiImportLimits } from "@/server/services/ai";
 
@@ -14,7 +15,7 @@ export default async function MenuPage({ params }: PageProps<"/dashboard/[venueI
       <div className="page-head">
         <div>
           <h1>Menu</h1>
-          <p>Prices, allergens and dietary tags. Mark items sold out in a tap.</p>
+          <p>{isIndianMenu(venue.config.currencyCode) ? "Dishes, prices and veg marks. Mark a dish sold out in a tap." : "Dishes, prices, allergens and dietary tags. Mark a dish sold out in a tap."}</p>
         </div>
         <a className="btn" href={`/menu?i=${encodeURIComponent(venue.shortCode)}&s=preview`} target="_blank" rel="noreferrer">
           <ExternalLink aria-hidden /> View menu

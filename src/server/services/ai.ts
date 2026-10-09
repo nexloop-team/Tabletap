@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import { ALLERGENS, DIETARY_TAGS } from "@/lib/venue/schema";
+import { ALLERGENS, DIETARY_TAGS, FOOD_TYPES } from "@/lib/venue/schema";
 import { getDb } from "../db";
 import { ServiceError } from "../http";
 
@@ -273,6 +273,8 @@ const importedMenuSchema = z.object({
           price: z.number().nullable(),
           dietaryTags: z.array(z.enum(DIETARY_TAGS)),
           allergens: z.array(z.enum(ALLERGENS)),
+          /** The veg / non-veg mark, for Indian menus. */
+          foodType: z.enum(FOOD_TYPES).nullable(),
         }),
       ),
     }),
@@ -286,7 +288,8 @@ const IMPORT_SYSTEM = `You transcribe a café or restaurant's printed menu (phot
 - Copy descriptions only when the menu prints one; otherwise use null.
 - Prices are numbers in the menu's currency (3.40 → 3.4). When one item lists several prices (sizes), use the first and mention the sizes in the description. Use null when no price is printed.
 - dietaryTags: only when the menu marks the item (e.g. "V", "VG", "GF", a leaf icon).
-- allergens: only the ones the menu states, or that the item's name or description makes unmistakable (cheese → milk, prawn → crustaceans, peanut satay → peanuts). These are suggestions the owner will check, so leave them empty when unsure.
+- allergens: only when the menu prints them for that item, or an ingredient in the item's own name or description names one (cheese → milk, prawns → crustaceans, peanut satay → peanuts). Never guess from the kind of dish: coffee, tea, juice or a plain dish has none unless such an ingredient is written. Leave the list empty when in doubt; the owner adds the rest.
+- foodType: "veg", "nonveg" or "egg" when the menu shows a veg / non-veg mark (green or red dot), or the dish is plainly one (chicken, mutton, fish, prawns → nonveg; omelette, egg curry → egg; paneer, dal, vegetables, coffee → veg). null when unsure.
 - Skip anything that isn't a dish or drink: opening hours, addresses, slogans, Wi-Fi details.
 - Reply with JSON only.`;
 

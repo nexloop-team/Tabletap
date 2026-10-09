@@ -1,3 +1,5 @@
+import { backedAllergens } from "@/lib/venue/allergen-words";
+import { isIndianMenu } from "@/lib/venue/region";
 import { menuSectionSchema } from "@/lib/venue/schema";
 import { venueFromRequest } from "@/server/dashboard";
 import { handle, rateLimit, ServiceError } from "@/server/http";
@@ -44,6 +46,7 @@ export const POST = handle(async (request, ctx: RouteContext<"/api/dashboard/ven
   if (files.filter((file) => file.mediaType === "application/pdf").length > 1) throw new ServiceError(400, "Upload one PDF at a time");
 
   const imported = await importMenu(venue.id, files);
+  const indian = isIndianMenu(venue.config.currencyCode);
   const flaggedItemIds: string[] = [];
   const sections = imported.sections
     .filter((section) => section.items.length > 0)
@@ -55,15 +58,20 @@ export const POST = handle(async (request, ctx: RouteContext<"/api/dashboard/ven
         sortOrder: index,
         items: section.items.slice(0, 300).map((item) => {
           const id = newId("itm").slice(0, 40);
-          if (item.allergens.length > 0) flaggedItemIds.push(id);
+          const name = item.name.trim().slice(0, 120) || "Untitled item";
+          const description = item.description?.trim().slice(0, 500) || null;
+          // Indian menus don't use the 14 allergens; elsewhere, only keep ones the dish's own words back up.
+          const allergens = indian ? [] : backedAllergens([...new Set(item.allergens)], `${name} ${description ?? ""}`);
+          if (allergens.length > 0) flaggedItemIds.push(id);
           return {
             id,
-            name: item.name.trim().slice(0, 120) || "Untitled item",
-            description: item.description?.trim().slice(0, 500) || null,
+            name,
+            description,
             priceInPence: item.price && item.price > 0 ? Math.min(Math.round(item.price * 100), 10_000_000) : 0,
             isAvailable: true,
-            allergens: [...new Set(item.allergens)],
-            dietaryTags: [...new Set(item.dietaryTags)],
+            allergens,
+            dietaryTags: indian ? [] : [...new Set(item.dietaryTags)],
+            foodType: indian ? item.foodType : null,
           };
         }),
       };

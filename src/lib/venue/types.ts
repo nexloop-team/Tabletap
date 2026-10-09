@@ -34,6 +34,8 @@ export interface MenuItem {
   isAvailable: boolean;
   allergens: string[];
   dietaryTags: string[];
+  /** Indian menus: the veg / non-veg / egg mark. */
+  foodType?: "veg" | "nonveg" | "egg" | null;
   calories?: number | null;
   imageUrl?: string | null;
   /** "What's this?" text for unfamiliar dishes. */

@@ -1,26 +1,28 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronDown, GripVertical, List, Loader2, Plus, ScrollText, Sparkles, Trash2, type LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, GripVertical, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { VegMark } from "@/components/menu/VegMark";
 import { useLivePreview } from "@/lib/live-preview";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
-import { ALLERGENS, DIETARY_TAGS, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
-import type { MenuLayout } from "@/lib/venue/types";
+import { isIndianMenu, menuPriceFormat } from "@/lib/venue/region";
+import { ALLERGENS, DIETARY_TAGS, FOOD_TYPES, LINK_LABEL_TOKENS, MENU_BADGES, type VenueConfig } from "@/lib/venue/schema";
 import { useConfirm } from "./confirm";
+import { PreviewPane } from "./EditorFrame";
 import { MenuAiTools } from "./MenuAiTools";
-import { Card, Field, ImageField, newClientId, SaveBar, SwitchRow, TextField } from "./ui";
-import { EditorPanel, EditorTabs, PreviewPane, useEditorTab, type EditorTab } from "./EditorFrame";
 import { MobilePreview } from "./MobilePreview";
+import { Card, Field, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
-
-const BADGE_LABELS: Record<(typeof MENU_BADGES)[number], string> = { popular: "Popular", new: "New", spicy: "Spicy", chef: "Chef's pick" };
 
 type Menu = VenueConfig["menus"][number];
 type Section = Menu["sections"][number];
 type Item = Section["items"][number];
+type FoodType = (typeof FOOD_TYPES)[number];
 
+const BADGE_LABELS: Record<(typeof MENU_BADGES)[number], string> = { popular: "Popular", new: "New", spicy: "Spicy", chef: "Chef's pick" };
 const DIETARY_LABELS: Record<(typeof DIETARY_TAGS)[number], string> = { vegan: "Vegan", vegetarian: "Vegetarian", gluten_free: "Gluten-free" };
+const FOOD_TYPE_LABELS: Record<FoodType, string> = { veg: "Veg", nonveg: "Non-veg", egg: "Egg" };
 const BUTTON_LABELS: Record<(typeof LINK_LABEL_TOKENS)[number], string> = {
   view_menu: "View menu",
   view_price_list: "View price list",
@@ -29,11 +31,6 @@ const BUTTON_LABELS: Record<(typeof LINK_LABEL_TOKENS)[number], string> = {
   visit_website: "Visit website",
   order_online: "Order online",
 };
-
-const MENU_LAYOUTS: { value: MenuLayout; label: string; hint: string; icon: LucideIcon }[] = [
-  { value: "list", label: "List", hint: "A card per dish, photo beside it", icon: List },
-  { value: "classic", label: "Classic", hint: "Like a printed menu", icon: ScrollText },
-];
 
 function move<T>(list: T[], index: number, delta: number): T[] {
   const target = index + delta;
@@ -47,6 +44,27 @@ function capitalise(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+/** "4.5" or "4,50" → 450; anything else → null. */
+function parsePrice(text: string): number | null {
+  const clean = text.trim().replace(",", ".");
+  if (!/^\d+(\.\d{0,2})?$/.test(clean)) return null;
+  return Math.round(parseFloat(clean) * 100);
+}
+
+/** What the editor needs to know about the venue's menu conventions. */
+interface Conventions {
+  money: Intl.NumberFormat;
+  symbol: string;
+  /** Indian menus: the veg mark and "Bestseller" instead of allergens and dietary tags. */
+  indian: boolean;
+}
+
+/**
+ * The menu, as an owner thinks of it: add a dish with its name and price in
+ * one line, flip "In stock" on the row, and open a dish only to add the
+ * extras (photo, description, tags). Built like the quick-add in Square and
+ * the item list in the Zomato and Swiggy partner apps.
+ */
 export function MenuEditor({
   venueId,
   menus,
@@ -68,17 +86,16 @@ export function MenuEditor({
   const ask = useConfirm();
   const list = editor.draft.menus;
   const [selected, setSelected] = useState(0);
+  const [importing, setImporting] = useState(false);
   // Imported items whose allergens came from the AI, until the owner opens them.
   const [toCheck, setToCheck] = useState<Set<string>>(() => new Set());
   const menu = list[Math.min(selected, list.length - 1)];
-  const money = new Intl.NumberFormat(undefined, { style: "currency", currency: currencyCode });
+  const conventions = useMemo<Conventions>(() => {
+    const money = menuPriceFormat(undefined, currencyCode);
+    return { money, symbol: money.formatToParts(0).find((part) => part.type === "currency")?.value ?? "", indian: isIndianMenu(currencyCode) };
+  }, [currencyCode]);
   const external = menu ? menu.externalUrl !== null && menu.externalUrl !== undefined : false;
-  const tabs: EditorTab[] = [
-    { id: "dishes", label: "Dishes" },
-    { id: "settings", label: "Settings" },
-    ...(ai !== "off" && !external ? [{ id: "import", label: "Import" }] : []),
-  ];
-  const [tab, setTab] = useEditorTab(tabs);
+  const dishCount = menu?.sections.reduce((n, s) => n + s.items.length, 0) ?? 0;
 
   // The preview frame shows the draft, opened on the menu being edited.
   const previewDraft = useMemo(() => ({ menus: list, menuId: menu?.id ?? null }), [list, menu?.id]);
@@ -95,12 +112,10 @@ export function MenuEditor({
 
   async function removeMenu() {
     if (!menu) return;
-    if (!(await ask({ title: `Delete “${menu.name}”?`, body: "Every section and item on this menu goes too. Nothing is saved until you press Save changes.", confirmLabel: "Delete menu", danger: true }))) return;
+    if (!(await ask({ title: `Delete “${menu.name}”?`, body: "Every section and dish on this menu goes too. Nothing is saved until you press Save changes.", confirmLabel: "Delete menu", danger: true }))) return;
     setMenus(list.filter((m) => m !== menu));
     setSelected(0);
   }
-
-  const dishCount = menu?.sections.reduce((n, s) => n + s.items.length, 0) ?? 0;
 
   return (
     <div className="editor-grid">
@@ -127,153 +142,133 @@ export function MenuEditor({
             </div>
           </Card>
         ) : (
-          <>
-            <EditorTabs tabs={tabs} active={tab} onSelect={setTab} label="Menu settings" />
-
-            {tab === "dishes" && (
-              <EditorPanel id="dishes">
-                {external ? (
-                  <Card title="This menu is a link" description="Guests who tap it go straight to your own menu page, so there are no dishes to edit here.">
-                    <div className="inline">
-                      <button type="button" className="btn" onClick={() => setTab("settings")}>
-                        Change the link
+          <div className="editor-flow">
+            <Card
+              title={menu.name || "Menu"}
+              description={external ? "Guests who tap the menu card go straight to your own menu page." : `${dishCount} dish${dishCount === 1 ? "" : "es"} in ${menu.sections.length} section${menu.sections.length === 1 ? "" : "s"}.`}
+              actions={
+                list.length > 1 ? (
+                  <button type="button" className="btn btn-sm btn-danger" onClick={removeMenu}>
+                    <Trash2 aria-hidden /> Delete menu
+                  </button>
+                ) : undefined
+              }
+            >
+              <div className="row">
+                <TextField label="Menu name" value={menu.name} onChange={(value) => setMenu({ name: value ?? "" })} placeholder="All day" maxLength={80} />
+                {!external && (
+                  <div className="field">
+                    <span className="field-label" id="menu-look-label">
+                      Look
+                    </span>
+                    <div className="segmented" role="group" aria-labelledby="menu-look-label">
+                      <button type="button" aria-pressed={menu.layout !== "classic"} onClick={() => setMenu({ layout: null })}>
+                        Cards with photos
                       </button>
-                      <button type="button" className="btn btn-ghost" onClick={() => setMenu({ externalUrl: null })}>
-                        Host the menu here instead
+                      <button type="button" aria-pressed={menu.layout === "classic"} onClick={() => setMenu({ layout: "classic" })}>
+                        Classic printed
                       </button>
-                    </div>
-                  </Card>
-                ) : (
-                  <>
-                    {toCheck.size > 0 && (
-                      <div className="notice notice-warn">
-                        {toCheck.size} imported dish{toCheck.size === 1 ? " has" : "es have"} AI-suggested allergens. Open each one marked “Check allergens” and confirm before saving.
-                      </div>
-                    )}
-                    <MenuSections
-                      venueId={venueId}
-                      ai={ai === "on"}
-                      sections={menu.sections}
-                      money={money}
-                      toCheck={toCheck}
-                      onChecked={(itemId) =>
-                        setToCheck((current) => {
-                          if (!current.has(itemId)) return current;
-                          const next = new Set(current);
-                          next.delete(itemId);
-                          return next;
-                        })
-                      }
-                      onChange={setSections}
-                      onRemoveSection={async (section) =>
-                        section.items.length === 0 ||
-                        (await ask({
-                          title: `Delete “${section.name || "this section"}”?`,
-                          body: `Its ${section.items.length} item${section.items.length === 1 ? "" : "s"} go too.`,
-                          confirmLabel: "Delete section",
-                          danger: true,
-                        }))
-                      }
-                    />
-                  </>
-                )}
-              </EditorPanel>
-            )}
-
-            {tab === "settings" && (
-              <EditorPanel id="settings">
-                <Card
-                  title="Menu settings"
-                  description={external ? "Where the menu card on your page sends guests." : `${dishCount} dish${dishCount === 1 ? "" : "es"} in ${menu.sections.length} section${menu.sections.length === 1 ? "" : "s"}.`}
-                  actions={
-                    list.length > 1 ? (
-                      <button type="button" className="btn btn-sm btn-danger" onClick={removeMenu}>
-                        <Trash2 aria-hidden /> Delete menu
-                      </button>
-                    ) : undefined
-                  }
-                >
-                  <div className="row">
-                    <TextField label="Menu name" value={menu.name} onChange={(value) => setMenu({ name: value ?? "" })} placeholder="All day" maxLength={80} />
-                    <div className="field">
-                      <span className="field-label" id="menu-mode-label">
-                        Where&apos;s the menu?
-                      </span>
-                      <div className="segmented" role="group" aria-labelledby="menu-mode-label">
-                        <button type="button" aria-pressed={!external} onClick={() => setMenu({ externalUrl: null })}>
-                          Hosted here
-                        </button>
-                        <button type="button" aria-pressed={external} onClick={() => setMenu({ externalUrl: menu.externalUrl ?? "", linkLabelToken: menu.linkLabelToken ?? "view_menu" })}>
-                          A link
-                        </button>
-                      </div>
                     </div>
                   </div>
-                  {external ? (
-                    <div className="row" style={{ marginTop: 14 }}>
-                      <TextField label="Menu link" value={menu.externalUrl} onChange={(value) => setMenu({ externalUrl: value ?? "" })} placeholder="https://" type="url" />
-                      <Field label="Button text" htmlFor="menu-label">
-                        <select id="menu-label" className="select" value={menu.linkLabelToken ?? "view_menu"} onChange={(event) => setMenu({ linkLabelToken: event.target.value as Menu["linkLabelToken"] })}>
-                          {LINK_LABEL_TOKENS.map((token) => (
-                            <option key={token} value={token}>
-                              {BUTTON_LABELS[token]}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
+                )}
+              </div>
+              {external ? (
+                <div className="row" style={{ marginTop: 14 }}>
+                  <TextField label="Menu link" value={menu.externalUrl} onChange={(value) => setMenu({ externalUrl: value ?? "" })} placeholder="https://" type="url" />
+                  <Field label="Button text" htmlFor="menu-label">
+                    <select id="menu-label" className="select" value={menu.linkLabelToken ?? "view_menu"} onChange={(event) => setMenu({ linkLabelToken: event.target.value as Menu["linkLabelToken"] })}>
+                      {LINK_LABEL_TOKENS.map((token) => (
+                        <option key={token} value={token}>
+                          {BUTTON_LABELS[token]}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              ) : (
+                <>
+                  <TextField label="Welcome note (optional)" value={menu.welcomeText} onChange={(value) => setMenu({ welcomeText: value })} placeholder="Food served 12 – 9pm" maxLength={200} />
+                  <SwitchRow title="Show calories" description="Print each dish's kcal where you've entered it." checked={!!menu.showCalories} onChange={(on) => setMenu({ showCalories: on })} />
+                </>
+              )}
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost menu-mode-switch"
+                onClick={() => setMenu(external ? { externalUrl: null } : { externalUrl: menu.externalUrl ?? "", linkLabelToken: menu.linkLabelToken ?? "view_menu" })}
+              >
+                {external ? "Add the dishes here instead" : "My menu is on another website"}
+              </button>
+            </Card>
+
+            {!external && (
+              <>
+                {ai !== "off" &&
+                  (importing || dishCount === 0 ? (
+                    <div className="menu-import">
+                      {dishCount > 0 && (
+                        <button type="button" className="btn btn-sm btn-ghost menu-import-close" onClick={() => setImporting(false)}>
+                          <X aria-hidden /> Close
+                        </button>
+                      )}
+                      <MenuAiTools
+                        venueId={venueId}
+                        importLimits={importLimits}
+                        sections={menu.sections}
+                        onImport={(sections, mode, flagged) => {
+                          setSections(mode === "replace" ? sections : [...menu.sections, ...sections]);
+                          setToCheck((current) => new Set([...current, ...flagged]));
+                          setImporting(false);
+                        }}
+                        onExplanations={(byItemId) =>
+                          setSections(
+                            menu.sections.map((section) => ({
+                              ...section,
+                              items: section.items.map((item) => (byItemId[item.id] ? { ...item, explainer: byItemId[item.id] } : item)),
+                            })),
+                          )
+                        }
+                      />
                     </div>
                   ) : (
-                    <TextField label="Welcome note" value={menu.welcomeText} onChange={(value) => setMenu({ welcomeText: value })} placeholder="Food served 12 – 9pm" maxLength={200} hint="A line at the top of the menu, under its name." />
-                  )}
-                </Card>
-                {!external && (
-                  <Card title="Look" description="How dishes are laid out for guests.">
-                    <div className="preset-grid" role="group" aria-label="Menu layout">
-                      {MENU_LAYOUTS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className="preset"
-                          aria-pressed={(menu.layout === "classic" ? "classic" : "list") === option.value}
-                          onClick={() => setMenu({ layout: option.value === "list" ? null : option.value })}
-                        >
-                          <option.icon className="preset-icon" aria-hidden />
-                          <span>
-                            {option.label}
-                            <span className="preset-hint">{option.hint}</span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    <SwitchRow title="Show calories" description="Print each dish's kcal where you've entered it." checked={!!menu.showCalories} onChange={(on) => setMenu({ showCalories: on })} />
-                  </Card>
-                )}
-              </EditorPanel>
-            )}
+                    <button type="button" className="btn menu-import-open" onClick={() => setImporting(true)}>
+                      <Sparkles aria-hidden /> Add dishes from a photo of your menu
+                    </button>
+                  ))}
 
-            {tab === "import" && (
-              <EditorPanel id="import">
-                <MenuAiTools
+                {toCheck.size > 0 && (
+                  <div className="notice notice-warn">
+                    {toCheck.size} imported dish{toCheck.size === 1 ? " has" : "es have"} AI-suggested allergens. Open each one marked “Check allergens” and confirm before saving.
+                  </div>
+                )}
+
+                <MenuSections
                   venueId={venueId}
-                  importLimits={importLimits}
+                  ai={ai === "on"}
                   sections={menu.sections}
-                  onImport={(sections, mode, flagged) => {
-                    setSections(mode === "replace" ? sections : [...menu.sections, ...sections]);
-                    setToCheck((current) => new Set([...current, ...flagged]));
-                    setTab("dishes");
-                  }}
-                  onExplanations={(byItemId) =>
-                    setSections(
-                      menu.sections.map((section) => ({
-                        ...section,
-                        items: section.items.map((item) => (byItemId[item.id] ? { ...item, explainer: byItemId[item.id] } : item)),
-                      })),
-                    )
+                  conventions={conventions}
+                  toCheck={toCheck}
+                  onChecked={(itemId) =>
+                    setToCheck((current) => {
+                      if (!current.has(itemId)) return current;
+                      const next = new Set(current);
+                      next.delete(itemId);
+                      return next;
+                    })
+                  }
+                  onChange={setSections}
+                  onRemoveSection={async (section) =>
+                    section.items.length === 0 ||
+                    (await ask({
+                      title: `Delete “${section.name || "this section"}”?`,
+                      body: `Its ${section.items.length} dish${section.items.length === 1 ? "" : "es"} go too.`,
+                      confirmLabel: "Delete section",
+                      danger: true,
+                    }))
                   }
                 />
-              </EditorPanel>
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -293,25 +288,24 @@ export function MenuEditor({
   );
 }
 
-/** One line under an item's name: what a guest will see on it, or what needs checking. */
-function itemNote(item: Item, flagged: boolean): { text: string; warn: boolean } {
+/** One line under a dish's name: what a guest will see on it, or what still needs doing. */
+function itemNote(item: Item, flagged: boolean, indian: boolean): { text: string; warn: boolean } {
   if (flagged) return { text: "Imported · check allergens", warn: true };
-  if (!item.isAvailable) return { text: "Sold out", warn: false };
+  if (!item.priceInPence) return { text: "No price yet", warn: true };
+  if (indian && !item.foodType) return { text: "Mark it veg or non-veg", warn: true };
   const parts = [
-    ...item.dietaryTags.map((tag) => DIETARY_LABELS[tag]),
-    ...(item.badges ?? []).map((badge) => BADGE_LABELS[badge]),
+    ...(item.badges ?? []).map((badge) => (indian && badge === "popular" ? "Bestseller" : BADGE_LABELS[badge])),
+    ...(indian ? [] : item.dietaryTags.map((tag) => DIETARY_LABELS[tag])),
     ...(item.featured ? ["Today's special"] : []),
-    ...(item.imageUrl ? ["photo"] : []),
   ];
-  if (!item.priceInPence) parts.unshift("No price yet");
-  return { text: parts.join(" · ") || (item.description ? item.description : "No details yet"), warn: !item.priceInPence };
+  return { text: parts.join(" · ") || item.description || "Tap to add a photo, description or tags", warn: false };
 }
 
 interface SectionsProps {
   venueId: string;
   ai: boolean;
   sections: Section[];
-  money: Intl.NumberFormat;
+  conventions: Conventions;
   toCheck: Set<string>;
   onChecked: (itemId: string) => void;
   onChange: (sections: Section[]) => void;
@@ -324,19 +318,11 @@ function MenuSections({ sections, onChange, onRemoveSection, ...rest }: Sections
   const [openItem, setOpenItem] = useState<string | null>(null);
 
   function addSection() {
-    const next: Section = { id: newClientId("sec"), name: "", sortOrder: sections.length, items: [] };
-    onChange([...sections, next]);
+    onChange([...sections, { id: newClientId("sec"), name: "", sortOrder: sections.length, items: [] }]);
   }
 
   return (
     <>
-      {sections.length === 0 && (
-        <Card>
-          <div className="empty">
-            <p>Start with a section like “Coffee” or “Brunch”, then add dishes to it.</p>
-          </div>
-        </Card>
-      )}
       {sections.map((section, index) => (
         <SectionCard
           key={section.id}
@@ -354,7 +340,7 @@ function MenuSections({ sections, onChange, onRemoveSection, ...rest }: Sections
         />
       ))}
       <button type="button" className="btn-dashed" disabled={sections.length >= 50} onClick={addSection}>
-        <Plus aria-hidden /> Add section
+        <Plus aria-hidden /> {sections.length === 0 ? "Add your first section, like Starters or Coffee" : "Add a section"}
       </button>
     </>
   );
@@ -366,7 +352,7 @@ function SectionCard({
   section,
   first,
   last,
-  money,
+  conventions,
   toCheck,
   openItem,
   onOpen,
@@ -384,19 +370,15 @@ function SectionCard({
   onMove: (delta: number) => void;
   onRemove: () => void;
 }) {
+  const { money, indian } = conventions;
   const setItems = (items: Item[]) => onChange({ ...section, items });
+  const setItem = (id: string, patch: Partial<Item>) => setItems(section.items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   const drag = useDragReorder(section.items.length, (from, to) => setItems(moveTo(section.items, from, to)));
-
-  function addItem() {
-    const next: Item = { id: newClientId("itm"), name: "", priceInPence: 0, isAvailable: true, allergens: [], dietaryTags: [] };
-    setItems([...section.items, next]);
-    onOpen(next.id);
-  }
 
   return (
     <section className="card menu-section-card" aria-label={section.name || "New section"}>
       <div className="pane-head">
-        <input className="input pane-title" aria-label="Section name" placeholder="Section name, e.g. Coffee" value={section.name} maxLength={120} onChange={(event) => onChange({ ...section, name: event.target.value })} />
+        <input className="input pane-title" aria-label="Section name" placeholder="Section name, e.g. Starters" value={section.name} maxLength={120} onChange={(event) => onChange({ ...section, name: event.target.value })} />
         <button type="button" className="btn btn-icon btn-ghost" aria-label="Move section up" disabled={first} onClick={() => onMove(-1)}>
           <ArrowUp aria-hidden />
         </button>
@@ -415,49 +397,98 @@ function SectionCard({
         maxLength={140}
         onChange={(event) => onChange({ ...section, description: event.target.value || null })}
       />
-      <ul className="pane-list">
-        {section.items.map((it, index) => {
-          const note = itemNote(it, toCheck.has(it.id));
-          const open = openItem === it.id;
-          return (
-            <li key={it.id} ref={drag.rowRef(index)} className={`item-row${open ? " selected" : ""}${it.isAvailable ? "" : " sold-out"}${drag.dragging === index ? " dragging" : ""}`}>
-              <button type="button" className="drag-handle" aria-label={`Reorder ${it.name || "this item"}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
-                <GripVertical aria-hidden />
-              </button>
-              <button type="button" className="item-row-main" aria-expanded={open} onClick={() => onOpen(open ? null : it.id)}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- merchant uploads, already sized */}
-                {it.imageUrl && <img className="item-thumb" src={it.imageUrl} alt="" />}
-                <span className="item-row-text">
-                  <strong>{it.name || "Untitled dish"}</strong>
-                  <span className={note.warn ? "warn" : undefined}>{note.text}</span>
+      {section.items.length > 0 && (
+        <ul className="pane-list">
+          {section.items.map((it, index) => {
+            const note = itemNote(it, toCheck.has(it.id), indian);
+            const open = openItem === it.id;
+            return (
+              <li key={it.id} ref={drag.rowRef(index)} className={`item-row${open ? " selected" : ""}${it.isAvailable ? "" : " sold-out"}${drag.dragging === index ? " dragging" : ""}`}>
+                <button type="button" className="drag-handle" aria-label={`Reorder ${it.name || "this dish"}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
+                  <GripVertical aria-hidden />
+                </button>
+                <button type="button" className="item-row-main" aria-expanded={open} onClick={() => onOpen(open ? null : it.id)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- merchant uploads, already sized */}
+                  {it.imageUrl && <img className="item-thumb" src={it.imageUrl} alt="" />}
+                  <span className="item-row-text">
+                    <strong>
+                      {indian && it.foodType && <VegMark type={it.foodType} label={FOOD_TYPE_LABELS[it.foodType]} />}
+                      {it.name || "Untitled dish"}
+                    </strong>
+                    <span className={note.warn ? "warn" : undefined}>{note.text}</span>
+                  </span>
+                  <span className="num item-row-price">{money.format(it.priceInPence / 100)}</span>
+                  <ChevronDown className="item-row-chevron" aria-hidden />
+                </button>
+                <span className="item-row-stock">
+                  <span aria-hidden>{it.isAvailable ? "In stock" : "Sold out"}</span>
+                  <Switch label={`${it.name || "This dish"} in stock`} checked={it.isAvailable} onChange={(on) => setItem(it.id, { isAvailable: on })} />
                 </span>
-                <span className="num item-row-price">{money.format(it.priceInPence / 100)}</span>
-                <ChevronDown className="item-row-chevron" aria-hidden />
-              </button>
-              {open && (
-                <ItemEditor
-                  venueId={venueId}
-                  ai={ai}
-                  item={it}
-                  money={money}
-                  flagged={toCheck.has(it.id)}
-                  onChecked={() => onChecked(it.id)}
-                  onChange={(next) => setItems(section.items.map((i) => (i.id === it.id ? next : i)))}
-                  onRemove={() => {
-                    setItems(section.items.filter((i) => i.id !== it.id));
-                    onOpen(null);
-                  }}
-                  onClose={() => onOpen(null)}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <button type="button" className="btn-dashed" onClick={addItem} disabled={section.items.length >= 300}>
-        <Plus aria-hidden /> Add dish
-      </button>
+                {open && (
+                  <ItemEditor
+                    venueId={venueId}
+                    ai={ai}
+                    item={it}
+                    conventions={conventions}
+                    flagged={toCheck.has(it.id)}
+                    onChecked={() => onChecked(it.id)}
+                    onChange={(next) => setItems(section.items.map((i) => (i.id === it.id ? next : i)))}
+                    onRemove={() => {
+                      setItems(section.items.filter((i) => i.id !== it.id));
+                      onOpen(null);
+                    }}
+                    onClose={() => onOpen(null)}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {section.items.length < 300 && <QuickAdd conventions={conventions} onAdd={(item) => setItems([...section.items, item])} />}
     </section>
+  );
+}
+
+/** One line to add a dish: name, price (and veg or non-veg), Enter. Details can come later. */
+function QuickAdd({ conventions, onAdd }: { conventions: Conventions; onAdd: (item: Item) => void }) {
+  const { symbol, indian } = conventions;
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [foodType, setFoodType] = useState<FoodType>("veg");
+  const nameInput = useRef<HTMLInputElement>(null);
+  const pence = price.trim() ? parsePrice(price) : 0;
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!name.trim() || pence === null) return;
+    onAdd({ id: newClientId("itm"), name: name.trim().slice(0, 120), priceInPence: pence, isAvailable: true, allergens: [], dietaryTags: [], ...(indian ? { foodType } : {}) });
+    setName("");
+    setPrice("");
+    nameInput.current?.focus();
+  }
+
+  return (
+    <form className="quick-add" onSubmit={submit}>
+      <input ref={nameInput} className="input" aria-label="New dish name" placeholder={indian ? "Add a dish, e.g. Masala dosa" : "Add a dish, e.g. Flat white"} value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+      <span className="input-prefix quick-add-price">
+        {symbol && <span aria-hidden>{symbol}</span>}
+        <input className="input" aria-label="Price" inputMode="decimal" placeholder="0" value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={pence === null} />
+      </span>
+      {indian && (
+        <span className="segmented quick-add-type" role="group" aria-label="Veg or non-veg">
+          {(["veg", "nonveg"] as const).map((type) => (
+            <button key={type} type="button" aria-pressed={foodType === type} onClick={() => setFoodType(type)}>
+              <VegMark type={type} label="" />
+              {FOOD_TYPE_LABELS[type]}
+            </button>
+          ))}
+        </span>
+      )}
+      <button type="submit" className="btn btn-primary" disabled={!name.trim() || pence === null}>
+        <Plus aria-hidden /> Add
+      </button>
+    </form>
   );
 }
 
@@ -465,7 +496,7 @@ function ItemEditor({
   venueId,
   ai,
   item,
-  money,
+  conventions,
   flagged,
   onChecked,
   onChange,
@@ -475,7 +506,7 @@ function ItemEditor({
   venueId: string;
   ai: boolean;
   item: Item;
-  money: Intl.NumberFormat;
+  conventions: Conventions;
   /** Allergens came from an AI import and haven't been confirmed yet. */
   flagged: boolean;
   onChecked: () => void;
@@ -483,18 +514,19 @@ function ItemEditor({
   onRemove: () => void;
   onClose: () => void;
 }) {
-  // Typed text, so "4." or "" survive while the merchant is mid-edit.
-  const [price, setPrice] = useState(item.priceInPence ? (item.priceInPence / 100).toFixed(2) : "");
+  const { symbol, indian } = conventions;
+  // Typed text, so "4." or "" survive while the owner is mid-edit.
+  const [price, setPrice] = useState(item.priceInPence ? String(item.priceInPence / 100) : "");
   const [drafting, setDrafting] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [aiDrafted, setAiDrafted] = useState(false);
+  // The rarely used settings stay folded unless the dish already uses one.
+  const [more, setMore] = useState(flagged || !!item.calories || !!item.featured || !!item.explainer || (!indian && item.allergens.length > 0));
   const set = (patch: Partial<Item>) => onChange({ ...item, ...patch });
   const toggle = <T extends string>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-  const symbol = money.formatToParts(0).find((part) => part.type === "currency")?.value ?? "";
 
   return (
     <div className="item-editor" role="group" aria-label={`Edit ${item.name || "new dish"}`}>
-
       {flagged && (
         <div className="ai-check">
           <span>
@@ -507,12 +539,7 @@ function ItemEditor({
       )}
 
       <div className="row">
-        <div className="span-all">
-          <TextField label="Name" value={item.name} onChange={(value) => set({ name: value ?? "" })} maxLength={120} />
-        </div>
-        <div className="span-all">
-          <TextField label="Description" value={item.description} onChange={(value) => set({ description: value })} multiline maxLength={500} />
-        </div>
+        <TextField label="Name" value={item.name} onChange={(value) => set({ name: value ?? "" })} maxLength={120} />
         <Field label="Price" htmlFor={`price-${item.id}`}>
           <span className="input-prefix">
             {symbol && <span aria-hidden>{symbol}</span>}
@@ -520,7 +547,7 @@ function ItemEditor({
               id={`price-${item.id}`}
               className="input"
               inputMode="decimal"
-              placeholder="0.00"
+              placeholder="0"
               value={price}
               onChange={(event) => {
                 const text = event.target.value.replace(",", ".");
@@ -531,116 +558,142 @@ function ItemEditor({
             />
           </span>
         </Field>
-        <Field label="Calories · optional" htmlFor={`kcal-${item.id}`}>
-          <span className="input-prefix suffix">
-            <input
-              id={`kcal-${item.id}`}
-              className="input"
-              inputMode="numeric"
-              placeholder="0"
-              value={item.calories ?? ""}
-              onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, "").slice(0, 5);
-                set({ calories: digits ? Number(digits) : null });
-              }}
-            />
-            <span aria-hidden>kcal</span>
-          </span>
-        </Field>
       </div>
-      <ImageField venueId={venueId} label="Photo" value={item.imageUrl} onChange={(url) => set({ imageUrl: url })} />
+
+      {indian && (
+        <div className="field">
+          <span className="field-label" id={`type-${item.id}`}>
+            Veg or non-veg
+          </span>
+          <div className="segmented" role="group" aria-labelledby={`type-${item.id}`}>
+            {FOOD_TYPES.map((type) => (
+              <button key={type} type="button" aria-pressed={item.foodType === type} onClick={() => set({ foodType: type })}>
+                <VegMark type={type} label="" />
+                {FOOD_TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <TextField label="Description (optional)" value={item.description} onChange={(value) => set({ description: value })} multiline maxLength={500} placeholder="What's in it, in a line or two" />
+      <ImageField venueId={venueId} label="Photo (optional)" value={item.imageUrl} onChange={(url) => set({ imageUrl: url })} />
 
       <div className="field">
-        <span className="field-label">Allergens</span>
+        <span className="field-label">Tags</span>
         <div className="chips">
-          {ALLERGENS.map((allergen) => (
-            <button key={allergen} type="button" className="chip" aria-pressed={item.allergens.includes(allergen)} onClick={() => set({ allergens: toggle(item.allergens, allergen) })}>
-              {capitalise(allergen)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="field">
-        <span className="field-label">Dietary and badges</span>
-        <div className="chips">
-          {DIETARY_TAGS.map((tag) => (
-            <button key={tag} type="button" className="chip" aria-pressed={item.dietaryTags.includes(tag)} onClick={() => set({ dietaryTags: toggle(item.dietaryTags, tag) })}>
-              {DIETARY_LABELS[tag]}
-            </button>
-          ))}
           {MENU_BADGES.map((badge) => (
             <button key={badge} type="button" className="chip" aria-pressed={(item.badges ?? []).includes(badge)} onClick={() => set({ badges: toggle(item.badges ?? [], badge) })}>
-              {BADGE_LABELS[badge]}
+              {indian && badge === "popular" ? "Bestseller" : BADGE_LABELS[badge]}
             </button>
           ))}
+          {!indian &&
+            DIETARY_TAGS.map((tag) => (
+              <button key={tag} type="button" className="chip" aria-pressed={item.dietaryTags.includes(tag)} onClick={() => set({ dietaryTags: toggle(item.dietaryTags, tag) })}>
+                {DIETARY_LABELS[tag]}
+              </button>
+            ))}
         </div>
       </div>
 
-      <div className="switch-list">
-        <SwitchRow title="Today's special" description="Shows in the specials strip at the top of the menu." checked={!!item.featured} onChange={(on) => set({ featured: on })} />
-        <SwitchRow title="Available" description="Turn off to show “Sold out”." checked={item.isAvailable} onChange={(on) => set({ isAvailable: on })} />
-      </div>
-
-      <div className="field">
-        <div className="spread">
-          <label htmlFor={`explainer-${item.id}`}>“What&apos;s this?” explainer</label>
-          {ai && (
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={drafting || !item.name.trim()}
-              onClick={async () => {
-                setDrafting(true);
-                setDraftError(null);
-                try {
-                  const { suggestions } = await dashboardApi.explainDishes(venueId, {
-                    items: [{ id: item.id, name: item.name, description: item.description ?? null }],
-                    onlyUnfamiliar: false,
-                  });
-                  if (suggestions[0]) {
-                    set({ explainer: suggestions[0].explainer });
-                    setAiDrafted(true);
-                  } else setDraftError("No draft came back. Try adding a short description first.");
-                } catch (err) {
-                  setDraftError(errorMessage(err));
-                } finally {
-                  setDrafting(false);
-                }
-              }}
-            >
-              {drafting ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />} {item.explainer ? "Redraft with AI" : "Draft with AI"}
-            </button>
-          )}
-        </div>
-        <textarea
-          id={`explainer-${item.id}`}
-          className={`textarea${aiDrafted ? " ai-drafted" : ""}`}
-          maxLength={600}
-          value={item.explainer ?? ""}
-          placeholder="For dishes guests might not know, e.g. “Shakshuka is eggs gently poached in a spiced tomato and pepper sauce…”"
-          onChange={(event) => set({ explainer: event.target.value || null })}
-        />
-        {draftError ? (
-          <p className="field-error">{draftError}</p>
-        ) : aiDrafted ? (
-          <div className="ai-check">
-            <span>
-              <strong>AI draft.</strong> Check it&apos;s right for your kitchen before saving.
-            </span>
-            <button type="button" className="btn btn-sm" onClick={() => setAiDrafted(false)}>
-              Looks right
-            </button>
+      <details className="more-options" open={more} onToggle={(event) => setMore(event.currentTarget.open)}>
+        <summary>More options</summary>
+        <div className="more-options-body">
+          <div className="switch-list">
+            <SwitchRow title="Today's special" description="Shows in the specials strip at the top of the menu." checked={!!item.featured} onChange={(on) => set({ featured: on })} />
           </div>
-        ) : (
-          <p className="hint">Guests tap “What&apos;s this?” under the dish to read it. Leave blank for familiar dishes.</p>
-        )}
-      </div>
+          <Field label="Calories" htmlFor={`kcal-${item.id}`} hint="Shown when “Show calories” is on for this menu.">
+            <span className="input-prefix suffix" style={{ maxWidth: 200 }}>
+              <input
+                id={`kcal-${item.id}`}
+                className="input"
+                inputMode="numeric"
+                placeholder="0"
+                value={item.calories ?? ""}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "").slice(0, 5);
+                  set({ calories: digits ? Number(digits) : null });
+                }}
+              />
+              <span aria-hidden>kcal</span>
+            </span>
+          </Field>
+
+          {!indian && (
+            <div className="field">
+              <span className="field-label">Allergens</span>
+              <div className="chips">
+                {ALLERGENS.map((allergen) => (
+                  <button key={allergen} type="button" className="chip" aria-pressed={item.allergens.includes(allergen)} onClick={() => set({ allergens: toggle(item.allergens, allergen) })}>
+                    {capitalise(allergen)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="field">
+            <div className="spread">
+              <label htmlFor={`explainer-${item.id}`}>“What&apos;s this?” note</label>
+              {ai && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={drafting || !item.name.trim()}
+                  onClick={async () => {
+                    setDrafting(true);
+                    setDraftError(null);
+                    try {
+                      const { suggestions } = await dashboardApi.explainDishes(venueId, {
+                        items: [{ id: item.id, name: item.name, description: item.description ?? null }],
+                        onlyUnfamiliar: false,
+                      });
+                      if (suggestions[0]) {
+                        set({ explainer: suggestions[0].explainer });
+                        setAiDrafted(true);
+                      } else setDraftError("No draft came back. Try adding a short description first.");
+                    } catch (err) {
+                      setDraftError(errorMessage(err));
+                    } finally {
+                      setDrafting(false);
+                    }
+                  }}
+                >
+                  {drafting ? <Loader2 className="spin" aria-hidden /> : <Sparkles aria-hidden />} {item.explainer ? "Redraft with AI" : "Draft with AI"}
+                </button>
+              )}
+            </div>
+            <textarea
+              id={`explainer-${item.id}`}
+              className={`textarea${aiDrafted ? " ai-drafted" : ""}`}
+              maxLength={600}
+              value={item.explainer ?? ""}
+              placeholder="For dishes guests might not know, e.g. “Shakshuka is eggs gently poached in a spiced tomato and pepper sauce…”"
+              onChange={(event) => set({ explainer: event.target.value || null })}
+            />
+            {draftError ? (
+              <p className="field-error">{draftError}</p>
+            ) : aiDrafted ? (
+              <div className="ai-check">
+                <span>
+                  <strong>AI draft.</strong> Check it&apos;s right for your kitchen before saving.
+                </span>
+                <button type="button" className="btn btn-sm" onClick={() => setAiDrafted(false)}>
+                  Looks right
+                </button>
+              </div>
+            ) : (
+              <p className="hint">Guests tap “What&apos;s this?” under the dish to read it. Leave blank for familiar dishes.</p>
+            )}
+          </div>
+        </div>
+      </details>
 
       <div className="item-editor-foot">
         <button type="button" className="btn btn-sm btn-ghost btn-danger" onClick={onRemove}>
           <Trash2 aria-hidden /> Delete dish
         </button>
-        <button type="button" className="btn btn-sm" onClick={onClose}>
+        <button type="button" className="btn btn-sm btn-primary" onClick={onClose}>
           Done
         </button>
       </div>

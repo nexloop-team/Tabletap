@@ -6051,3 +6051,96 @@ body:has(.app) {
     max-width: 1440px;
   }
 }
+
+/* Menu editor: one line to add a dish, "In stock" on each row, extras folded away. */
+.quick-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.quick-add > .input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.quick-add-price {
+  flex: 0 1 130px;
+}
+.quick-add-type button {
+  display: inline-flex;
+  align-items: center;
+}
+.item-row-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 4px;
+  font-size: 12px;
+  color: var(--a-text-3);
+  white-space: nowrap;
+}
+.item-row.sold-out .item-row-stock {
+  color: var(--a-warn);
+}
+.item-row-text strong .veg-mark {
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+.more-options {
+  border-top: 1px solid var(--a-border);
+  padding-top: 10px;
+}
+.more-options summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--a-accent-text);
+  list-style-position: inside;
+}
+.more-options-body {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+.menu-mode-switch {
+  justify-self: start;
+  margin-top: 10px;
+  color: var(--a-text-2);
+}
+.menu-import {
+  display: grid;
+  gap: 6px;
+}
+.menu-import-close {
+  justify-self: end;
+}
+.menu-import-open {
+  justify-self: start;
+}
+.menu-import > .card {
+  margin: 0;
+}
+/* The Indian veg / non-veg / egg mark (also styled for guests in landing.css). */
+.app .veg-mark {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  flex: none;
+  background: #fff;
+  border-radius: 3px;
+}
+.app .veg-mark.veg {
+  color: #128a3e;
+}
+.app .veg-mark.nonveg {
+  color: #8b3a1a;
+}
+.app .veg-mark.egg {
+  color: #c58b00;
+}
+@media (max-width: 640px) {
+  .item-row-stock > span {
+    display: none;
+  }
+}

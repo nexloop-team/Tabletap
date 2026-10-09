@@ -86,7 +86,7 @@ describe("Groq", () => {
   it("reads menu photos with the vision model, as base64 data URLs", async () => {
     process.env.GROQ_API_KEY = "gsk_test";
     const calls = mockGroq(
-      JSON.stringify({ sections: [{ name: "Coffee", items: [{ name: "Flat white", description: null, price: 3.4, dietaryTags: [], allergens: ["milk"] }] }] }),
+      JSON.stringify({ sections: [{ name: "Coffee", items: [{ name: "Flat white", description: null, price: 3.4, dietaryTags: [], allergens: ["milk"], foodType: null }] }] }),
     );
     const menu = await ai.importMenu("ven_ai2", [{ mediaType: "image/jpeg", base64: "AAAA" }]);
     expect(menu.sections[0].items[0]).toMatchObject({ name: "Flat white", price: 3.4, allergens: ["milk"] });

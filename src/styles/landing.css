@@ -2787,3 +2787,26 @@ svg.tile-glyph {
   background: var(--card-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+/* The Indian veg / non-veg / egg mark, before a dish name. */
+.veg-mark {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-inline-end: 7px;
+  vertical-align: -1px;
+  flex: none;
+  background: #fff;
+  border-radius: 3px;
+}
+.veg-mark.veg {
+  color: #128a3e;
+}
+.veg-mark.nonveg {
+  color: #8b3a1a;
+}
+.veg-mark.egg {
+  color: #c58b00;
+}
+.menu-pill .veg-mark {
+  margin-inline-end: 6px;
+}

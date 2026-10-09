@@ -60,7 +60,7 @@ export function MenuAiTools({
         <strong className="ai-title">
           Import from a photo{importLimits.pdf ? " or PDF" : ""}
         </strong>
-        <p>Snap your printed menu. We&apos;ll read the dishes, prices and allergens, and you check them before anything goes live.</p>
+        <p>Snap your printed menu. We&apos;ll read the dishes and prices, and you check them before anything goes live.</p>
       </div>
     </div>
   );

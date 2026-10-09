@@ -11,7 +11,9 @@ import { computeTheme } from "@/lib/theme";
 import { safeImageUrl } from "@/lib/venue/features";
 import type { Menu, MenuItem, VenueBranding } from "@/lib/venue/types";
 import { ALLERGENS } from "@/lib/venue/schema";
+import { isIndianMenu, menuPriceFormat } from "@/lib/venue/region";
 import { DishSheet } from "./DishSheet";
+import { VegMark } from "./VegMark";
 
 type Badge = NonNullable<MenuItem["badges"]>[number];
 
@@ -28,6 +30,8 @@ const DIETS: Record<string, { key: MessageKey; icon: LucideIcon }> = {
   gluten_free: { key: "dietary_gluten_free", icon: WheatOff },
 };
 
+const FOOD_TYPE_KEYS: Record<NonNullable<MenuItem["foodType"]>, MessageKey> = { veg: "food_veg", nonveg: "food_nonveg", egg: "food_egg" };
+
 /** Filter chips offered when at least one dish carries the tag, in this order. */
 const DIET_FILTERS = ["vegan", "vegetarian", "gluten_free"] as const;
 
@@ -42,7 +46,7 @@ function dietKey(tag: string): string {
 
 function priceFormatter(locale: string, currency: string): (pence: number) => string {
   try {
-    const format = new Intl.NumberFormat(locale, { style: "currency", currency });
+    const format = menuPriceFormat(locale, currency);
     return (pence) => format.format(pence / 100);
   } catch {
     return (pence) => (pence / 100).toFixed(2);
@@ -58,7 +62,7 @@ function matches(item: MenuItem, query: string): boolean {
 function fitsDiets(item: MenuItem, diets: string[]): boolean {
   if (diets.length === 0) return true;
   const tags = item.dietaryTags.map(dietKey);
-  return diets.every((diet) => tags.includes(diet) || (diet === "vegetarian" && tags.includes("vegan")));
+  return diets.every((diet) => (diet === "veg" ? item.foodType === "veg" : tags.includes(diet) || (diet === "vegetarian" && tags.includes("vegan"))));
 }
 
 interface MenuViewProps {
@@ -100,11 +104,18 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const shownIndex = focused >= 0 ? focused : Math.min(menuIndex, Math.max(0, menus.length - 1));
   const menu = menus[shownIndex] ?? null;
   const sections = useMemo(() => (menu ? [...menu.sections].sort((a, b) => a.sortOrder - b.sortOrder).filter((s) => s.items.length > 0) : []), [menu]);
-  const allergens = useMemo(() => [...new Set(sections.flatMap((s) => s.items.flatMap((i) => i.allergens.map((a) => a.toLowerCase()))))].sort(), [sections]);
-  const dietOptions = useMemo(() => {
-    const present = new Set(sections.flatMap((s) => s.items.flatMap((i) => i.dietaryTags.map(dietKey))));
+  const indian = isIndianMenu(currencyCode);
+  // Indian menus skip the 14 allergens and filter on the veg mark instead.
+  const allergens = useMemo(() => (indian ? [] : [...new Set(sections.flatMap((s) => s.items.flatMap((i) => i.allergens.map((a) => a.toLowerCase()))))].sort()), [sections, indian]);
+  const dietOptions = useMemo<string[]>(() => {
+    const items = sections.flatMap((s) => s.items);
+    if (indian) return items.some((i) => i.foodType === "veg") && items.some((i) => i.foodType && i.foodType !== "veg") ? ["veg"] : [];
+    const present = new Set(items.flatMap((i) => i.dietaryTags.map(dietKey)));
     return DIET_FILTERS.filter((diet) => present.has(diet) || (diet === "vegetarian" && present.has("vegan")));
-  }, [sections]);
+  }, [sections, indian]);
+  /** "Bestseller" on Indian menus, as on the delivery apps. */
+  const badgeLabel = (badge: Badge) => (indian && badge === "popular" ? t("badge_bestseller") : t(BADGES[badge].key));
+  const vegMark = (item: MenuItem) => (indian && item.foodType ? <VegMark type={item.foodType} label={t(FOOD_TYPE_KEYS[item.foodType])} /> : null);
 
   useEffect(() => {
     track("menu_viewed", { menus: menus.length });
@@ -127,8 +138,8 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
     const all = sections.flatMap((s) => s.items).filter(allowed);
     const specials = all.filter((item) => item.featured);
     if (specials.length > 0) return { title: t("menu_specials"), items: specials };
-    return { title: t("menu_popular"), items: all.filter((item) => item.badges?.includes("popular")) };
-  }, [sections, excluded, diets, t]);
+    return { title: t(indian ? "menu_bestsellers" : "menu_popular"), items: all.filter((item) => item.badges?.includes("popular")) };
+  }, [sections, excluded, diets, t, indian]);
 
   // Highlight the section chip for whichever section is at the top of the screen.
   useEffect(() => {
@@ -171,19 +182,20 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   /** Badges, dietary tags and kcal for a dish, in the card colours. */
   function tagList(item: MenuItem) {
     const showKcal = !!menu?.showCalories && typeof item.calories === "number";
-    if (!(item.badges ?? []).length && !item.dietaryTags.length && !showKcal) return null;
+    const dietaryTags = indian ? [] : item.dietaryTags;
+    if (!(item.badges ?? []).length && !dietaryTags.length && !showKcal) return null;
     return (
       <span className="menu-tags">
         {(item.badges ?? []).map((badge) => {
-          const { key, icon: Icon } = BADGES[badge];
+          const Icon = BADGES[badge].icon;
           return (
             <span key={badge} className={`menu-tag badge ${badge}`}>
               <Icon aria-hidden />
-              {t(key)}
+              {badgeLabel(badge)}
             </span>
           );
         })}
-        {item.dietaryTags.map((tag) => {
+        {dietaryTags.map((tag) => {
           const diet = DIETS[dietKey(tag)];
           const Icon = diet?.icon;
           return (
@@ -214,7 +226,8 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   function ribbon(item: MenuItem): { label: string; kind: string } | null {
     if (!item.isAvailable) return { label: t("menu_unavailable"), kind: "sold-out" };
     const badge = (item.badges ?? [])[0];
-    if (badge) return { label: t(BADGES[badge].key), kind: badge };
+    if (badge) return { label: badgeLabel(badge), kind: badge };
+    if (indian) return null;
     const diet = item.dietaryTags.map(dietKey).find((tag) => DIETS[tag]);
     return diet ? { label: t(DIETS[diet].key), kind: diet } : null;
   }
@@ -225,14 +238,17 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
     const corner = ribbon(item);
     const showKcal = !!menu?.showCalories && typeof item.calories === "number";
     // Dietary tags not already in the corner, as small icons by the price.
-    const diets = item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag] && tag !== corner?.kind);
+    const diets = indian ? [] : item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag] && tag !== corner?.kind);
     return (
       <li key={item.id} id={`item-${item.id}`} className={`dish${item.isAvailable ? "" : " unavailable"}${image ? "" : " no-photo"}`}>
         <button type="button" className="dish-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
           {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
           {image && <img className="dish-photo" src={image} alt="" loading="lazy" />}
           <span className="dish-body">
-            <span className="dish-name">{item.name}</span>
+            <span className="dish-name">
+              {vegMark(item)}
+              {item.name}
+            </span>
             {item.description && <span className="dish-desc">{item.description}</span>}
             <span className="dish-foot">
               <span className="dish-price">{formatPrice(item.priceInPence)}</span>
@@ -349,7 +365,8 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
                 ))}
                 {dietOptions.map((diet) => (
                   <button key={diet} type="button" className={`menu-pill${diets.includes(diet) ? " on" : ""}`} aria-pressed={diets.includes(diet)} onClick={() => toggleDiet(diet)}>
-                    {t(DIETS[diet].key)}
+                    {diet === "veg" && <VegMark type="veg" label="" />}
+                    {diet === "veg" ? t("menu_veg_only") : t(DIETS[diet].key)}
                   </button>
                 ))}
               </div>
@@ -425,13 +442,16 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
                                   <span className="menu-badges-top">
                                     {(item.badges ?? []).map((badge) => (
                                       <span key={badge} className={`menu-badge-chip ${badge}`}>
-                                        {t(BADGES[badge].key)}
+                                        {badgeLabel(badge)}
                                       </span>
                                     ))}
                                   </span>
                                 )}
                                 <span className="menu-item-head">
-                                  <span className="menu-item-name">{item.name}</span>
+                                  <span className="menu-item-name">
+                                    {vegMark(item)}
+                                    {item.name}
+                                  </span>
                                   {/* The classic layout prints the price on the name line, with dotted leaders. */}
                                   <span className="menu-leader" aria-hidden />
                                   <span className="menu-price head-price">{formatPrice(item.priceInPence)}</span>
@@ -461,7 +481,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
               ))
             )}
 
-            <p className="menu-note small">{t("menu_allergen_note")}</p>
+            <p className="menu-note small">{t(indian ? "menu_allergy_ask" : "menu_allergen_note")}</p>
             <p className="menu-note small menu-copyright">
               © {new Date().getFullYear()} {venueName}
             </p>
@@ -473,7 +493,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
         item={openDish}
         price={openDish ? formatPrice(openDish.priceInPence) : ""}
         tags={openDish ? tagList(openDish) : null}
-        details={openDish ? allergenLines(openDish) : []}
+        details={openDish ? (indian ? (openDish.foodType ? [t(FOOD_TYPE_KEYS[openDish.foodType])] : []) : allergenLines(openDish)) : []}
         labels={{ close: t("close"), whatsThis: t("menu_whats_this"), explainerNote: t("menu_explainer_allergens"), soldOut: t("menu_unavailable") }}
         onClose={closeDish}
       />
