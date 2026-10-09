@@ -6,7 +6,7 @@ import type { PublicVenue } from "@/lib/venue/types";
  * Demo venues, one per major configuration, so every flow on the landing
  * page can be exercised locally:
  *   /s?i=demo          stamp card with tiers, menu, Wi-Fi, CRM off (plain Wi-Fi)
- *   /s?i=demo-crm      dark brand, pub (18+), Wi-Fi email gate, consent, birthday
+ *   /s?i=demo-crm      Bento, White & Honey, Indian menu (₹, veg marks), Wi-Fi email gate, consent, birthday
  *   /s?i=demo-rewards  rewards-only membership, external menu, custom links, no cover
  *
  * The Google review links use the reserved `.invalid` TLD, which the page
@@ -114,69 +114,59 @@ export const DEMO_VENUES: PublicVenue[] = [
     crm: { enabled: false, consentAsk: false, wifiCapture: false, feedbackCapture: false, birthdayAsk: false },
   },
   {
+    // Was "The Copper Kettle"; same id and code so existing links keep working.
     id: "ven_kettle",
     shortCode: "demo-crm",
-    name: "The Copper Kettle",
-    venueType: "pub",
-    currencyCode: "GBP",
-    wifi: { ssid: "CopperKettle", password: "ale&cider", security: "WPA2" },
+    name: "Honeycomb Café",
+    venueType: "cafe",
+    currencyCode: "INR",
+    wifi: { ssid: "Honeycomb-Guest", password: "honeybee123", security: "WPA2" },
     socialLinks: {
-      google: "https://reviews.demo.invalid/copper-kettle",
-      facebook: "https://www.facebook.com/",
-      tripAdvisor: "https://www.tripadvisor.com/",
-      youtube: "https://www.youtube.com/",
+      google: "https://reviews.demo.invalid/honeycomb",
+      instagram: "https://www.instagram.com/",
     },
     menus: [
       {
-        id: "menu_kettle",
-        name: "Food",
-        welcomeText: "Food served 12 - 9pm",
-        primaryColorHex: "#B5651D",
+        id: "menu_honeycomb",
+        name: "Menu",
+        welcomeText: "Kitchen open 8am – 10pm",
         sections: [
           {
-            id: "sec_mains",
-            name: "Pub Classics",
-            description: "Served 12 – 9pm. Sunday roasts 12 – 5.",
+            id: "sec_brunch_hc",
+            name: "All-day brunch",
             sortOrder: 0,
             items: [
-              { id: "itm_fish", name: "Beer-Battered Haddock", description: "Line-caught haddock in our own ale batter, chunky chips, mushy peas, tartare", priceInPence: 1650, isAvailable: true, allergens: ["gluten", "fish", "eggs"], dietaryTags: [], calories: 980, imageUrl: "/demo/dish-haddock.svg", badges: ["popular"] },
-              {
-                id: "itm_pie",
-                name: "Steak & Ale Pie",
-                description: "Slow-cooked beef in real ale under a shortcrust lid, mash, greens, gravy",
-                priceInPence: 1750,
-                isAvailable: true,
-                allergens: ["gluten", "milk", "celery"],
-                dietaryTags: [],
-                calories: 1040,
-                imageUrl: "/demo/dish-steak-pie.svg",
-                badges: ["chef"],
-                featured: true,
-                explainer: "Chunks of beef braised for hours in dark ale until tender, then baked under a pastry lid.",
-              },
+              { id: "itm_hc_pancakes", name: "Honey butter pancakes", description: "Three fluffy pancakes, wildflower honey, whipped butter and berries", priceInPence: 32000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 610, imageUrl: "/demo/dish-pancakes.svg", badges: ["popular"], featured: true },
+              { id: "itm_hc_avo", name: "Avocado toast", description: "Smashed avocado, chilli flakes, lime and seeds on sourdough", priceInPence: 38000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 420, imageUrl: "/demo/dish-avocado-toast.svg" },
+              { id: "itm_hc_omelette", name: "Masala omelette toast", description: "Fluffy omelette with onion, tomato, green chilli and coriander", priceInPence: 24000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "egg", calories: 380, imageUrl: "/demo/dish-eggs-florentine.svg", badges: ["spicy"] },
+              { id: "itm_hc_paneer", name: "Paneer tikka sandwich", description: "Tandoori paneer, mint chutney and pickled onions, toasted", priceInPence: 29000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 520, badges: ["chef"] },
+              { id: "itm_hc_club", name: "Chicken club sandwich", description: "Grilled chicken, egg, lettuce and tomato with fries", priceInPence: 34000, isAvailable: false, allergens: [], dietaryTags: [], foodType: "nonveg", calories: 690 },
             ],
           },
           {
-            id: "sec_sides",
-            name: "Sides",
+            id: "sec_coffee_hc",
+            name: "Coffee & chai",
             sortOrder: 1,
             items: [
-              { id: "itm_chips", name: "Chunky Chips", description: "Triple-cooked, sea salt", priceInPence: 450, isAvailable: true, allergens: [], dietaryTags: ["vegan"], calories: 420 },
-              { id: "itm_rings", name: "Onion Rings", description: "In our ale batter", priceInPence: 500, isAvailable: true, allergens: ["gluten"], dietaryTags: ["vegetarian"], calories: 380, badges: ["new"] },
+              { id: "itm_hc_filter", name: "Filter coffee", description: "South Indian decoction, frothed with hot milk", priceInPence: 12000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 120, imageUrl: "/demo/dish-flat-white.svg", badges: ["popular"] },
+              { id: "itm_hc_honeycap", name: "Honey cappuccino", description: "Double shot, steamed milk and a spoon of raw honey", priceInPence: 21000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 160, badges: ["new"] },
+              { id: "itm_hc_chai", name: "Masala chai", description: "Assam tea brewed with ginger, cardamom and cinnamon", priceInPence: 9000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 110 },
+              { id: "itm_hc_cold", name: "Cold coffee", description: "Blended with ice cream and a drizzle of honey", priceInPence: 22000, isAvailable: true, allergens: [], dietaryTags: [], foodType: "veg", calories: 290 },
             ],
           },
         ],
       },
     ],
-    loyaltyProgram: { rewardName: "Free Pint", stampsRequired: 8 },
+    loyaltyProgram: { rewardName: "Free filter coffee", stampsRequired: 8 },
     branding: {
-      coverImageUrl: "/demo/kettle-cover.svg",
-      logoUrl: "/demo/kettle-logo.svg",
-      tagline: "Est. 1887 · Real ales & roasts",
-      backgroundColorHex: "#1F2A24",
-      style: "classic",
+      coverImageUrl: "/demo/honeycomb-cover.svg",
+      logoUrl: "/demo/honeycomb-logo.svg",
+      tagline: "Coffee, brunch & honey cake",
+      layout: "grid",
+      palette: "white-honey",
+      backgroundColorHex: "#FFFFFF",
       showGoogleReviewButton: true,
-      sudokuEnabled: false,
+      sudokuEnabled: true,
     },
     externalLinks: [],
     crm: { enabled: true, consentAsk: true, wifiCapture: true, feedbackCapture: true, birthdayAsk: true },

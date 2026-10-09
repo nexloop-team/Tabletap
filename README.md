@@ -44,7 +44,7 @@ Three demo venues are seeded on first start (free access, no owner):
 | URL | Shows |
 |---|---|
 | `/s?i=demo` | Stamp card with reward tiers, hosted menu, plain Wi-Fi, Sudoku |
-| `/s?i=demo-crm` | Dark pub theme, Wi-Fi email gate, marketing consent (18+), birthday ask |
+| `/s?i=demo-crm` | Honeycomb Café: Bento tiles on White & Honey, Indian menu (₹, veg / non-veg marks), Wi-Fi email gate, marketing consent, birthday ask |
 | `/s?i=demo-rewards` | Rewards-only membership, external ordering link, custom link cards |
 
 ## Subscription

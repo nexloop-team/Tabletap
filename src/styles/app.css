@@ -5850,15 +5850,16 @@ body:has(.app) {
 .hero-chip > span:last-child {
   color: var(--a-text-2);
 }
-.hero-chip-top {
-  top: 22%;
-  left: -6%;
-  transform: rotate(-3deg);
-}
-.hero-chip-bottom {
-  bottom: 14%;
-  right: -4%;
+/* Over the phone's edges, clear of the venue name at the top of its screen. */
+.hero-chip-stamp {
+  top: 55%;
+  right: -9%;
   transform: rotate(2deg);
+}
+.hero-chip-wifi {
+  bottom: 12%;
+  left: -9%;
+  transform: rotate(-3deg);
 }
 .hero-chip-icon {
   flex: none;
@@ -5880,10 +5881,10 @@ body:has(.app) {
   background: #d94d66;
 }
 @media (max-width: 900px) {
-  .hero-chip-top {
+  .hero-chip-wifi {
     left: 0;
   }
-  .hero-chip-bottom {
+  .hero-chip-stamp {
     right: 0;
   }
 }

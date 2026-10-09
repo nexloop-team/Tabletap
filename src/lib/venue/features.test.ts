@@ -3,7 +3,7 @@ import { DEMO_VENUES } from "@/server/seed";
 import type { PublicVenue } from "./types";
 import { applyFeatureOrder, buildFeatures, consentAgeThreshold, customFeatureLabel, resolvedTitle, safeImageUrl, sanitiseExternalUrl, wifiView } from "./features";
 
-const [juniper, kettle, bloom] = DEMO_VENUES;
+const [juniper, , bloom] = DEMO_VENUES;
 
 function venue(overrides: Partial<PublicVenue>): PublicVenue {
   return { ...juniper, ...overrides, branding: { ...juniper.branding, ...overrides.branding } };
@@ -20,7 +20,7 @@ describe("buildFeatures", () => {
   });
 
   it("shows loyalty for a rewards-only programme and drops sudoku when disabled", () => {
-    expect(buildFeatures(kettle)).not.toContain("sudoku");
+    expect(buildFeatures(venue({ branding: { sudokuEnabled: false } }))).not.toContain("sudoku");
     expect(buildFeatures(bloom)).toContain("loyalty");
   });
 
@@ -85,7 +85,7 @@ describe("header and helpers", () => {
 
   it("treats open networks as passwordless and raises the age line for pubs", () => {
     expect(wifiView(bloom)).toMatchObject({ isOpen: true, canCopyPassword: false });
-    expect(consentAgeThreshold(kettle)).toBe(18);
+    expect(consentAgeThreshold(venue({ venueType: "pub" }))).toBe(18);
     expect(consentAgeThreshold(juniper)).toBe(13);
   });
 });

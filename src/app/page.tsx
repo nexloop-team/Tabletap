@@ -11,7 +11,7 @@ import "@/styles/app.css";
 
 const DEMO_NOTES: Record<string, string> = {
   demo: "Stamp card, menu with photos, Sudoku",
-  "demo-crm": "Dark venue, Wi-Fi email gate, pub menu",
+  "demo-crm": "Bento tiles, Indian menu with veg marks, Wi-Fi email gate",
   "demo-rewards": "Members club, order online, colours from the logo",
 };
 
@@ -120,10 +120,10 @@ export default async function Home() {
           <div className="hero-visual" aria-hidden>
             <div className="phone">
               <div className="phone-screen">
-                <iframe src="/s?i=demo&s=home&embed=1" title="Example venue page" loading="lazy" tabIndex={-1} />
+                <iframe src="/s?i=demo-crm&s=home&embed=1" title="Example venue page" loading="lazy" tabIndex={-1} />
               </div>
             </div>
-            <div className="hero-chip hero-chip-top">
+            <div className="hero-chip hero-chip-wifi">
               <span className="hero-chip-icon ok">
                 <Check />
               </span>
@@ -132,7 +132,7 @@ export default async function Home() {
                 No more asking at the counter
               </span>
             </div>
-            <div className="hero-chip hero-chip-bottom">
+            <div className="hero-chip hero-chip-stamp">
               <span className="hero-chip-icon rose">
                 <Heart fill="currentColor" />
               </span>
