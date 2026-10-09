@@ -44,8 +44,8 @@ function GuestPreview({ name, tagline, color, cards }: { name: string; tagline: 
       <div className="ob-guest-head">
         <span className="ob-guest-logo">{initials(name, "·")}</span>
         <span>
+          {tagline?.trim() && <span className="ob-guest-tagline">{tagline}</span>}
           <strong>{name.trim() || "Your venue"}</strong>
-          {tagline?.trim() && <span>{tagline}</span>}
         </span>
       </div>
       <ul>
@@ -160,11 +160,14 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
             <BrandMark />
             {BRAND.name}
           </Link>
-          {exitHref && (
-            <Link className="ob-exit" href={exitHref}>
-              Back to dashboard
-            </Link>
-          )}
+          <span className="ob-bar-end">
+            <span className="ob-time">{step === STEPS.length - 1 ? "Almost done" : `About ${STEPS.length - step - 1} minute${STEPS.length - step - 1 === 1 ? "" : "s"} left`}</span>
+            {exitHref && (
+              <Link className="ob-exit" href={exitHref}>
+                Back to dashboard
+              </Link>
+            )}
+          </span>
         </div>
         <ol className="ob-steps" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((label, index) => (
@@ -213,7 +216,7 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
           {step === 1 && (
             <>
               <h1>Pick a colour that feels like {name.trim() || "your place"}</h1>
-              <p>This is your page background. We&apos;ll pick text and button colours that stay easy to read. You can change it later.</p>
+              <p>We&apos;ll match the text and cards to it so everything stays easy to read. You can change it any time.</p>
               <fieldset className="ob-swatches">
                 <legend className="field-label">Suggested colours</legend>
                 <div className="ob-swatch-grid">
@@ -225,8 +228,11 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
                   ))}
                 </div>
               </fieldset>
-              <div className="field">
-                <label htmlFor="hex">Or use your own</label>
+              <div className="field ob-own-box">
+                <span className="ob-own-title">
+                  <label htmlFor="hex">Use your own colour</label>
+                  <span className="hint">Paste a hex code from your sign or cups</span>
+                </span>
                 <div className="ob-own">
                   <input className="color-input" type="color" aria-label="Pick a custom colour" value={color} onChange={(event) => setColor(event.target.value.toUpperCase())} />
                   <HexField value={color} onChange={setColor} />
@@ -323,6 +329,7 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
               <GuestPreview name={name} tagline={tagline} color={color} cards={previewCards} />
             </div>
           </div>
+          <p className="ob-preview-caption">This is what guests will see</p>
         </aside>
       </main>
     </div>

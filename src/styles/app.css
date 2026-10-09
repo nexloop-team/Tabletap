@@ -5034,3 +5034,57 @@ body:has(.app) {
 .preview-foot a {
   font-weight: 600;
 }
+
+.ob-bar-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+.ob-time {
+  font-size: 13px;
+  color: var(--a-text-3);
+}
+.ob-guest-head strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.ob-guest-tagline {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ob-own-box {
+  padding: 14px;
+  border: 1.5px dashed var(--a-border-strong);
+  border-radius: var(--a-radius);
+}
+.ob-own-title {
+  display: grid;
+  gap: 2px;
+}
+.ob-own-title label {
+  font-weight: 600;
+}
+.ob-preview-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--a-accent-text);
+}
+.ob-preview-caption::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--a-accent);
+}
