@@ -6,15 +6,23 @@ import { logoColours } from "@/lib/logo-colours";
 import { computeTheme, tilePalette, tileSource } from "@/lib/theme";
 import type { VenueBranding } from "@/lib/venue/types";
 
-/** Deep shades white text reads on: the main tile colour. */
+/**
+ * Premium main colours: one deep anchor each, the shades fine-dining and
+ * café brands lean on, plus black and white for a monochrome look.
+ */
 const MAIN_SWATCHES: [name: string, hex: string][] = [
-  ["Forest", "#1F3D2B"],
-  ["Olive", "#3E4A1E"],
-  ["Navy", "#1F3A5F"],
-  ["Plum", "#4A2545"],
-  ["Espresso", "#3B2A20"],
-  ["Brick", "#8C3B26"],
-  ["Charcoal", "#222222"],
+  ["Emerald", "#0F3D33"],
+  ["Midnight", "#0F172A"],
+  ["Oxblood", "#5B1A2A"],
+  ["Espresso", "#2E2A26"],
+  ["Olive", "#3D4127"],
+  ["Deep teal", "#0E4D52"],
+  ["Plum", "#3F1D38"],
+  ["Terracotta", "#9A3F28"],
+  ["Champagne", "#B08D3F"],
+  ["Charcoal", "#1C1C1E"],
+  ["Black", "#000000"],
+  ["White", "#FFFFFF"],
 ];
 
 

@@ -1912,11 +1912,11 @@ body:has(.app) {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 16px 120px;
+  padding: 24px 16px 48px;
 }
 @media (min-width: 768px) {
   .page {
-    padding: 32px 32px 120px;
+    padding: 32px 32px 56px;
   }
 }
 .page-medium {
@@ -2049,7 +2049,7 @@ body:has(.app) {
 .stats {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 .stat {
   display: flex;
@@ -5861,4 +5861,22 @@ body:has(.app) {
 }
 .print-format-pick {
   flex-wrap: wrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .swatch {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+}
+
+/* Room for the floating save bar only on pages that have one. */
+.page:has(.savebar),
+.page:has(.mobile-preview-btn) {
+  padding-bottom: 120px;
+}
+/* Wide screens: let the dashboard use more of the width. */
+@media (min-width: 1600px) {
+  .page:not(.page-narrow) {
+    max-width: 1440px;
+  }
 }

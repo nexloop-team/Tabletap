@@ -165,7 +165,10 @@ export function tilePalette(branding: VenueBranding, isLightCards: boolean): Rec
       : hslToHex(h, Math.min(sat, 0.6), 0.2);
 
   // The second colour is always automatic: a brighter shade of the same hue, light enough for dark text.
-  const pop = readable(grey ? hslToHex(85, 0.55, 0.6) : hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
+  // Black, white and greys stay monochrome: the bright shade is a lighter grey.
+  const pop = grey
+    ? readable(hslToHex(0, 0, baseL > 0.85 ? 0.84 : Math.min(0.8, baseL + 0.55)), "lighter")
+    : readable(hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
 
   const pale = isLightCards
     ? hslToHex(h, grey ? 0 : Math.min(sat, 0.4), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))

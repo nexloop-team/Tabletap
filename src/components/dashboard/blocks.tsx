@@ -98,7 +98,9 @@ export function DailyBars({ data, label, unit, today = false }: { data: { day: s
       <figcaption className="visually-hidden">
         {label}: {noun(total)} in {data.length} days.
       </figcaption>
-      <table className="visually-hidden">
+      {/* Wrapped: a table can't shrink to the 1px hidden box itself, and would stretch the page. */}
+      <div className="visually-hidden">
+      <table>
         <thead>
           <tr>
             <th scope="col">Day</th>
@@ -114,6 +116,7 @@ export function DailyBars({ data, label, unit, today = false }: { data: { day: s
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

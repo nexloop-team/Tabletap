@@ -1540,7 +1540,8 @@
   position: relative;
   background: var(--tile-bg);
   color: var(--tile-fg);
-  box-shadow: none;
+  /* A hairline so a white tile still shows on a white page. */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07);
   border-radius: max(var(--shape-card), 4px);
 }
 .landing[data-shape="rounded"] .tile-wrap,
@@ -1750,9 +1751,10 @@ svg.tile-glyph {
   font-size: 14px;
   font-weight: 700;
 }
+/* The tile's own colours flipped, so the button shows on any tile (white on deep, deep on white). */
 .tile-chip-light {
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--tile-on-hero);
+  color: var(--tile-hero);
 }
 
 /* Menu: tall, with a faint knife and fork and an arrow out. */
