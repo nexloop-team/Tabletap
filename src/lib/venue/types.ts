@@ -87,7 +87,7 @@ export interface VenueBranding {
   backgroundColorHex?: string | null;
   /** Grid layout: the colour its tiles are shaded from. Absent means the page colour, or a deep green on white or black pages. */
   tileColorHex?: string | null;
-  /** Bento: the second colour (Wi-Fi tile, stamp bars, stars). Absent means a brighter shade of the tile colour. */
+  /** No longer used: the second colour is always a brighter shade of the tile colour. Kept so older saves still load. */
   tileAccentHex?: string | null;
   /** Bento: where the tile colours came from, for the editor. Absent: "custom" if a tile colour is set, else "page". */
   tileSource?: "logo" | "page" | "custom" | null;

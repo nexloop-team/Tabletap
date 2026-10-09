@@ -134,12 +134,11 @@ function readable(hex: string, direction: "lighter" | "darker"): string {
  * The bento layout's three tile shades:
  *
  * - **hero** (loyalty, Google review): the main tile colour;
- * - **pop** (Wi-Fi, stamp bars, pills, stars): the second colour, or by
- *   default a brighter shade of the main one, so green gives greens;
+ * - **pop** (Wi-Fi, stamp bars, pills, stars): a brighter shade of the main
+ *   one, worked out automatically, so green gives greens;
  * - **pale** (everything else): a wash lifted off the page colour.
  *
- * The main and second colours come from the logo, the owner's pick, or the
- * page colour. Text on each is whichever of black or white reads better, and
+ * The main colour comes from the logo, the owner's pick, or the page colour. Text on each is whichever of black or white reads better, and
  * a shade is nudged lighter or darker until that passes AA.
  */
 export function tilePalette(branding: VenueBranding, isLightCards: boolean): Record<string, string> {
@@ -152,7 +151,6 @@ export function tilePalette(branding: VenueBranding, isLightCards: boolean): Rec
   const floor = Math.max(pageL, 0.1);
 
   const picked = source !== "page" && hexToRgb(branding.tileColorHex?.trim() ?? "") ? `#${branding.tileColorHex!.trim().replace(/^#/, "").toUpperCase()}` : null;
-  const second = source !== "page" && hexToRgb(branding.tileAccentHex?.trim() ?? "") ? `#${branding.tileAccentHex!.trim().replace(/^#/, "").toUpperCase()}` : null;
   const base = picked ?? (pageHsl && pageHsl.s > 0.15 && pageHsl.l > 0.08 && pageHsl.l < 0.92 ? pageHex : DEFAULT_TILE);
   const { h, s, l: baseL } = rgbToHsl(hexToRgb(base)!);
   const grey = s < 0.1;
@@ -166,10 +164,8 @@ export function tilePalette(branding: VenueBranding, isLightCards: boolean): Rec
       ? hslToHex(h, Math.min(sat, 0.5), Math.min(floor + 0.16, 0.38))
       : hslToHex(h, Math.min(sat, 0.6), 0.2);
 
-  // The second colour: as picked, or a brighter shade of the same hue (light enough for dark text).
-  const pop = second
-    ? readable(second, rgbToHsl(hexToRgb(second)!).l > 0.45 ? "lighter" : "darker")
-    : readable(grey ? hslToHex(85, 0.55, 0.6) : hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
+  // The second colour is always automatic: a brighter shade of the same hue, light enough for dark text.
+  const pop = readable(grey ? hslToHex(85, 0.55, 0.6) : hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
 
   const pale = isLightCards
     ? hslToHex(h, grey ? 0 : Math.min(sat, 0.4), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))

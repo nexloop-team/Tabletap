@@ -54,7 +54,7 @@ describe("tile palette", () => {
   });
 });
 
-describe("second tile colour", () => {
+describe("automatic second tile colour", () => {
   const hue = (hex: string) => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
     const max = Math.max(r, g, b);
@@ -70,10 +70,12 @@ describe("second tile colour", () => {
     expect(relativeLuminance(p["--tile-pop"])).toBeGreaterThan(relativeLuminance(p["--tile-hero"]));
   });
 
-  it("uses a picked second colour, keeping text readable", () => {
-    for (const second of ["#8BC34A", "#7FB2E5", "#E1B53B", "#3355AA", "#777777"]) {
-      const p = tilePalette({ backgroundColorHex: "#FFFFFF", tileSource: "custom", tileColorHex: "#4A2545", tileAccentHex: second }, true);
-      expect(contrast(p["--tile-pop"], p["--tile-on-pop"]), second).toBeGreaterThanOrEqual(4.5);
+  it("works the second colour out itself, ignoring any stored one", () => {
+    const picked = tilePalette({ backgroundColorHex: "#FFFFFF", tileSource: "custom", tileColorHex: "#4A2545", tileAccentHex: "#E1B53B" }, true);
+    expect(picked).toEqual(tilePalette({ backgroundColorHex: "#FFFFFF", tileSource: "custom", tileColorHex: "#4A2545" }, true));
+    for (const main of ["#1F3D2B", "#1F3A5F", "#8C3B26", "#C8803F", "#222222"]) {
+      const p = tilePalette({ backgroundColorHex: "#FFFFFF", tileSource: "custom", tileColorHex: main }, true);
+      expect(contrast(p["--tile-pop"], p["--tile-on-pop"]), main).toBeGreaterThanOrEqual(4.5);
     }
   });
 

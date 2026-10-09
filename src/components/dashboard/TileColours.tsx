@@ -17,16 +17,6 @@ const MAIN_SWATCHES: [name: string, hex: string][] = [
   ["Charcoal", "#222222"],
 ];
 
-/** Brighter colours for the Wi-Fi tile, stamp bars and stars. */
-const SECOND_SWATCHES: [name: string, hex: string][] = [
-  ["Lime", "#8BC34A"],
-  ["Mint", "#5FBF84"],
-  ["Sky", "#7FB2E5"],
-  ["Lavender", "#A99BE0"],
-  ["Peach", "#F2A774"],
-  ["Mustard", "#E1B53B"],
-  ["Rose", "#E88A9A"],
-];
 
 type Source = "logo" | "page" | "custom";
 
@@ -41,16 +31,11 @@ function Strip({ branding }: { branding: VenueBranding }) {
   );
 }
 
-function ColourRow({ label, hint, value, swatches, onChange, autoLabel }: { label: string; hint: string; value: string | null; swatches: [string, string][]; onChange: (hex: string | null) => void; autoLabel?: string }) {
+function ColourRow({ label, hint, value, swatches, onChange }: { label: string; hint: string; value: string | null; swatches: [string, string][]; onChange: (hex: string) => void }) {
   return (
     <div className="field">
       <span className="field-label">{label}</span>
       <div className="swatches">
-        {autoLabel && (
-          <button type="button" className="btn btn-sm" aria-pressed={!value} onClick={() => onChange(null)}>
-            {autoLabel}
-          </button>
-        )}
         {swatches.map(([name, swatch]) => (
           <button key={swatch} type="button" className="swatch" style={{ background: swatch }} aria-label={name} title={name} aria-pressed={(value ?? "").toUpperCase() === swatch} onClick={() => onChange(swatch)} />
         ))}
@@ -63,8 +48,8 @@ function ColourRow({ label, hint, value, swatches, onChange, autoLabel }: { labe
 
 /**
  * Bento tile colours: from the logo (two colours read off it), worked out
- * from the page colour, or picked. Picking gives a main colour and a second
- * one; leave the second on Auto for shades of the main colour.
+ * from the page colour, or picked. The owner only chooses the main colour;
+ * the bright and pale shades are always worked out from it.
  */
 export function TileColours({ branding, onChange }: { branding: VenueBranding; onChange: (patch: Partial<VenueBranding>) => void }) {
   const source = tileSource(branding);
@@ -79,7 +64,7 @@ export function TileColours({ branding, onChange }: { branding: VenueBranding; o
     try {
       const colours = await logoColours(logo);
       if (!colours) throw new Error("no colours");
-      onChange({ tileSource: "logo", tileColorHex: colours.main, tileAccentHex: colours.accent });
+      onChange({ tileSource: "logo", tileColorHex: colours.main, tileAccentHex: null });
     } catch {
       setError("We couldn't read colours from your logo. Pick a colour instead.");
     } finally {
@@ -128,18 +113,10 @@ export function TileColours({ branding, onChange }: { branding: VenueBranding; o
         <div className="tile-colour-rows">
           <ColourRow
             label="Main colour"
-            hint="The loyalty and review tiles."
+            hint="The loyalty and review tiles. The Wi-Fi tile, stamp bars and stars use brighter shades of it automatically, so green stays green."
             value={branding.tileColorHex ?? null}
             swatches={MAIN_SWATCHES}
-            onChange={(hex) => onChange({ tileSource: "custom", tileColorHex: hex ?? MAIN_SWATCHES[0][1] })}
-          />
-          <ColourRow
-            label="Second colour"
-            hint="The Wi-Fi tile, stamp bars and stars. Auto uses brighter shades of your main colour, so green stays green."
-            value={branding.tileAccentHex ?? null}
-            swatches={SECOND_SWATCHES}
-            autoLabel="Auto"
-            onChange={(hex) => onChange({ tileSource: source === "logo" ? "logo" : "custom", tileAccentHex: hex })}
+            onChange={(hex) => onChange({ tileSource: "custom", tileColorHex: hex, tileAccentHex: null })}
           />
         </div>
       )}
