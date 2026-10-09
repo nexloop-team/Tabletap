@@ -10,6 +10,7 @@ import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
 import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { MobilePreview } from "./MobilePreview";
+import { TileColours } from "./TileColours";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -26,16 +27,6 @@ const SWATCHES: [name: string, hex: string][] = [
   ["Black", "#111111"],
 ];
 
-/** Bento tile colours: deep shades that white text reads on. */
-const TILE_SWATCHES: [name: string, hex: string][] = [
-  ["Forest", "#1F3D2B"],
-  ["Olive", "#3E4A1E"],
-  ["Navy", "#1F3A5F"],
-  ["Plum", "#4A2545"],
-  ["Espresso", "#3B2A20"],
-  ["Brick", "#8C3B26"],
-  ["Charcoal", "#222222"],
-];
 
 const APPEARANCES = [
   { value: null, label: "Auto" },
@@ -371,36 +362,7 @@ export function DesignEditor({
               ))}
             </div>
           </div>
-          {branding.layout === "grid" && (
-            <div className="field">
-              <span className="field-label">Tile colour</span>
-              <div className="swatches">
-                <button type="button" className="btn btn-sm" aria-pressed={!branding.tileColorHex} onClick={() => setBranding({ tileColorHex: null })}>
-                  Auto
-                </button>
-                {TILE_SWATCHES.map(([name, swatch]) => (
-                  <button
-                    key={swatch}
-                    type="button"
-                    className="swatch"
-                    style={{ background: swatch }}
-                    aria-label={name}
-                    title={name}
-                    aria-pressed={(branding.tileColorHex ?? "").toUpperCase() === swatch}
-                    onClick={() => setBranding({ tileColorHex: swatch })}
-                  />
-                ))}
-                <input
-                  className="color-input"
-                  type="color"
-                  aria-label="Pick a custom tile colour"
-                  value={branding.tileColorHex ?? "#1F3D2B"}
-                  onChange={(event) => setBranding({ tileColorHex: event.target.value.toUpperCase() })}
-                />
-              </div>
-              <span className="hint">Use your logo&apos;s main colour. The loyalty and review tiles use it; the others are brighter and paler shades of it. Auto uses your background colour.</span>
-            </div>
-          )}
+          {branding.layout === "grid" && <TileColours branding={branding} onChange={setBranding} />}
           <div className="row">
             <div className="field">
               <span className="field-label" id="header-style-label">

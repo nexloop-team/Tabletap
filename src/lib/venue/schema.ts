@@ -92,6 +92,8 @@ export const brandingSchema = z.object({
   tagline: optionalText(120),
   backgroundColorHex: hexColor,
   tileColorHex: hexColor,
+  tileAccentHex: hexColor,
+  tileSource: z.enum(["logo", "page", "custom"]).nullish(),
   appearance: z.enum(["light", "dark"]).nullish(),
   style: z.enum(["classic", "editorial", "modern"]).nullish(),
   showGoogleReviewButton: z.boolean().optional(),

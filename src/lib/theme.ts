@@ -108,36 +108,71 @@ function textOn(hex: string): string {
 /** Deep green: the grid's tile colour when the page is white, black or grey and the owner hasn't picked one. */
 const DEFAULT_TILE = "#2F5D3A";
 
+/** Where the bento tile colours come from: the logo, the page colour, or the owner's own pick. */
+export function tileSource(branding: VenueBranding): "logo" | "page" | "custom" {
+  // Before there was a choice, a stored tile colour meant "picked".
+  return branding.tileSource ?? (hexToRgb(branding.tileColorHex?.trim() ?? "") ? "custom" : "page");
+}
+
+/** Nudge a colour's lightness until black or white text on it passes AA (4.5:1). */
+function readable(hex: string, direction: "lighter" | "darker"): string {
+  const { h, s, l } = rgbToHsl(hexToRgb(hex)!);
+  const passes = (c: string) => {
+    const lum = relativeLuminance(c);
+    return Math.max(1.05 / (lum + 0.05), (lum + 0.05) / 0.06) >= 4.5;
+  };
+  let light = l;
+  let colour = hex;
+  for (let i = 0; i < 40 && !passes(colour); i++) {
+    light = direction === "lighter" ? Math.min(0.95, light + 0.015) : Math.max(0.05, light - 0.015);
+    colour = hslToHex(h, s, light);
+  }
+  return colour.toUpperCase();
+}
+
 /**
- * The grid layout's three tile shades, all from one colour: a deep "hero"
- * shade for the loyalty and review tiles, a bright "pop" shade (the hue
- * nudged towards yellow) for Wi-Fi, and a pale wash for everything else.
- * Text on each is whichever of black or white reads better.
+ * The bento layout's three tile shades:
+ *
+ * - **hero** (loyalty, Google review): the main tile colour;
+ * - **pop** (Wi-Fi, stamp bars, pills, stars): the second colour, or by
+ *   default a brighter shade of the main one, so green gives greens;
+ * - **pale** (everything else): a wash lifted off the page colour.
+ *
+ * The main and second colours come from the logo, the owner's pick, or the
+ * page colour. Text on each is whichever of black or white reads better, and
+ * a shade is nudged lighter or darker until that passes AA.
  */
 export function tilePalette(branding: VenueBranding, isLightCards: boolean): Record<string, string> {
-  const picked = branding.tileColorHex?.trim() ?? "";
+  const source = tileSource(branding);
   const pageHex = branding.backgroundColorHex?.trim() ?? "";
   const page = hexToRgb(pageHex);
   const pageHsl = page ? rgbToHsl(page) : null;
-  const base = hexToRgb(picked) ? picked : pageHsl && pageHsl.s > 0.15 && pageHsl.l > 0.08 && pageHsl.l < 0.92 ? pageHex : DEFAULT_TILE;
-  const { h, s } = rgbToHsl(hexToRgb(base)!);
-  const grey = s < 0.1;
-  const sat = grey ? 0 : Math.max(s, 0.35);
-  // Tiles must stand off the page: on a dark page they're lighter than it, on a pale one darker.
   const pageL = pageHsl?.l ?? 1;
   const darkPage = !isLightColor(page ? pageHex : "#FFFFFF");
   const floor = Math.max(pageL, 0.1);
-  const pickedHero = hexToRgb(picked) && relativeLuminance(picked) <= 0.18 ? `#${picked.replace(/^#/, "").toUpperCase()}` : null;
-  // A picked colour is used as-is for the hero tiles when white text reads on it (and, on a dark page, it isn't the page itself).
-  const hero = pickedHero && !(darkPage && Math.abs(rgbToHsl(hexToRgb(pickedHero)!).l - pageL) < 0.08) ? pickedHero : darkPage ? hslToHex(h, Math.min(sat, 0.5), Math.min(floor + 0.16, 0.38)) : hslToHex(h, Math.min(sat, 0.6), 0.2);
-  const popHue = grey ? 85 : h - 35;
-  const popSat = grey ? 0.6 : Math.min(Math.max(sat, 0.55), 0.75);
-  // Bright, but light enough that dark text on it passes AA (some hues sit at a mid-tone where neither does).
-  let popLight = 0.56;
-  while (popLight < 0.85 && (relativeLuminance(hslToHex(popHue, popSat, popLight)) + 0.05) / 0.06 < 4.5) popLight += 0.02;
-  const pop = hslToHex(popHue, popSat, popLight);
+
+  const picked = source !== "page" && hexToRgb(branding.tileColorHex?.trim() ?? "") ? `#${branding.tileColorHex!.trim().replace(/^#/, "").toUpperCase()}` : null;
+  const second = source !== "page" && hexToRgb(branding.tileAccentHex?.trim() ?? "") ? `#${branding.tileAccentHex!.trim().replace(/^#/, "").toUpperCase()}` : null;
+  const base = picked ?? (pageHsl && pageHsl.s > 0.15 && pageHsl.l > 0.08 && pageHsl.l < 0.92 ? pageHex : DEFAULT_TILE);
+  const { h, s, l: baseL } = rgbToHsl(hexToRgb(base)!);
+  const grey = s < 0.1;
+  const sat = grey ? 0 : Math.max(s, 0.35);
+
+  // A picked colour is used as-is (only nudged for readable text), unless it would vanish into a dark page.
+  const blendsIn = picked && darkPage && Math.abs(baseL - pageL) < 0.08;
+  const hero = picked && !blendsIn
+    ? readable(picked, baseL > 0.5 ? "lighter" : "darker")
+    : darkPage
+      ? hslToHex(h, Math.min(sat, 0.5), Math.min(floor + 0.16, 0.38))
+      : hslToHex(h, Math.min(sat, 0.6), 0.2);
+
+  // The second colour: as picked, or a brighter shade of the same hue (light enough for dark text).
+  const pop = second
+    ? readable(second, rgbToHsl(hexToRgb(second)!).l > 0.45 ? "lighter" : "darker")
+    : readable(grey ? hslToHex(85, 0.55, 0.6) : hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
+
   const pale = isLightCards
-    ? hslToHex(h - 15, grey ? 0 : Math.min(sat, 0.45), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))
+    ? hslToHex(h, grey ? 0 : Math.min(sat, 0.4), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))
     : hslToHex(h, Math.min(sat, 0.25), darkPage ? Math.min(floor + 0.08, 0.3) : 0.17);
   return {
     "--tile-hero": hero,
