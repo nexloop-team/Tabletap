@@ -142,6 +142,25 @@ describe("venues on the SaaS side", () => {
     expect(m.venues.findVenue(venue.id)?.loyaltyProgram?.rewardName).toBe("Free coffee");
   });
 
+  it("finds a lapsed venue for the Back soon page, but not a wrong code", async () => {
+    const user = await owner("paused@example.com");
+    const venue = onboard(user, "Paused Cafe");
+    expect(m.venues.findPausedVenue(venue.shortCode)).toBeNull();
+    m.db.getDb().prepare("UPDATE subscriptions SET trial_ends_at = ? WHERE venue_id = ?").run(new Date(Date.now() - 1000).toISOString(), venue.id);
+    expect(m.venues.findPausedVenue(venue.shortCode)?.name).toBe("Paused Cafe");
+    expect(m.venues.findPausedVenue("no-such-venue")).toBeNull();
+  });
+
+  it("subscribing again before a cancelled year ends keeps the paid-up date (dev mode)", async () => {
+    const user = await owner("again@example.com");
+    const venue = onboard(user, "Again Cafe");
+    const end = new Date(Date.now() + 100 * 86_400_000).toISOString();
+    m.subscriptions.updateSubscription(venue.id, { paid: true, status: "active", provider: "dev", cancelAtPeriodEnd: true, currentPeriodEnd: end });
+    const record = m.venues.getVenueRecord(venue.id)!;
+    await m.billing.startCheckout(record, user, "http://localhost");
+    expect(m.subscriptions.getSubscription(venue.id)).toMatchObject({ paid: true, cancelAtPeriodEnd: false, currentPeriodEnd: end });
+  });
+
   it("extends a lapsed trial from today", async () => {
     const user = await owner("c2@example.com");
     const venue = onboard(user, "Lapsed");

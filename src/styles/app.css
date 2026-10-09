@@ -3837,37 +3837,183 @@ body:has(.app) {
   width: min(794px, 100%);
   aspect-ratio: 210 / 297;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
   background: #fff;
   color: #16181a;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   container-type: inline-size;
+  overflow: hidden;
 }
-.tent {
+.print-formats {
+  margin: 0 auto 18px;
+  display: flex;
+  width: fit-content;
+}
+.print-formats a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--a-text-2);
+  font-size: 14px;
+  text-decoration: none;
+}
+.print-formats a[aria-current="true"] {
+  background: var(--a-surface);
+  color: var(--a-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+.table-chip {
+  display: inline-block;
+  padding: 0.5cqi 2cqi;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  font-size: max(10px, 1.8cqi);
+  font-weight: 700;
+}
+.print-sheets[data-style="classic"] :is(.a6-name, .sticker-name) {
+  font-family: "Playfair Display SC", Georgia, serif;
+}
+.print-sheets[data-style="editorial"] :is(.a6-name, .sticker-name) {
+  font-family: Petrona, Georgia, serif;
+}
+.print-sheets[data-style="modern"] :is(.a6-name, .sticker-name) {
+  font-family: Outfit, system-ui, sans-serif;
+}
+
+/* A6: four cards in the venue's colours. */
+.print-page[data-format="a6"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.a6-card {
   min-width: 0;
-  padding: 5.5cqi;
+  padding: 5cqi 4cqi 3.5cqi;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 2cqi;
+  gap: 1.4cqi;
   text-align: center;
-  break-inside: avoid;
+  outline: 1px dashed #b8b7b0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
-/* Cut lines between the four cards. */
-.tent:nth-child(odd) {
-  border-right: 1px dashed #b8b7b0;
+.a6-logo {
+  width: 8cqi;
+  height: 8cqi;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  color: #16181a;
+  font-size: 2.6cqi;
+  font-weight: 800;
+  border: 0.5cqi solid rgba(255, 255, 255, 0.6);
 }
-.tent:nth-child(-n + 2) {
+.a6-name {
+  font-size: max(13px, 3.4cqi);
+  font-weight: 800;
+  line-height: 1.1;
+}
+.a6-tagline {
+  font-size: max(9px, 1.6cqi);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.a6-rule {
+  width: 14cqi;
+  height: 1px;
+  margin: 0.6cqi 0;
+  background: var(--text-tertiary);
+}
+.app .a6-card h2 {
+  margin: 0;
+  font-family: var(--font-sans), var(--font-ui);
+  font-size: max(12px, 2.8cqi);
+  line-height: 1.2;
+  text-wrap: balance;
+  color: inherit;
+}
+.a6-qr {
+  padding: 1.6cqi;
+  border-radius: 2.4cqi;
+  background: #ffffff;
+}
+.a6-qr img {
+  display: block;
+  width: 20cqi;
+  height: 20cqi;
+}
+.a6-foot {
+  margin-top: auto;
+  align-self: stretch;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: max(9px, 1.6cqi);
+  color: var(--text-secondary);
+}
+.a6-foot .table-chip {
+  color: var(--text-primary);
+}
+
+/* Tent: two to a sheet; the top panel is upside down so both sides read once folded. */
+.print-page[data-format="tent"] {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.tent-card {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
   border-bottom: 1px dashed #b8b7b0;
 }
-.tent-venue {
+.tent-card:last-child {
+  border-bottom: 0;
+}
+.tent-flipped {
+  transform: rotate(180deg);
+}
+.tent-fold {
+  padding: 0 3cqi;
+  border-top: 1px dashed #b8b7b0;
+  text-align: right;
+  font-size: max(8px, 1.3cqi);
+  color: #8a8f94;
+}
+.tent-panel {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 1.3cqi;
+  gap: 5cqi;
+  padding: 3cqi 6cqi;
+}
+.tent-qr {
+  flex: none;
+  padding: 1.6cqi;
+  border: 2px solid #16181a;
+  border-radius: 2.4cqi;
+}
+.tent-qr img {
+  display: block;
+  width: 20cqi;
+  height: 20cqi;
+}
+.tent-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.2cqi;
+  min-width: 0;
+}
+.tent-venue {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.4cqi;
   font-size: max(11px, 2cqi);
-  font-weight: 600;
+  font-weight: 700;
 }
 .tent-logo {
   width: 5cqi;
@@ -3882,53 +4028,104 @@ body:has(.app) {
   font-size: 1.8cqi;
   font-weight: 700;
 }
-.app .tent h2 {
-  font-size: max(14px, 3.3cqi);
-  line-height: 1.1;
+.app .tent-text h2 {
+  margin: 0;
+  font-size: max(16px, 4.6cqi);
+  line-height: 1.05;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
-.tent-qr {
-  padding: 1.5cqi;
-  border: 2px solid #16181a;
-  border-radius: 2cqi;
-}
-.tent-qr img {
-  display: block;
-  width: 21cqi;
-  height: 21cqi;
-}
-.tent p {
-  font-size: max(11px, 2cqi);
-  line-height: 1.35;
-  color: #16181a;
-}
-.tent-foot {
-  align-self: stretch;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.tent .table-label {
-  font-family: var(--a-font-display);
-  font-size: max(13px, 2.5cqi);
-  color: #16181a;
-}
-.tent-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75cqi;
-  font-family: var(--a-font-display);
-  font-size: max(9px, 1.5cqi);
-  text-transform: lowercase;
+.tent-text p {
+  margin: 0;
+  font-size: max(10px, 1.9cqi);
   color: #4a4f54;
-  --mark-ink: #fff;
 }
-.tent-brand svg {
-  width: max(10px, 1.8cqi);
-  height: max(10px, 1.8cqi);
-  color: #24573f;
+
+/* Round stickers: the venue name round the top, what the code opens round the bottom. */
+.print-page[data-format="sticker"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  padding: 4cqi;
+  gap: 3cqi;
+}
+.sticker-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1cqi;
+}
+.sticker {
+  position: relative;
+  width: 36cqi;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1cqi solid var(--tile-pop, #e8b8a0);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sticker-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+.sticker-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+.sticker-offers {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+.sticker-qr {
+  padding: 1.4cqi;
+  border-radius: 2cqi;
+  background: #ffffff;
+}
+.sticker-qr img {
+  display: block;
+  width: 15cqi;
+  height: 15cqi;
+}
+.sticker-label {
+  font-size: max(9px, 1.5cqi);
+  color: #8a8f94;
+}
+
+/* Wi-Fi signs: pointers to the table codes, two columns of six. */
+.print-page[data-format="wifi"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  padding: 4cqi;
+  gap: 3cqi;
+}
+.wifi-sign {
+  display: flex;
+  align-items: center;
+  gap: 2.4cqi;
+  padding: 2cqi 3cqi;
+  border-radius: 2.4cqi;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.wifi-sign svg {
+  flex: none;
+  width: 5cqi;
+  height: 5cqi;
+}
+.wifi-sign span {
+  font-size: max(9px, 1.6cqi);
+  line-height: 1.3;
+}
+.wifi-sign strong {
+  display: block;
+  font-size: max(12px, 2.6cqi);
 }
 
 @media print {
