@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { BILLING_PERIOD, formatInr, PRICE_INR, type SubscriptionStatus } from "@/lib/plans";
+import { BILLING_PERIOD, formatInr, parseDbDate, PRICE_INR, type SubscriptionStatus } from "@/lib/plans";
 import { BRAND } from "@/config/brand";
 import type { CheckoutStart, ConfirmPaymentRequest } from "@/lib/api/account-contracts";
 import { ServiceError } from "../http";
@@ -62,8 +62,17 @@ export async function startCheckout(venue: VenueRecord, user: User, origin: stri
   const mode = billingMode();
   const billingPage = `${origin}/dashboard/${venue.id}/billing`;
   if (mode === "disabled") throw new ServiceError(503, "Payments aren't set up yet");
+  const existing = getSubscription(venue.id);
+  // "Subscribe again" while a cancelled year is still running: the new subscription starts when it ends, so nobody pays twice.
+  const resumeAt = existing?.paid && existing.cancelAtPeriodEnd ? (parseDbDate(existing.currentPeriodEnd) ?? 0) : 0;
+  const resuming = resumeAt > Date.now();
   if (mode === "dev") {
-    updateSubscription(venue.id, { paid: true, status: "active", provider: "dev", cancelAtPeriodEnd: false, currentPeriodEnd: new Date(Date.now() + YEAR_MS).toISOString() });
+    updateSubscription(
+      venue.id,
+      resuming
+        ? { cancelAtPeriodEnd: false }
+        : { paid: true, status: "active", provider: "dev", cancelAtPeriodEnd: false, currentPeriodEnd: new Date(Date.now() + YEAR_MS).toISOString() },
+    );
     return { kind: "redirect", url: `${billingPage}?subscribed=1` };
   }
   const sub = await razorpay<RazorpaySubscription>("POST", "/subscriptions", {
@@ -71,6 +80,7 @@ export async function startCheckout(venue: VenueRecord, user: User, origin: stri
     total_count: TOTAL_CYCLES,
     quantity: 1,
     customer_notify: 1,
+    ...(resuming ? { start_at: Math.floor(resumeAt / 1000) } : {}),
     notes: { venue_id: venue.id, venue_name: venue.config.name.slice(0, 200), owner_email: user.email },
   });
   return {
@@ -100,6 +110,9 @@ export async function confirmCheckout(venue: VenueRecord, input: ConfirmPaymentR
   }
   const sub = await razorpay<RazorpaySubscription>("GET", `/subscriptions/${encodeURIComponent(input.subscriptionId)}`);
   if (venueIdFromNotes(sub.notes) !== venue.id) throw new ServiceError(400, "That payment belongs to a different venue");
+  const existing = getSubscription(venue.id);
+  // A subscription that starts later (subscribing again before a cancelled year ends) keeps the year already paid for.
+  const keepPeriod = !sub.current_end && existing?.paid && (parseDbDate(existing.currentPeriodEnd) ?? 0) > Date.now();
   updateSubscription(venue.id, {
     paid: true,
     status: "active",
@@ -107,7 +120,7 @@ export async function confirmCheckout(venue: VenueRecord, input: ConfirmPaymentR
     providerCustomerId: sub.customer_id ?? null,
     providerSubscriptionId: sub.id,
     cancelAtPeriodEnd: false,
-    currentPeriodEnd: new Date(sub.current_end ? sub.current_end * 1000 : Date.now() + YEAR_MS).toISOString(),
+    currentPeriodEnd: keepPeriod ? existing!.currentPeriodEnd : new Date(sub.current_end ? sub.current_end * 1000 : Date.now() + YEAR_MS).toISOString(),
   });
 }
 

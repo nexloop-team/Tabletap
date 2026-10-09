@@ -10,6 +10,8 @@ export interface Subscription extends SubscriptionState {
   providerSubscriptionId: string | null;
   /** Cancelled by the owner: stays paid until `currentPeriodEnd`, then lapses. */
   cancelAtPeriodEnd: boolean;
+  /** Last change, e.g. when a payment failed or the subscription ended. */
+  updatedAt: string | null;
 }
 
 interface SubscriptionRow {
@@ -23,6 +25,7 @@ interface SubscriptionRow {
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
   cancel_at_period_end: number;
+  updated_at: string | null;
 }
 
 function toSubscription(row: SubscriptionRow): Subscription {
@@ -36,6 +39,7 @@ function toSubscription(row: SubscriptionRow): Subscription {
     providerCustomerId: row.provider_customer_id,
     providerSubscriptionId: row.provider_subscription_id,
     cancelAtPeriodEnd: !!row.cancel_at_period_end,
+    updatedAt: row.updated_at,
   };
 }
 

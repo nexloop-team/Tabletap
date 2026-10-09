@@ -37,7 +37,7 @@ function loadCheckout(): Promise<boolean> {
 }
 
 /** Subscribe (Razorpay Checkout in a pop-up, or straight on in dev mode). */
-export function SubscribeButton({ venueId, label }: { venueId: string; label: string }) {
+export function SubscribeButton({ venueId, label, variant = "primary" }: { venueId: string; label: string; variant?: "primary" | "light" }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export function SubscribeButton({ venueId, label }: { venueId: string; label: st
 
   return (
     <div>
-      <button type="button" className="btn btn-primary btn-block" onClick={go} disabled={pending}>
+      <button type="button" className={variant === "light" ? "btn btn-block plan-subscribe" : "btn btn-primary"} onClick={go} disabled={pending}>
         {pending && <Loader2 className="spin" aria-hidden />}
         {label}
       </button>

@@ -1,17 +1,102 @@
 import type { Metadata } from "next";
-import { Check } from "lucide-react";
+import { Check, ExternalLink, Lock } from "lucide-react";
+import { BrandMark } from "@/components/icons";
 import { CancelSubscriptionButton, SubscribeButton } from "@/components/dashboard/BillingActions";
 import { BRAND } from "@/config/brand";
-import { accessBadge, BILLING_PERIOD, formatInr, GST_RATE, parseDbDate, PLAN_FEATURES, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS } from "@/lib/plans";
+import { accessBadge, BILLING_PERIOD, formatInr, GST_RATE, parseDbDate, PLAN_FEATURES, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS, trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
-import { firstParam } from "@/server/request";
 import { billingMode } from "@/server/services/billing";
+import { guestPageUrl } from "@/server/services/qr";
+import { firstParam, serverOrigin } from "@/server/request";
 
 export const metadata: Metadata = { title: "Subscription" };
 
-function formatDate(value: string | null | undefined): string | null {
-  const time = parseDbDate(value);
-  return time === null ? null : new Date(time).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const DAY = 86_400_000;
+
+function formatDay(time: number | null): string {
+  return time === null ? "" : new Date(time).toLocaleDateString("en-IN", { day: "numeric", month: "long" });
+}
+
+function formatDate(time: number | null): string {
+  return time === null ? "" : new Date(time).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+}
+
+type Step = { title: string; sub: string; state: "done" | "now" | "later" };
+
+/** One status card per state, worded as in the design. */
+function statusFor(input: {
+  access: "paid" | "trial" | "unpaid";
+  status: string | undefined;
+  provider: string | null | undefined;
+  cancelling: boolean;
+  wasPaid: boolean;
+  trialStart: number | null;
+  trialEnd: number | null;
+  periodEnd: number | null;
+  trialDays: number | null;
+  updatedAt: number | null;
+}): { badge?: string; tone: "trial" | "ok" | "danger" | "info"; title: string; body: string; steps?: Step[]; progress?: { elapsed: number; total: number; start: string; end: string } } {
+  const { access, status, provider, cancelling, wasPaid, trialStart, trialEnd, periodEnd, trialDays, updatedAt } = input;
+  if (access === "trial") {
+    const lastDay = trialDays !== null && trialDays <= 1;
+    const total = Math.max(1, Math.round(((trialEnd ?? 0) - (trialStart ?? 0)) / DAY));
+    const elapsed = Math.min(total, Math.max(0, Math.floor((Date.now() - (trialStart ?? Date.now())) / DAY)));
+    return {
+      tone: "trial",
+      title: lastDay ? "Your free trial ends tonight" : `Your free trial ends on ${formatDay(trialEnd)}`,
+      body: lastDay
+        ? "Last day of your free trial. Your page goes offline tonight unless you subscribe. Nothing is deleted: subscribe any time and it comes back exactly as it was."
+        : "Your page goes offline then unless you subscribe. Nothing is deleted: subscribe any time and it comes back exactly as it was.",
+      progress: total <= 31 ? { elapsed, total, start: `Started ${formatDay(trialStart)}`, end: `Ends ${formatDay(trialEnd)}` } : undefined,
+    };
+  }
+  if (access === "unpaid") {
+    return {
+      badge: "Unpaid · page offline",
+      tone: "danger",
+      title: "Your page is offline",
+      body: "Guests who scan your codes see a friendly “taking a short break” page. Your menu, guests and stamp cards are all safe.",
+      steps: [
+        { title: wasPaid ? "Subscription ended" : "Trial ended", sub: formatDay(wasPaid ? updatedAt : trialEnd), state: "done" },
+        { title: "Subscribe", sub: "Takes about a minute with UPI", state: "now" },
+        { title: "Page is back", sub: "Straight away, exactly as it was", state: "later" },
+      ],
+    };
+  }
+  if (provider === "manual") {
+    return {
+      badge: "Free access",
+      tone: "info",
+      title: "Free access from the Tabletap team",
+      body: "Everything is included and there’s nothing to pay. We’ll let you know before this ever changes.",
+    };
+  }
+  if (status === "past_due") {
+    return {
+      badge: "Payment failing",
+      tone: "danger",
+      title: "Your renewal didn’t go through",
+      body: "Razorpay will retry a few times. If every retry fails, your page goes offline until you subscribe again. Check that your card or UPI mandate is still valid.",
+      steps: [
+        { title: "Payment failed", sub: formatDay(updatedAt), state: "done" },
+        { title: "Razorpay retries", sub: "Over the next few days", state: "now" },
+        { title: "Page goes offline", sub: "Only if all retries fail", state: "later" },
+      ],
+    };
+  }
+  if (cancelling) {
+    return {
+      badge: "Won’t renew",
+      tone: "info",
+      title: `Your page stays live until ${formatDate(periodEnd)}`,
+      body: "Your subscription won’t renew. Changed your mind? Subscribe again before then and nothing changes for your guests.",
+    };
+  }
+  return {
+    tone: "ok",
+    title: periodEnd ? `Renews on ${formatDate(periodEnd)}` : "You’re subscribed",
+    body: `Razorpay will charge ${formatInr(PRICE_WITH_GST_INR)} including GST on that day. Your page stays live the whole time.`,
+  };
 }
 
 export default async function BillingPage({ params, searchParams }: PageProps<"/dashboard/[venueId]/billing">) {
@@ -19,87 +104,153 @@ export default async function BillingPage({ params, searchParams }: PageProps<"/
   const query = await searchParams;
   const mode = billingMode();
   const badge = accessBadge(subscription);
-  const periodEnd = formatDate(subscription?.currentPeriodEnd);
-  const trialEnd = formatDate(subscription?.trialEndsAt);
+  const periodEnd = parseDbDate(subscription?.currentPeriodEnd);
+  const trialEnd = parseDbDate(subscription?.trialEndsAt);
+  const trialStart = trialEnd !== null ? Math.min(parseDbDate(venue.createdAt) ?? trialEnd - TRIAL_DAYS * DAY, trialEnd - DAY) : null;
   const managedBySupport = access === "paid" && subscription?.provider === "manual";
   const cancelling = access === "paid" && !!subscription?.cancelAtPeriodEnd;
   const canCancel = access === "paid" && !managedBySupport && !cancelling;
-  // While a cancelled year runs out, a second subscription would charge twice.
-  const canSubscribe = access !== "paid";
+  const canSubscribe = access !== "paid" || cancelling;
+  const devMode = mode === "dev" || subscription?.provider === "dev";
+  const guestUrl = guestPageUrl(await serverOrigin(), venue.shortCode);
+  const state = statusFor({
+    access,
+    status: subscription?.status,
+    provider: subscription?.provider,
+    cancelling,
+    wasPaid: !!subscription?.provider && subscription.provider !== "manual",
+    trialStart,
+    trialEnd,
+    periodEnd,
+    trialDays: trialDaysLeft(subscription),
+    updatedAt: parseDbDate(subscription?.updatedAt),
+  });
+  const subscribeLabel = cancelling ? "Subscribe again" : access === "unpaid" ? "Subscribe now" : "Subscribe";
+  const planPoints = access === "unpaid" ? ["Everything included, no add-ons", "Page back online the moment you pay", "Cancel any time before renewal"] : PLAN_FEATURES;
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Subscription</h1>
-          <p>One plan with everything in it, billed once a year for each venue.</p>
+          <p>One plan with everything in it. Billed once a year for each venue.</p>
         </div>
       </div>
 
-      {firstParam(query.subscribed) && <div className="notice notice-ok" style={{ marginBottom: 16 }}>You&apos;re subscribed. Thank you! Your guest page stays live.</div>}
+      {firstParam(query.subscribed) && <div className="notice notice-ok" style={{ marginBottom: 16 }}>You’re subscribed. Thank you! Your receipt is on its way to your inbox.</div>}
       {mode === "dev" && (
         <div className="notice notice-warn" style={{ marginBottom: 16 }}>
           Payments are in dev mode (no Razorpay keys set): subscribing switches the venue on for a year without payment.
         </div>
       )}
-      {access === "unpaid" && (
-        <div className="notice notice-error" style={{ marginBottom: 16 }}>
-          Your guest page is offline because {subscription?.paid || subscription?.status === "canceled" ? "your subscription has ended" : "your free trial has ended"}. Subscribe to bring it back exactly as it was.
-        </div>
-      )}
-      {subscription?.status === "past_due" && access === "paid" && (
-        <div className="notice notice-error" style={{ marginBottom: 16 }}>
-          Your renewal payment didn&apos;t go through. Razorpay will try again over the next few days; use the link in their email to update how you pay.
-        </div>
-      )}
-      {cancelling && (
-        <div className="notice notice-info" style={{ marginBottom: 16 }}>
-          Your subscription won&apos;t renew. Your guest page stays live until {periodEnd ?? "the end of the year you paid for"}.
-        </div>
-      )}
 
-      <section className="card" style={{ marginBottom: 16 }}>
-        <div className="spread">
-          <div>
-            <div className="hint">Status</div>
-            <div className="inline" style={{ marginTop: 2 }}>
-              <strong style={{ fontSize: 20 }}>{access === "paid" ? "Subscribed" : access === "trial" ? "Free trial" : "Not subscribed"}</strong>
-              <span className={`badge ${badge.className}`}>{badge.label}</span>
+      <div className="billing-grid">
+        <div className="billing-main">
+          <section className="card billing-status">
+            <span className={`badge ${state.badge ? (state.tone === "danger" ? "badge-danger" : state.tone === "info" ? "badge-info" : "badge-ok") : badge.className}`}>
+              <span className="badge-dot" aria-hidden />
+              {state.badge ?? badge.label}
+            </span>
+            <h2>{state.title}</h2>
+            <p>{state.body}</p>
+            {state.progress && (
+              <div className="trial-progress">
+                <div className="trial-bars" aria-hidden>
+                  {Array.from({ length: state.progress.total }, (_, i) => (
+                    <span key={i} className={i < state.progress!.elapsed ? "done" : i === state.progress!.elapsed ? "now" : ""} />
+                  ))}
+                </div>
+                <div className="trial-dates">
+                  <span>{state.progress.start}</span>
+                  <span>{state.progress.end}</span>
+                </div>
+              </div>
+            )}
+            {state.steps && (
+              <ol className="billing-steps">
+                {state.steps.map((step, i) => (
+                  <li key={step.title} className={step.state}>
+                    <span className="billing-step-mark" aria-hidden>
+                      {step.state === "done" ? <Check /> : i + 1}
+                    </span>
+                    <span>
+                      <strong>{step.title}</strong>
+                      {step.sub && <span>{step.sub}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <div className="inline billing-actions">
+              {access === "trial" && mode !== "disabled" && <SubscribeButton venueId={venue.id} label="Subscribe" />}
+              {(access === "unpaid" || access === "paid") && (
+                <a className="btn" href={guestUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink aria-hidden /> See what guests see
+                </a>
+              )}
+              {canCancel && <CancelSubscriptionButton venueId={venue.id} endsOn={formatDate(periodEnd) || null} devMode={devMode} />}
             </div>
-            {access === "trial" && trialEnd && <p className="hint">Your trial ends on {trialEnd}. Your page goes offline then unless you subscribe.</p>}
-            {access === "paid" && !cancelling && !managedBySupport && periodEnd && <p className="hint">Renews on {periodEnd}.</p>}
-            {managedBySupport && <p className="hint">Free access from the {BRAND.name} team{periodEnd ? `, until ${periodEnd}` : ""}.</p>}
-          </div>
-          {canCancel && <CancelSubscriptionButton venueId={venue.id} endsOn={periodEnd} devMode={mode === "dev" || subscription?.provider === "dev"} />}
-        </div>
-      </section>
+          </section>
 
-      <div className="pricing pricing-single" style={{ margin: 0 }}>
-        <section className="card price-card featured">
-          <h3>{BRAND.name}</h3>
-          <div className="price">
-            {formatInr(PRICE_INR)}
-            <span> / {BILLING_PERIOD}</span>
+          <section className="card billing-faq">
+            <details open={access !== "paid"}>
+              <summary>What happens if I don’t subscribe?</summary>
+              <p>
+                Your guest page goes offline when the trial ends. You can still sign in and edit everything. Subscribe any time and the page comes back exactly as it was, with your menu, guests and stamp
+                cards.
+              </p>
+            </details>
+            <details>
+              <summary>Do I get a GST invoice?</summary>
+              <p>
+                Yes. Razorpay emails a receipt for every payment with the 18% GST shown. Need your GSTIN on the invoice? Email <a href={`mailto:${BRAND.supportEmail}`}>{BRAND.supportEmail}</a> and we’ll add it.
+              </p>
+            </details>
+            <details>
+              <summary>Can I cancel later?</summary>
+              <p>Yes, any time. Your page stays live until the end of the year you paid for, nothing is deleted, and you can subscribe again whenever you like.</p>
+            </details>
+          </section>
+        </div>
+
+        <aside className="plan-card">
+          <div className="plan-card-head">
+            <span className="plan-brand">
+              <BrandMark size={26} /> {BRAND.name.toLowerCase()}
+            </span>
+            {access === "trial" && <span className="plan-flag">{TRIAL_DAYS} days free</span>}
           </div>
-          <p className="price-gst">
-            + {GST_RATE * 100}% GST, so {formatInr(PRICE_WITH_GST_INR)} in total. {TRIAL_DAYS}-day free trial for every new venue.
+          <div className="plan-price">
+            {formatInr(PRICE_INR)}
+            <span> / {BILLING_PERIOD} per venue</span>
+          </div>
+          <p className="plan-gst">
+            + {GST_RATE * 100}% GST, so {formatInr(PRICE_WITH_GST_INR)} in total
           </p>
           <ul>
-            {PLAN_FEATURES.map((feature) => (
+            {planPoints.map((feature) => (
               <li key={feature}>
                 <Check aria-hidden /> {feature}
               </li>
             ))}
           </ul>
-          {canSubscribe &&
-            (mode === "disabled" ? (
-              <p className="hint">Online payments aren&apos;t set up yet. Email {BRAND.supportEmail} and we&apos;ll get you subscribed.</p>
-            ) : (
-              <SubscribeButton venueId={venue.id} label={access === "trial" ? "Subscribe now" : "Subscribe"} />
-            ))}
-          {access === "paid" && <p className="hint">{cancelling ? "Everything above stays on until your paid year ends." : "You're subscribed. Everything above is on."}</p>}
-        </section>
+          {managedBySupport ? (
+            <p className="plan-on">Included free for this venue</p>
+          ) : access === "paid" && !cancelling ? (
+            <p className="plan-on">You’re on this plan</p>
+          ) : canSubscribe && mode === "disabled" ? (
+            <p className="plan-on">Online payments aren’t set up yet. Email {BRAND.supportEmail} and we’ll get you subscribed.</p>
+          ) : (
+            canSubscribe && <SubscribeButton venueId={venue.id} label={subscribeLabel} variant="light" />
+          )}
+          <p className="plan-secure">
+            <Lock aria-hidden /> Secure checkout by Razorpay · UPI, cards, netbanking
+          </p>
+        </aside>
       </div>
+      <p className="billing-help">
+        Questions about paying? <a href={`mailto:${BRAND.supportEmail}`}>Get in touch</a>
+      </p>
     </>
   );
 }

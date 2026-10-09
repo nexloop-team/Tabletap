@@ -4541,3 +4541,247 @@ body:has(.app) {
 .row-actions .inline {
   flex-wrap: nowrap;
 }
+
+/* Subscription page: status and FAQ on the left, the plan on the right. */
+.billing-grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .billing-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  }
+}
+.billing-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.billing-status {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.billing-status h2 {
+  margin: 4px 0 0;
+  font-family: var(--a-font-display);
+  font-size: 24px;
+  letter-spacing: -0.015em;
+}
+.billing-status > p {
+  margin: 0;
+  color: var(--a-text-2);
+  max-width: 62ch;
+}
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.trial-progress {
+  width: 100%;
+  margin-top: 6px;
+}
+.trial-bars {
+  display: flex;
+  gap: 4px;
+}
+.trial-bars span {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--a-surface-3);
+}
+.trial-bars span.done {
+  background: var(--a-accent);
+}
+.trial-bars span.now {
+  background: var(--a-warm);
+}
+.trial-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--a-text-3);
+}
+.billing-steps {
+  list-style: none;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+  border-radius: var(--a-radius);
+  background: var(--a-surface-2);
+}
+.billing-steps li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.billing-steps li > span:last-child {
+  display: grid;
+  gap: 1px;
+  font-size: 14px;
+}
+.billing-steps li > span:last-child span {
+  color: var(--a-text-3);
+  font-size: 13px;
+}
+.billing-step-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--a-border-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+.billing-step-mark svg {
+  width: 14px;
+  height: 14px;
+}
+.billing-steps li.done .billing-step-mark {
+  border: 0;
+  background: var(--a-ok);
+  color: #fff;
+}
+.billing-steps li.now .billing-step-mark {
+  border: 0;
+  background: var(--a-warm-soft);
+  color: var(--a-warm-text);
+}
+.billing-actions {
+  margin-top: 6px;
+}
+.billing-faq {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.billing-faq details {
+  padding: 12px 0;
+}
+.billing-faq details + details {
+  border-top: 1px solid var(--a-border);
+}
+.billing-faq summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.billing-faq details p {
+  margin: 10px 0 2px;
+  color: var(--a-text-2);
+  font-size: 14px;
+}
+.plan-card {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 18px;
+  background: #16301f;
+  color: #f2f3f1;
+}
+.plan-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.plan-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--a-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  --mark-ink: #16301f;
+}
+.plan-flag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--a-warm);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.plan-price {
+  font-family: var(--a-font-display);
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.plan-price span {
+  font-family: var(--font-sans), var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #b9c2bb;
+}
+.plan-gst {
+  margin: 0;
+  color: #b9c2bb;
+  font-size: 14px;
+}
+.plan-card ul {
+  list-style: none;
+  margin: 4px 0;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 10px;
+  font-size: 14px;
+}
+.plan-card li {
+  display: flex;
+  gap: 10px;
+}
+.plan-card li svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: #5fbf84;
+}
+.app .plan-subscribe {
+  min-height: 48px;
+  background: #f5f5f1;
+  color: #16301f;
+  font-weight: 700;
+  border-color: transparent;
+}
+.app .plan-subscribe:hover {
+  background: #ffffff;
+}
+.plan-on {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.plan-secure {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: #b9c2bb;
+}
+.plan-secure svg {
+  width: 13px;
+  height: 13px;
+}
+.billing-help {
+  margin: 18px 0 0;
+  text-align: center;
+  color: var(--a-text-2);
+  font-size: 14px;
+}

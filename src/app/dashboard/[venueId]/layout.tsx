@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AccountBar } from "@/components/dashboard/AccountBar";
 import { AdminEditBar } from "@/components/dashboard/AdminEditBar";
 import { HashFocus } from "@/components/dashboard/HashFocus";
-import { trialDaysLeft } from "@/lib/plans";
+import { parseDbDate, trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { EDIT_GRANT_MINUTES, editGrantExpiry } from "@/server/repositories/admin-actions";
 import { isManagerRole, venueRole } from "@/server/repositories/venues";
@@ -42,7 +42,7 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
           )}
         </div>
       )}
-      {!operatorView && <AccountBar unverifiedEmail={user.emailVerified ? null : user.email} trialDays={trialDays} billingHref={`/dashboard/${venue.id}/billing`} />}
+      {!operatorView && <AccountBar unverifiedEmail={user.emailVerified ? null : user.email} trialDays={trialDays} trialEnds={trialDays !== null && subscription?.trialEndsAt ? new Date(parseDbDate(subscription.trialEndsAt)!).toLocaleDateString("en-IN", { day: "numeric", month: "long" }) : null} billingHref={`/dashboard/${venue.id}/billing`} />}
       <HashFocus />
       {children}
     </div>

@@ -22,7 +22,7 @@ function snoozedNow(): boolean {
  * free-trial countdown and, until it's done, "confirm your email" (which can
  * be snoozed for a day).
  */
-export function AccountBar({ unverifiedEmail, trialDays, billingHref }: { unverifiedEmail: string | null; trialDays: number | null; billingHref: string }) {
+export function AccountBar({ unverifiedEmail, trialDays, trialEnds, billingHref }: { unverifiedEmail: string | null; trialDays: number | null; trialEnds?: string | null; billingHref: string }) {
   const storedSnooze = useSyncExternalStore(subscribeNever, snoozedNow, () => false);
   const [snoozed, setSnoozed] = useState(false);
   const showEmail = !!unverifiedEmail && !storedSnooze && !snoozed;
@@ -37,7 +37,7 @@ export function AccountBar({ unverifiedEmail, trialDays, billingHref }: { unveri
             <strong>
               Free trial · {trialDays} day{trialDays === 1 ? "" : "s"} left.
             </strong>{" "}
-            <span className="account-bar-more">Subscribe to keep your guest page online after it ends.</span>
+            <span className="account-bar-more">{trialDays <= 1 ? "Your page goes offline tonight unless you subscribe." : trialEnds ? `Your page goes offline on ${trialEnds} unless you subscribe.` : "Subscribe to keep your guest page online after it ends."}</span>
           </span>
           <Link className="btn btn-primary btn-sm" href={billingHref}>
             Subscribe
