@@ -302,3 +302,38 @@ export function AdminUserActions({
     />
   );
 }
+
+/** "Extend trial" on the admin overview's Needs attention list: seven more days, after a confirm. */
+export function AdminExtendTrial({ venueId, name, offline }: { venueId: string; name: string; offline: boolean }) {
+  const router = useRouter();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [pending, setPending] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn btn-sm"
+      disabled={pending}
+      onClick={async () => {
+        const ok = await confirm({
+          title: `Give ${name} ${TRIAL_EXTENSION_DAYS} more trial days?`,
+          body: offline ? "Its trial restarts from today, so the guest page comes back online now." : "They're added to the end of the current trial.",
+          confirmLabel: "Extend trial",
+        });
+        if (!ok) return;
+        setPending(true);
+        try {
+          await dashboardApi.adminUpdateVenue(venueId, { extendTrialDays: TRIAL_EXTENSION_DAYS });
+          toast({ text: "Trial extended." });
+          router.refresh();
+        } catch (err) {
+          toast({ text: errorMessage(err) });
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      {pending && <Loader2 className="spin" aria-hidden />} Extend trial
+    </button>
+  );
+}

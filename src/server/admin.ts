@@ -1,5 +1,6 @@
 import "server-only";
 import { accessState, parseDbDate, PRICE_INR, trialDaysLeft, type SubscriptionState, type SubscriptionStatus } from "@/lib/plans";
+import { getDb } from "./db";
 import { listUsersForAdmin } from "./repositories/users";
 import { listVenuesForAdmin } from "./repositories/venues";
 
@@ -52,6 +53,55 @@ export function revenueSummary(venues: AdminVenue[], now = Date.now()) {
     churn30d: paying.length + lapsed.length ? lapsed.length / (paying.length + lapsed.length) : 0,
     pastDue: venues.filter((venue) => venue.pastDue).length,
     trialsEndingThisWeek: venues.filter((venue) => venue.segment === "trial" && venue.trialDays !== null && venue.trialDays <= 7).length,
+    wontRenewInr: (paying.length - renewing.length) * PRICE_INR,
+    atRiskInr: venues.filter((venue) => venue.pastDue).length * PRICE_INR,
+    newPaying30d: paying.filter((venue) => (paidSince(venue) ?? 0) > monthAgo).length,
+    trialToPaid90d: trialConversion(venues, now),
+    history: arrHistory(paying, now),
+  };
+}
+
+const YEAR_MS = 365 * 86_400_000;
+
+/** When a paying venue's current paid year began: its renewal date less a year. */
+function paidSince(venue: AdminVenue): number | null {
+  const end = parseDbDate(venue.currentPeriodEnd);
+  return end === null ? null : end - YEAR_MS;
+}
+
+/** Of the venues whose trial ended in the last 90 days, the share that went on to pay. Null with none to go on. */
+function trialConversion(venues: AdminVenue[], now: number): number | null {
+  const window = now - 90 * 86_400_000;
+  const ended = venues.filter((venue) => {
+    const end = parseDbDate(venue.trialEndsAt);
+    return end !== null && end <= now && end > window && venue.ownerEmail;
+  });
+  if (ended.length === 0) return null;
+  return ended.filter((venue) => venue.paying).length / ended.length;
+}
+
+/**
+ * Yearly recurring revenue at the end of each of the last 12 months, rebuilt
+ * from today's paying venues and when their paid year began. An estimate:
+ * there's no revenue ledger, so venues that paid and left aren't in it.
+ */
+function arrHistory(paying: AdminVenue[], now: number): { month: string; value: number }[] {
+  const starts = paying.map((venue) => paidSince(venue) ?? 0);
+  const today = new Date(now);
+  return Array.from({ length: 12 }, (_, i) => {
+    const monthEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 10 + i, 1)).getTime() - 1;
+    const end = i === 11 ? now : monthEnd;
+    const label = new Date(i === 11 ? now : monthEnd).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+    return { month: label, value: starts.filter((start) => start <= end).length * PRICE_INR };
+  });
+}
+
+/** Totals for the admin sidebar. */
+export function platformCounts(): { venues: number; accounts: number } {
+  const db = getDb();
+  return {
+    venues: (db.prepare("SELECT COUNT(*) AS n FROM venues").get() as { n: number }).n,
+    accounts: (db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n,
   };
 }
 

@@ -35,6 +35,8 @@ interface NavItem {
   /** Match the path exactly rather than as a prefix (section roots). */
   exact?: boolean;
   badge?: string;
+  /** A quiet total beside the label (admin sidebar). */
+  total?: number;
 }
 
 interface NavGroup {
@@ -104,6 +106,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
         {item.venue ? <VenueAvatar venue={item.venue} /> : Icon && <Icon aria-hidden />}
         <span className="nav-label">{item.label}</span>
         {item.badge && <span className="nav-count" aria-label={`${item.badge} unread`}>{item.badge}</span>}
+        {item.total !== undefined && <span className="nav-total">{item.total.toLocaleString("en-IN")}</span>}
       </Link>
     </li>
   );
@@ -180,7 +183,7 @@ function Brand({ mode }: { mode: "venue" | "admin" }) {
  * Sidebar app frame for the merchant dashboard and the operator console.
  * The sidebar is static from 1024px up and an off-canvas drawer below.
  */
-export function AppShell({ mode, venues, user, children }: { mode: "venue" | "admin"; venues: ShellVenue[]; user: ShellUser; children: ReactNode }) {
+export function AppShell({ mode, venues, user, counts, children }: { mode: "venue" | "admin"; venues: ShellVenue[]; user: ShellUser; /** Admin: totals beside nav items, keyed by href. */ counts?: Record<string, number>; children: ReactNode }) {
   const pathname = usePathname();
   const params = useParams<{ venueId?: string }>();
   // Remembering which path the drawer was opened on closes it on navigation without an effect.
@@ -204,7 +207,7 @@ export function AppShell({ mode, venues, user, children }: { mode: "venue" | "ad
   const venueId = mode === "venue" ? (params.venueId ?? "") : "";
   const groups: NavGroup[] =
     mode === "admin"
-      ? ADMIN_NAV
+      ? ADMIN_NAV.map((group) => ({ ...group, items: group.items.map((item) => (counts?.[item.href] !== undefined ? { ...item, total: counts[item.href] } : item)) }))
       : venueId
         ? venueNav(`/dashboard/${venueId}`, venues.find((v) => v.id === venueId)?.unreadFeedback)
         : [

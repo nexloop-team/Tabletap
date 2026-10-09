@@ -5161,3 +5161,233 @@ body:has(.app) {
 .till-undo {
   border-style: dashed;
 }
+
+.nav-total {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--a-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Admin overview, as in the design. */
+.stat-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--a-text-3);
+}
+.stat-dot.admin {
+  background: var(--a-admin);
+}
+.stat-dot.ok {
+  background: var(--a-ok);
+}
+.stat-dot.warm {
+  background: var(--a-warm);
+}
+.stat-dot.danger {
+  background: var(--a-danger);
+}
+.admin-overview .stat .sub {
+  color: var(--a-text-3);
+}
+.revenue-card {
+  display: grid;
+  gap: 24px;
+  margin: 16px 0;
+}
+@media (min-width: 1000px) {
+  .revenue-card {
+    grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+.revenue-numbers {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.revenue-numbers .label {
+  font-weight: 600;
+  color: var(--a-text-2);
+}
+.revenue-big {
+  font-family: var(--a-font-display);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.revenue-new {
+  font-size: 13.5px;
+  color: var(--a-text-2);
+}
+.revenue-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  margin: 14px 0 0;
+}
+.revenue-grid dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--a-text-2);
+}
+.revenue-grid dt svg {
+  width: 14px;
+  height: 14px;
+  color: var(--a-warn);
+}
+.revenue-grid dd {
+  margin: 2px 0 0;
+  font-family: var(--a-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.revenue-grid dd small {
+  font-family: var(--font-sans), var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--a-text-2);
+}
+.arr-chart {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.arr-chart figcaption {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--a-text-3);
+}
+.arr-chart figcaption strong {
+  font-size: 14.5px;
+  color: var(--a-text);
+}
+.arr-plot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  height: 230px;
+}
+.arr-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  font-size: 11.5px;
+  color: var(--a-text-3);
+  text-align: right;
+}
+.arr-bars {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  background: repeating-linear-gradient(to bottom, var(--a-border) 0 1px, transparent 1px 25%) top / 100% calc(100% - 22px) no-repeat;
+}
+.arr-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+.arr-bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: color-mix(in srgb, var(--a-admin) 55%, transparent);
+}
+.arr-col.current .arr-bar {
+  background: var(--a-admin);
+}
+.arr-month {
+  height: 22px;
+  padding-top: 6px;
+  font-size: 11.5px;
+  color: var(--a-text-3);
+}
+.arr-value {
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.attention-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.attention-rows li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--a-border);
+}
+@media (max-width: 640px) {
+  .attention-rows li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .attention-tag {
+    grid-column: 1 / -1;
+  }
+}
+.attention-tag {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--a-surface-2);
+  color: var(--a-text-2);
+}
+.attention-tag span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.attention-tag.warm {
+  background: var(--a-warm-soft);
+  color: var(--a-warm-text);
+}
+.attention-tag.danger {
+  background: var(--a-danger-soft);
+  color: var(--a-danger);
+}
+.attention-rows .attention-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.attention-rows .attention-text span {
+  font-size: 13.5px;
+  color: var(--a-text-2);
+}
+.admin-overview .chart-bar {
+  background: var(--a-admin);
+}
+.admin-overview .card-head .filter-tabs {
+  flex-wrap: wrap;
+}
+.card-foot svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
