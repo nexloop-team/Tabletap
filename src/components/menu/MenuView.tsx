@@ -2,7 +2,6 @@
 
 import { ChefHat, ChevronLeft, Flame, Info, Leaf, Menu as MenuLines, Search, Sparkles, Sprout, Star, WheatOff, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { VenueHeader } from "@/components/landing/VenueHeader";
 import { createTracker } from "@/lib/analytics";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
 import { usePreviewDraft } from "@/lib/live-preview";
@@ -93,7 +92,6 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const track = useMemo(() => createTracker({ venueId, source, page: "menu" }), [venueId, source]);
   const formatPrice = useMemo(() => priceFormatter(locale, currencyCode), [locale, currencyCode]);
   const style = useMemo(() => computeTheme(branding).style, [branding]);
-  const hasCover = !!safeImageUrl(branding.coverImageUrl);
   const [menuIndex, setMenuIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]);
@@ -280,6 +278,48 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
     );
   }
 
+  /**
+   * Classic layout, like a printed menu: the name, a dotted leader to the
+   * price, the description in italics, and one quiet line of details. No
+   * photos, chips or boxes.
+   */
+  function classicItem(item: MenuItem) {
+    const showKcal = !!menu?.showCalories && typeof item.calories === "number";
+    const details = [
+      ...(item.badges ?? []).map(badgeLabel),
+      ...(indian ? [] : item.dietaryTags.map(dietKey).filter((tag) => DIETS[tag]).map((tag) => t(DIETS[tag].key))),
+      ...(showKcal ? [tf("menu_kcal", { kcal: item.calories as number })] : []),
+      ...(!indian && item.allergens.length > 0 ? [tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })] : []),
+    ];
+    const explainer = !!item.explainer?.trim();
+    return (
+      <li key={item.id} id={`item-${item.id}`} className={`classic-item${item.isAvailable ? "" : " unavailable"}`}>
+        <button type="button" className="classic-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
+          <span className="classic-line">
+            <span className="classic-name">
+              {vegMark(item)}
+              {item.name}
+            </span>
+            <span className="classic-leader" aria-hidden />
+            <span className="classic-price">{item.isAvailable ? formatPrice(item.priceInPence) : t("menu_unavailable")}</span>
+          </span>
+          {item.description && <span className="classic-desc">{item.description}</span>}
+          {(details.length > 0 || explainer) && (
+            <span className="classic-details">
+              {details.length > 0 && <span>{details.join(" · ")}</span>}
+              {explainer && (
+                <span className="classic-whats">
+                  <Info aria-hidden />
+                  {t("menu_whats_this")}
+                </span>
+              )}
+            </span>
+          )}
+        </button>
+      </li>
+    );
+  }
+
   const hasFilters = dietOptions.length > 0 || allergens.length > 0;
   const activeFilters = diets.length + excluded.length;
   const dietLabel = (diet: string) =>
@@ -295,13 +335,13 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
 
   const sectionNav =
     visibleSections.length > 1 || hasFilters ? (
-      <nav className={`menu-jump${layout === "list" ? " menu-cats" : ""}`} aria-label={t("menu_sections")}>
+      <nav className="menu-jump menu-cats" aria-label={t("menu_sections")}>
         <button type="button" className="menu-browse" aria-label={t("menu_browse")} aria-haspopup="dialog" onClick={() => setBrowseOpen(true)}>
           <MenuLines aria-hidden />
           {activeFilters > 0 && <span className="menu-browse-count">{activeFilters}</span>}
         </button>
         {visibleSections.length > 1 && visibleSections.map((section) => (
-          <button key={section.id} type="button" className={layout === "list" ? "menu-cat" : "menu-chip"} aria-current={section.id === current ? "true" : undefined} onClick={() => jumpTo(section.id)}>
+          <button key={section.id} type="button" className="menu-cat" aria-current={section.id === current ? "true" : undefined} onClick={() => jumpTo(section.id)}>
             {section.name}
           </button>
         ))}
@@ -319,17 +359,16 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
             <h1>{venueName}</h1>
           </header>
         ) : (
-          <VenueHeader
-            branding={branding}
-            name={venueName}
-            tagline={false}
-            overlay={
-              <a className={`menu-back${hasCover ? " on-cover" : ""}`} href={backHref}>
-                <ChevronLeft aria-hidden />
-                <span>{t("menu_back")}</span>
-              </a>
-            }
-          />
+          <header className="classic-head">
+            <a className="menu-back" href={backHref} aria-label={t("menu_back")}>
+              <ChevronLeft aria-hidden />
+            </a>
+            <h1>{venueName}</h1>
+            <p className="classic-kicker">
+              <span>{menu && menus.length > 1 ? menu.name : t("menu_title")}</span>
+            </p>
+            {menu?.welcomeText?.trim() && <p className="classic-welcome">{menu.welcomeText.trim()}</p>}
+          </header>
         )}
 
         {!menu ? (
@@ -339,10 +378,9 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
           </div>
         ) : (
           <>
-            {(layout === "classic" || menu.welcomeText?.trim()) && (
+            {layout === "list" && menu.welcomeText?.trim() && (
               <div className="menu-head">
-                {layout === "classic" && <h2 className="menu-title">{menus.length > 1 ? menu.name : t("menu_title")}</h2>}
-                {menu.welcomeText?.trim() && <p className="menu-welcome">{menu.welcomeText.trim()}</p>}
+                <p className="menu-welcome">{menu.welcomeText.trim()}</p>
               </div>
             )}
 
@@ -356,14 +394,12 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
               </div>
             )}
 
-            {layout === "list" && sectionNav}
+            {sectionNav}
 
             <label className="menu-search">
               <Search aria-hidden />
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("menu_search")} aria-label={t("menu_search")} />
             </label>
-
-            {layout === "classic" && sectionNav}
 
             {activeFilters > 0 && (
               <div className="menu-filters">
@@ -382,7 +418,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
               </div>
             )}
 
-            {highlights.items.length > 0 && !needle && (
+            {layout === "list" && highlights.items.length > 0 && !needle && (
               <section className="menu-specials" aria-label={highlights.title}>
                 <h2>
                   {highlights.title}
@@ -420,55 +456,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
                     <span>{section.items.length === 1 ? t("menu_items_one") : tf("menu_items", { count: section.items.length })}</span>
                   </div>
                   {section.description?.trim() && <p className="menu-section-desc">{section.description.trim()}</p>}
-                  {layout === "list" ? (
-                    <ul className="dish-list">{section.items.map(dishRow)}</ul>
-                  ) : (
-                    <ul className="menu-list">
-                      {section.items.map((item) => {
-                        const image = safeImageUrl(item.imageUrl);
-                        return (
-                          <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
-                            <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
-                              <span className="menu-item-text">
-                                {(item.badges ?? []).length > 0 && (
-                                  <span className="menu-badges-top">
-                                    {(item.badges ?? []).map((badge) => (
-                                      <span key={badge} className={`menu-badge-chip ${badge}`}>
-                                        {badgeLabel(badge)}
-                                      </span>
-                                    ))}
-                                  </span>
-                                )}
-                                <span className="menu-item-head">
-                                  <span className="menu-item-name">
-                                    {vegMark(item)}
-                                    {item.name}
-                                  </span>
-                                  {/* The classic layout prints the price on the name line, with dotted leaders. */}
-                                  <span className="menu-leader" aria-hidden />
-                                  <span className="menu-price head-price">{formatPrice(item.priceInPence)}</span>
-                                </span>
-                                {item.description && <span className="menu-desc">{item.description}</span>}
-                                <span className="menu-item-foot">
-                                  <span className="menu-price foot-price">{formatPrice(item.priceInPence)}</span>
-                                  {!item.isAvailable && <span className="menu-tag sold-out">{t("menu_unavailable")}</span>}
-                                </span>
-                                {tagList(item)}
-                                {item.allergens.length > 0 && <span className="menu-allergens">{tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") })}</span>}
-                                {item.explainer?.trim() && (
-                                  <span className="menu-whats">
-                                    <Info aria-hidden /> {t("menu_whats_this")}
-                                  </span>
-                                )}
-                              </span>
-                              {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-                              {image && <img className="menu-item-thumb" src={image} alt="" loading="lazy" />}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                  <ul className={layout === "list" ? "dish-list" : "classic-list"}>{section.items.map(layout === "list" ? dishRow : classicItem)}</ul>
                 </section>
               ))
             )}

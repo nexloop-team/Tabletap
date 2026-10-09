@@ -2524,7 +2524,7 @@ svg.tile-glyph {
   line-height: 1.15;
 }
 
-.menu-page[data-layout="list"] .menu-cats {
+.menu-page .menu-cats {
   gap: 24px;
   margin-top: 6px;
   padding: 0 16px;
@@ -2771,7 +2771,7 @@ svg.tile-glyph {
   margin-top: 0;
 }
 /* On the list layout the search sits in the card colour, like the dishes. */
-.menu-page[data-layout="list"] .menu-search {
+.menu-page .menu-search {
   background: var(--card-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -2842,7 +2842,7 @@ svg.tile-glyph {
   outline-offset: -4px;
   border-radius: 10px;
 }
-.menu-page[data-layout="list"] .menu-cats {
+.menu-page .menu-cats {
   padding-inline-start: 10px;
 }
 
@@ -2980,4 +2980,154 @@ svg.tile-glyph {
 .menu-pill .veg-mark,
 .browse-chip .veg-mark {
   margin-inline-end: 7px;
+}
+
+/* ───────────────────────── Menu, Classic layout ─────────────────────────
+   A printed menu: the venue's name centred over a small "— MENU —", centred
+   section titles, and each dish as name, dotted leader and price, with the
+   description in italics and one quiet line of details. No photos. */
+.classic-head {
+  position: relative;
+  padding: 24px 60px 8px;
+  text-align: center;
+}
+.classic-head .menu-back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--text-tint);
+}
+.classic-head h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: var(--fw-display);
+  letter-spacing: var(--display-tracking);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.classic-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.classic-kicker::before,
+.classic-kicker::after {
+  content: "";
+  width: 34px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.classic-welcome {
+  margin-top: 8px;
+  font-size: 14.5px;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+.menu-page[data-layout="classic"] .menu-section-head h2 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+.classic-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  list-style: none;
+}
+.classic-open {
+  display: block;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.classic-open:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.classic-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.classic-name {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: var(--fw-title);
+  line-height: 1.3;
+}
+.classic-name .veg-mark {
+  vertical-align: -2px;
+}
+.classic-leader {
+  flex: 1;
+  min-width: 20px;
+  border-bottom: 1.5px dotted color-mix(in srgb, var(--text-primary) 40%, transparent);
+  transform: translateY(-4px);
+}
+.classic-price {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.classic-desc {
+  display: block;
+  margin-top: 3px;
+  padding-inline-end: 48px;
+  font-size: 14.5px;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.classic-details {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.classic-whats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: 8px;
+  font-weight: 600;
+}
+.classic-whats:first-child {
+  margin-inline-start: 0;
+}
+.classic-whats svg {
+  width: 13px;
+  height: 13px;
+}
+.classic-item.unavailable .classic-name,
+.classic-item.unavailable .classic-desc,
+.classic-item.unavailable .classic-details {
+  opacity: 0.55;
+}
+.classic-item.unavailable .classic-price {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-secondary);
 }

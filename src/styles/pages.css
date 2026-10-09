@@ -852,29 +852,7 @@
 /* ───────────────────────── Menu layouts (Pro) ─────────────────────────
    data-layout on .menu-page: "list" (default) or "classic". */
 
-.menu-item-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-/* Only the classic layout prints the price on the name line. */
-.menu-leader,
-.menu-price.head-price {
-  display: none;
-}
-
-/* Classic: a printed menu. No cards or photos, centred section titles,
-   dotted leaders from each dish to its price. The list sits on the page
-   colour, so it borrows the page's text colours. */
-.menu-page[data-layout="classic"] .menu-list {
-  --card-bg: var(--page-bg);
-  --card-text-primary: var(--text-primary);
-  --card-text-secondary: var(--text-secondary);
-  --card-text-tertiary: var(--text-tertiary);
-  overflow: visible;
-  background: none;
-  box-shadow: none;
-}
+/* Classic: centred section titles (its dishes are styled in landing.css). */
 .menu-page[data-layout="classic"] .menu-section {
   padding-top: 34px;
 }
@@ -903,40 +881,6 @@
   text-align: center;
   font-style: italic;
 }
-.menu-page[data-layout="classic"] .menu-item {
-  border-top: 0;
-}
-.menu-page[data-layout="classic"] .menu-item-open {
-  padding: 10px 0;
-}
-.menu-page[data-layout="classic"] .menu-item-thumb {
-  display: none;
-}
-.menu-page[data-layout="classic"] .menu-item-text {
-  align-items: stretch;
-  gap: 4px;
-}
-.menu-page[data-layout="classic"] .menu-leader {
-  display: block;
-  flex: 1;
-  min-width: 16px;
-  border-bottom: 2px dotted color-mix(in srgb, var(--text-primary) 35%, transparent);
-  transform: translateY(-4px);
-}
-.menu-page[data-layout="classic"] .menu-price.head-price {
-  display: inline;
-}
-.menu-page[data-layout="classic"] .foot-price {
-  display: none;
-}
-.menu-page[data-layout="classic"] .menu-item-foot:not(:has(.sold-out)) {
-  display: none;
-}
-.menu-page[data-layout="classic"] .menu-desc {
-  display: block;
-  font-style: italic;
-}
-
 /* No hosted menu yet */
 .menu-empty {
   margin: 32px 16px 0;
