@@ -700,6 +700,8 @@ body:has(.app) {
 
 .mk {
   --mk-gutter: clamp(16px, 4vw, 40px);
+  /* The hero chips may hang past the edge on narrow screens; never scroll sideways for them. */
+  overflow-x: clip;
 }
 .mk-wrap {
   max-width: 1200px;
@@ -5849,13 +5851,13 @@ body:has(.app) {
 }
 /* Over the phone's edges, clear of the venue name at the top of its screen. */
 .hero-chip-stamp {
-  top: 55%;
-  right: -9%;
+  top: 47%;
+  right: -26%;
   transform: rotate(2deg);
 }
 .hero-chip-wifi {
-  bottom: 12%;
-  left: -9%;
+  top: 5%;
+  left: -26%;
   transform: rotate(-3deg);
 }
 .hero-chip-icon {
@@ -5877,12 +5879,34 @@ body:has(.app) {
 .hero-chip-icon.rose {
   background: #d94d66;
 }
-@media (max-width: 900px) {
+@media (max-width: 1300px) {
   .hero-chip-wifi {
-    left: 0;
+    left: -14%;
   }
   .hero-chip-stamp {
-    right: 0;
+    right: -6%;
+  }
+}
+/* Narrow screens: just the headline of each chip, tucked against the phone's edge. */
+@media (max-width: 900px) {
+  .hero-chip {
+    padding: 8px 12px;
+  }
+  .hero-chip > span:last-child {
+    font-size: 0;
+  }
+  .hero-chip strong {
+    font-size: 13px;
+  }
+  .hero-chip-icon {
+    width: 26px;
+    height: 26px;
+  }
+  .hero-chip-wifi {
+    left: -4px;
+  }
+  .hero-chip-stamp {
+    right: -4px;
   }
 }
 .mk .feature-icon.tint-orange { background: #fff1dd; color: #c86a00; }

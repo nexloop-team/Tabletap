@@ -120,7 +120,7 @@ export default async function Home() {
           <div className="hero-visual" aria-hidden>
             <div className="phone">
               <div className="phone-screen">
-                <iframe src="/s?i=demo-crm&s=home&embed=1" title="Example venue page" loading="lazy" tabIndex={-1} />
+                <iframe src="/s?i=demo&s=home&embed=1" title="Example venue page" loading="lazy" tabIndex={-1} />
               </div>
             </div>
             <div className="hero-chip hero-chip-wifi">
