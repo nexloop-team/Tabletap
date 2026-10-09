@@ -27,6 +27,8 @@ export const PALETTES: Palette[] = [
   { id: "matcha", name: "Matcha", bg: "#E4E9D3", hero: "#33452B", pop: "#BFCB9B", pale: "#FBFCF5" },
   { id: "rose-clay", name: "Rose Clay", bg: "#F3DFD3", hero: "#6B3A2A", pop: "#E2B8A0", pale: "#FFFBF8" },
   { id: "stone", name: "Stone", bg: "#E8E4DD", hero: "#2E2B28", pop: "#CBC3B6", pale: "#FFFDFA" },
+  // A white page: soft grey tiles, ink for the stamp card and reviews, honey for Wi-Fi.
+  { id: "white-honey", name: "White & Honey", bg: "#FFFFFF", hero: "#1C1C1E", pop: "#E6B85C", pale: "#F3F2EE" },
 ];
 
 export function findPalette(id: string | null | undefined): Palette | null {
