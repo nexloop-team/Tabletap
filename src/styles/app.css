@@ -54,6 +54,18 @@
   line-height: 1.5;
 }
 
+/* The page behind the app takes its background too, so scrolling past the end
+   (or a short window under a tall sidebar) never shows a white strip. */
+html:has(.app) {
+  background: #f5f5f1;
+}
+@media (prefers-color-scheme: dark) {
+  html:has(.app) {
+    background: #0f1113;
+    color-scheme: dark;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .app {
     --a-bg: #0f1113;
@@ -4140,6 +4152,7 @@ body:has(.app) {
   .no-print,
   .savebar,
   .trial-banner,
+  .account-bar,
   .page > .notice {
     display: none !important;
   }
@@ -4153,6 +4166,7 @@ body:has(.app) {
     margin: 0 !important;
     max-width: none !important;
   }
+  html:has(.app),
   .app,
   body:has(.app) {
     background: #fff !important;
@@ -5825,4 +5839,26 @@ body:has(.app) {
   color: var(--a-accent-text);
   font-size: 12px;
   font-weight: 700;
+}
+
+/* QR page: a live preview of the first sheet; printing prints every sheet. */
+.qr-sheet-preview {
+  margin-top: 20px;
+}
+.qr-sheet-preview .preview-label {
+  margin: 0 0 10px;
+}
+@media screen {
+  .qr-sheet-preview .print-page {
+    width: min(560px, 100%);
+  }
+  .qr-sheet-preview .print-page:not(:first-child) {
+    display: none;
+  }
+  .qr-sheet-preview .print-sheets {
+    justify-items: start;
+  }
+}
+.print-format-pick {
+  flex-wrap: wrap;
 }
