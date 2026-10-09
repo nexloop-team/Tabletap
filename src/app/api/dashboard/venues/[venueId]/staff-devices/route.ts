@@ -9,7 +9,7 @@ export const POST = handle(async (request, ctx: RouteContext<"/api/dashboard/ven
   const { venue } = await venueFromRequest(request, (await ctx.params).venueId, { write: true });
   rateLimit(request, "staff-pairing", 20);
   const { label } = await parseBody(request, addStaffDeviceRequest);
-  const { token, expiresAt } = createPairing(venue.id, label);
+  const { token, expiresAt } = await createPairing(venue.id, label);
   const url = `${publicOrigin(requestOrigin(request))}/api/staff/pair?t=${encodeURIComponent(token)}`;
   return Response.json({ url, qrSvg: await qrSvg(url), expiresAt });
 });

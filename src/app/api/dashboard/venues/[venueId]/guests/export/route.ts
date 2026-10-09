@@ -11,7 +11,7 @@ function cell(value: string | number | null): string {
 
 export const GET = handle(async (request, ctx: RouteContext<"/api/dashboard/venues/[venueId]/guests/export">) => {
   const { venue } = await venueFromRequest(request, (await ctx.params).venueId);
-  const { rows } = listGuests(venue.id, { limit: 100_000 });
+  const { rows } = await listGuests(venue.id, { limit: 100_000 });
   const header = ["email", "first_name", "name", "marketing_consent", "birthday_dd_mm", "stamps", "visits", "source", "joined_utc"];
   const lines = [header.join(",")];
   for (const row of rows) {

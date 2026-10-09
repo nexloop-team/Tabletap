@@ -13,8 +13,8 @@ export type VenueSegment = "paying" | "free" | "trial" | "unpaid" | "suspended";
 export const VENUE_LIMIT = 500;
 export const USER_LIMIT = 200;
 
-export function adminVenues() {
-  return listVenuesForAdmin(VENUE_LIMIT).map((venue) => {
+export async function adminVenues() {
+  return (await listVenuesForAdmin(VENUE_LIMIT)).map((venue) => {
     const sub: SubscriptionState = {
       paid: venue.paid,
       status: (venue.subscriptionStatus ?? "active") as SubscriptionStatus,
@@ -29,7 +29,7 @@ export function adminVenues() {
   });
 }
 
-export type AdminVenue = ReturnType<typeof adminVenues>[number];
+export type AdminVenue = Awaited<ReturnType<typeof adminVenues>>[number];
 
 /** Revenue in rupees, before GST. Dev-mode subscriptions count, so the numbers can be tried locally. */
 export function revenueSummary(venues: AdminVenue[], now = Date.now()) {
@@ -97,16 +97,16 @@ function arrHistory(paying: AdminVenue[], now: number): { month: string; value: 
 }
 
 /** Totals for the admin sidebar. */
-export function platformCounts(): { venues: number; accounts: number } {
-  const db = getDb();
+export async function platformCounts(): Promise<{ venues: number; accounts: number }> {
+  const db = await getDb();
   return {
-    venues: (db.prepare("SELECT COUNT(*) AS n FROM venues").get() as { n: number }).n,
-    accounts: (db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n,
+    venues: ((await db.get("SELECT COUNT(*) AS n FROM venues")) as { n: number }).n,
+    accounts: ((await db.get("SELECT COUNT(*) AS n FROM users")) as { n: number }).n,
   };
 }
 
-export function adminUsers() {
-  return listUsersForAdmin(USER_LIMIT);
+export async function adminUsers() {
+  return await listUsersForAdmin(USER_LIMIT);
 }
 
 /** Created within the last `days` days. */

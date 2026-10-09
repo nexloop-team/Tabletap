@@ -14,7 +14,21 @@ pnpm lint
 pnpm build && pnpm start
 ```
 
-Requires Node 22+ (the database uses the built-in `node:sqlite`). The SQLite file, uploaded images and feedback photos live in `./data/` (override with `DATA_DIR`). Migrations run automatically on start; restart the dev server after pulling a schema change.
+Requires Node 22+. The database is **PostgreSQL**:
+
+- **Locally, with nothing set up**, the app runs an embedded Postgres ([PGlite](https://pglite.dev)) saved in `./data/pg`. Uploaded images and feedback photos go to `./data/` too (override with `DATA_DIR`). Only one process can open that local database at a time.
+- **With `DATABASE_URL` set**, it connects to that server instead: Supabase, Neon, AWS RDS or your own Postgres. Moving between hosts is a change of that one URL plus a data copy (`pg_dump` / `pg_restore`).
+
+Migrations run automatically on start; restart the dev server after pulling a schema change.
+
+**Coming from the old SQLite version?** Stop the app, then copy everything across once:
+
+```bash
+node scripts/migrate-sqlite-to-postgres.mjs                    # into the local ./data/pg
+DATABASE_URL=postgres://… node scripts/migrate-sqlite-to-postgres.mjs   # into Supabase or your server
+```
+
+It creates the tables if needed, skips rows that are already there, and with `S3_*` set it also uploads the images.
 
 ### Try the owner flow locally
 
@@ -41,7 +55,15 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 
 ## Going to production
 
-1. **Host on a server with a persistent disk**, such as Railway, Fly.io, Render or a VPS, and mount a volume at `DATA_DIR`. SQLite and uploads are files, so serverless hosts like Vercel would lose them. Run a single instance, because rate limits are kept in memory.
+1. **Database and files:**
+   1. Set `DATABASE_URL` to your Postgres.
+      - **Supabase:** Project → Connect → copy the **Session pooler** string (IPv4, port 5432), with your database password filled in.
+      - **Self-hosted:** `postgres://user:pass@host:5432/tabletap`, plus `DATABASE_SSL=off` if it has no TLS.
+   2. For images, set the `S3_*` variables to a bucket.
+      - **Supabase:** Storage → create a private bucket `tabletap` → Storage settings → S3 access keys. Use the endpoint shown there (`https://<project>.supabase.co/storage/v1/s3`) and the project's region.
+      - **MinIO, R2 or AWS:** use their endpoint and keys.
+   3. Without `S3_*`, images stay on the server's disk under `DATA_DIR`. That needs a persistent volume, so it won't work on serverless hosts.
+   4. Run a single instance, because rate limits are kept in memory.
 2. **Set `APP_URL`** to your public origin (e.g. `https://tabletap.app`). It's encoded into every QR code, so it must never change.
 3. **Email:** create a [Resend](https://resend.com) account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 4. **Razorpay:**
@@ -52,7 +74,9 @@ When a venue has neither a paid subscription nor trial days left, its guest page
    5. Without keys in production, payments are disabled and the Subscription page asks owners to email support.
    6. Ask your accountant about GST invoices: Razorpay can issue them if you add your GSTIN in its dashboard.
 5. **Set `ADMIN_EMAILS`** to your own address(es).
-6. **Back up `DATA_DIR`**: snapshot the volume, or use [Litestream](https://litestream.io) for continuous SQLite replication.
+6. **Backups:**
+   - **Database:** Supabase backs it up daily on paid plans. Elsewhere, schedule `pg_dump`.
+   - **Images:** they're in the bucket, or in `DATA_DIR` if you kept them on disk.
 7. **Get the starter [terms](src/app/terms/page.tsx) and [privacy notice](src/app/privacy/page.tsx) reviewed by a lawyer.**
 
 ## Configuration
@@ -60,7 +84,11 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | Env var | Purpose |
 |---|---|
 | `APP_URL` | Public origin encoded into QR codes and links (falls back to the request host) |
-| `DATA_DIR` | Where the SQLite database, media and feedback photos are stored |
+| `DATABASE_URL` | PostgreSQL connection string (Supabase, Neon, RDS, self-hosted). Without it, an embedded Postgres in `DATA_DIR/pg` is used |
+| `DATABASE_SSL` | `off` for a server without TLS (localhost is detected automatically) |
+| `DATABASE_POOL_SIZE` | Connections per server (default 5) |
+| `S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Store images and feedback photos in any S3-compatible bucket (Supabase Storage, MinIO, R2, AWS). Without them they're saved under `DATA_DIR` |
+| `DATA_DIR` | Local folder for the embedded database and, without `S3_*`, images and feedback photos (default `./data`) |
 | `ADMIN_EMAILS` | Comma-separated super admins (the email must be verified). They can make other accounts admins from `/admin/accounts` |
 | `RESEND_API_KEY` | Sends email through Resend; without it emails only go to the `outbox` table and log |
 | `MAIL_FROM` | Sender for all emails, e.g. `Tabletap <hello@tabletap.app>` |

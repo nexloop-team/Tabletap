@@ -26,12 +26,12 @@ function mood(score: number): { label: string; tone: string } {
 export default async function FeedbackPage({ params, searchParams }: PageProps<"/dashboard/[venueId]/feedback">) {
   const { venue, user } = await loadDashboardVenue((await params).venueId);
   // Opening the inbox reads everything in it; the sidebar count then refreshes.
-  const hadUnread = unreadFeedback(venue.id, user.id).count > 0;
-  markFeedbackSeen(venue.id, user.id);
+  const hadUnread = (await unreadFeedback(venue.id, user.id)).count > 0;
+  await markFeedbackSeen(venue.id, user.id);
   const query = await searchParams;
   const filter = (FILTERS.find((f) => f.key === firstParam(query.filter))?.key ?? "all") as FeedbackFilter;
   const page = Math.max(1, Number(firstParam(query.page)) || 1);
-  const { rows, total } = listFeedback(venue.id, { filter, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const { rows, total } = await listFeedback(venue.id, { filter, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const base = `/dashboard/${venue.id}/feedback`;
   const href = (f: FeedbackFilter, p = 1) => `${base}?filter=${f}${p > 1 ? `&page=${p}` : ""}`;

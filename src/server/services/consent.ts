@@ -1,5 +1,5 @@
 import "server-only";
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "../db";
 import { consentAskOn } from "@/lib/venue/features";
 import type { PublicVenue } from "@/lib/venue/types";
 import { newToken } from "../ids";
@@ -25,19 +25,19 @@ export interface ConsentOutcome {
  * `declined` only for a guest never asked before, so a later "no" on a
  * different form cannot silently revoke an earlier confirmed "yes".
  */
-export function recordConsent(
-  db: DatabaseSync,
+export async function recordConsent(
+  db: Db,
   venue: PublicVenue,
   customer: CustomerRow,
   answer: ConsentAnswer | null,
   origin: string,
-): ConsentOutcome {
+): Promise<ConsentOutcome> {
   if (!answer || !consentAskOn(venue)) return { confirmationPending: false, mail: null };
 
   if (answer.marketingConsent && answer.ageAttested) {
     if (customer.marketing_consent === "granted") return { confirmationPending: false, mail: null };
     const token = newToken();
-    setConsent(db, customer.id, "pending", true, token);
+    await setConsent(db, customer.id, "pending", true, token);
     return {
       confirmationPending: true,
       mail: {
@@ -48,17 +48,17 @@ export function recordConsent(
     };
   }
 
-  if (customer.marketing_consent === "unasked") setConsent(db, customer.id, "declined", answer.ageAttested, null);
+  if (customer.marketing_consent === "unasked") await setConsent(db, customer.id, "declined", answer.ageAttested, null);
   return { confirmationPending: false, mail: null };
 }
 
-export function confirmConsent(db: DatabaseSync, token: string): boolean {
-  const customer = findCustomerByConsentToken(db, token);
+export async function confirmConsent(db: Db, token: string): Promise<boolean> {
+  const customer = await findCustomerByConsentToken(db, token);
   if (!customer || customer.marketing_consent !== "pending") return false;
-  setConsent(db, customer.id, "granted", !!customer.age_attested, null);
+  await setConsent(db, customer.id, "granted", !!customer.age_attested, null);
   return true;
 }
 
-export function deliver(mail: Mail | null) {
-  if (mail) sendMail(mail);
+export async function deliver(mail: Mail | null) {
+  if (mail) await sendMail(mail);
 }

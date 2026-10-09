@@ -12,7 +12,7 @@ import "@/styles/landing.css";
 import "@/styles/pages.css";
 
 export async function generateMetadata({ searchParams }: PageProps<"/menu">): Promise<Metadata> {
-  const venue = loadVenue(venueParam(await searchParams));
+  const venue = await loadVenue(venueParam(await searchParams));
   return { title: venue ? `${venue.name} menu` : BRAND.name, robots: { index: false, follow: false } };
 }
 
@@ -24,9 +24,9 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
   const locale = await requestLocale();
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
-  const venue = loadVenue(code);
+  const venue = await loadVenue(code);
   if (!venue) {
-    const paused = loadPausedVenue(code);
+    const paused = await loadPausedVenue(code);
     if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/s?i=${encodeURIComponent(code)}`} />;
     return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
   }

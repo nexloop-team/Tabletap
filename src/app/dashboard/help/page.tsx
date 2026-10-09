@@ -40,7 +40,7 @@ const FAQ: { q: string; a: string }[] = [
 /** Help: quick routes into the right page, common questions, and a person to write to. */
 export default async function HelpPage({ searchParams }: PageProps<"/dashboard/help">) {
   const user = await requireUser();
-  const venues = listVenuesForUser(user.id);
+  const venues = await listVenuesForUser(user.id);
   const requested = firstParam((await searchParams).v);
   const remembered = (await cookies()).get("tt_venue")?.value;
   const venue = venues.find((v) => v.id === requested) ?? venues.find((v) => v.id === remembered) ?? (venues.length === 1 ? venues[0] : null);

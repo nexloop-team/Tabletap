@@ -16,35 +16,35 @@ const MAX_VENUES_PER_ACCOUNT = 20;
 const RESERVED_CODES = new Set(["admin", "api", "app", "dashboard", "login", "signup", "support", "help", "billing", "media", "preview", "www", "demo"]);
 
 /** Owners (and operators) only; anyone else gets the same 404 as a missing venue. */
-export function requireVenueAccess(user: User, venueId: string): VenueRecord {
-  const venue = getVenueRecord(venueId);
-  if (!venue || (!isManagerRole(venueRole(user.id, venueId)) && !isAdmin(user))) throw new ServiceError(404, "Venue not found");
+export async function requireVenueAccess(user: User, venueId: string): Promise<VenueRecord> {
+  const venue = await getVenueRecord(venueId);
+  if (!venue || (!isManagerRole(await venueRole(user.id, venueId)) && !isAdmin(user))) throw new ServiceError(404, "Venue not found");
   return venue;
 }
 
-function availableShortCode(name: string): string {
+async function availableShortCode(name: string): Promise<string> {
   const base = slugify(name) || "venue";
   const padded = base.length >= 3 ? base : `${base}-venue`;
-  if (!RESERVED_CODES.has(padded) && !shortCodeTaken(padded)) return padded;
+  if (!RESERVED_CODES.has(padded) && !await shortCodeTaken(padded)) return padded;
   for (let attempt = 0; attempt < 20; attempt++) {
     const candidate = `${padded.slice(0, 33)}-${randomBytes(3).toString("hex")}`;
-    if (!shortCodeTaken(candidate)) return candidate;
+    if (!await shortCodeTaken(candidate)) return candidate;
   }
   throw new ServiceError(500, "Couldn't find a free venue code, please try again");
 }
 
-export function createVenueForUser(user: User, input: z.output<typeof createVenueRequest>): VenueRecord {
-  if (listVenuesForUser(user.id).length >= MAX_VENUES_PER_ACCOUNT) {
+export async function createVenueForUser(user: User, input: z.output<typeof createVenueRequest>): Promise<VenueRecord> {
+  if ((await listVenuesForUser(user.id)).length >= MAX_VENUES_PER_ACCOUNT) {
     throw new ServiceError(400, `An account can hold up to ${MAX_VENUES_PER_ACCOUNT} venues. Contact us for more.`);
   }
   const id = newId("ven");
   const config = venueConfigSchema.parse(initialVenueConfig(input, newId));
-  createVenue({ id, shortCode: availableShortCode(input.name), ownerId: user.id, config });
-  return getVenueRecord(id)!;
+  await createVenue({ id, shortCode: await availableShortCode(input.name), ownerId: user.id, config });
+  return (await getVenueRecord(id))!;
 }
 
 /** Applies whole top-level sections over the saved config, then validates the result as one. */
-export function updateVenue(venue: VenueRecord, input: z.output<typeof updateVenueRequest>): VenueRecord {
+export async function updateVenue(venue: VenueRecord, input: z.output<typeof updateVenueRequest>): Promise<VenueRecord> {
   if (input.config) {
     const merged = { ...venue.config, ...stripUndefined(input.config) };
     const result = venueConfigSchema.safeParse(merged);
@@ -52,14 +52,14 @@ export function updateVenue(venue: VenueRecord, input: z.output<typeof updateVen
       const issue = result.error.issues[0];
       throw new ServiceError(400, issue ? `${issue.message}${issue.path.length ? ` (${issue.path.join(" › ")})` : ""}` : "Invalid settings");
     }
-    updateVenueConfig(venue.id, result.data as VenueConfig);
+    await updateVenueConfig(venue.id, result.data as VenueConfig);
   }
   if (input.shortCode && input.shortCode !== venue.shortCode) {
     if (RESERVED_CODES.has(input.shortCode) || input.shortCode.startsWith("demo")) throw new ServiceError(400, "That code is reserved, please pick another");
-    if (shortCodeTaken(input.shortCode, venue.id)) throw new ServiceError(409, "Another venue already uses that code");
-    updateShortCode(venue.id, input.shortCode);
+    if (await shortCodeTaken(input.shortCode, venue.id)) throw new ServiceError(409, "Another venue already uses that code");
+    await updateShortCode(venue.id, input.shortCode);
   }
-  return getVenueRecord(venue.id)!;
+  return (await getVenueRecord(venue.id))!;
 }
 
 function stripUndefined<T extends object>(value: T): Partial<T> {
@@ -69,5 +69,5 @@ function stripUndefined<T extends object>(value: T): Partial<T> {
 export async function removeVenue(venue: VenueRecord, confirmName: string) {
   if (confirmName.trim() !== venue.config.name.trim()) throw new ServiceError(400, "Type the venue name exactly to confirm");
   await stopBilling(venue.id);
-  deleteVenue(venue.id);
+  await deleteVenue(venue.id);
 }

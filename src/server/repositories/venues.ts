@@ -1,13 +1,12 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
 import { TRIAL_DAYS } from "@/lib/plans";
 import { liveAnnouncement } from "@/lib/venue/features";
 import { localDate } from "../jobs/time";
 import type { VenueConfig } from "@/lib/venue/schema";
 import { resolveSettings, type VenueSettings } from "@/lib/venue/settings";
 import type { PublicVenue } from "@/lib/venue/types";
-import { DATA_DIR, getDb, transaction } from "../db";
+import { getDb, transaction } from "../db";
+import { storage, storageKey } from "../storage";
 import { startTrial, venueHasAccess } from "./subscriptions";
 
 export type VenueStatus = "active" | "suspended";
@@ -46,11 +45,9 @@ function toVenue(row: VenueRow): PublicVenue {
  * guest-facing lookup: suspended venues and venues without a paid
  * subscription or running trial don't resolve, so their pages go offline.
  */
-export function findVenue(idOrCode: string): PublicVenue | null {
-  const row = getDb()
-    .prepare("SELECT * FROM venues WHERE (id = ? OR short_code = ?) AND status = 'active' LIMIT 1")
-    .get(idOrCode, idOrCode) as VenueRow | undefined;
-  if (!row || !venueHasAccess(row.id)) return null;
+export async function findVenue(idOrCode: string): Promise<PublicVenue | null> {
+  const row = (await (await getDb()).get("SELECT * FROM venues WHERE (id = ? OR short_code = ?) AND status = 'active' LIMIT 1", idOrCode, idOrCode)) as VenueRow | undefined;
+  if (!row || !await venueHasAccess(row.id)) return null;
   const venue = toVenue(row);
   return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date())) };
 }
@@ -60,9 +57,9 @@ export function findVenue(idOrCode: string): PublicVenue | null {
  * left): just enough to show a "Back soon" page in its own colours. Null
  * when the code doesn't belong to any venue.
  */
-export function findPausedVenue(idOrCode: string): { name: string; branding: PublicVenue["branding"] } | null {
-  const row = getDb().prepare("SELECT * FROM venues WHERE id = ? OR short_code = ? LIMIT 1").get(idOrCode, idOrCode) as VenueRow | undefined;
-  if (!row || (row.status === "active" && venueHasAccess(row.id))) return null;
+export async function findPausedVenue(idOrCode: string): Promise<{ name: string; branding: PublicVenue["branding"] } | null> {
+  const row = (await (await getDb()).get("SELECT * FROM venues WHERE id = ? OR short_code = ? LIMIT 1", idOrCode, idOrCode)) as VenueRow | undefined;
+  if (!row || (row.status === "active" && await venueHasAccess(row.id))) return null;
   const venue = toVenue(row);
   return { name: venue.name, branding: venue.branding };
 }
@@ -82,29 +79,25 @@ function toRecord(row: VenueRow): VenueRecord {
   return { id, shortCode, status: row.status, config: config as VenueConfig, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
-export function getVenueRecord(venueId: string): VenueRecord | null {
-  const row = getDb().prepare("SELECT * FROM venues WHERE id = ?").get(venueId) as VenueRow | undefined;
+export async function getVenueRecord(venueId: string): Promise<VenueRecord | null> {
+  const row = (await (await getDb()).get("SELECT * FROM venues WHERE id = ?", venueId)) as VenueRow | undefined;
   return row ? toRecord(row) : null;
 }
 
 /** Venues this user runs (owner, or any future manager role). Staff memberships are listed separately. */
-export function listVenuesForUser(userId: string): VenueRecord[] {
-  const rows = getDb()
-    .prepare("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role != 'staff' ORDER BY v.created_at")
-    .all(userId) as unknown as VenueRow[];
+export async function listVenuesForUser(userId: string): Promise<VenueRecord[]> {
+  const rows = (await (await getDb()).all("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role != 'staff' ORDER BY v.created_at", userId)) as unknown as VenueRow[];
   return rows.map(toRecord);
 }
 
 /** Venues where this user is staff: they can open the till there and nothing else. */
-export function listStaffVenuesForUser(userId: string): VenueRecord[] {
-  const rows = getDb()
-    .prepare("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role = 'staff' ORDER BY v.created_at")
-    .all(userId) as unknown as VenueRow[];
+export async function listStaffVenuesForUser(userId: string): Promise<VenueRecord[]> {
+  const rows = (await (await getDb()).all("SELECT v.* FROM venues v JOIN venue_members m ON m.venue_id = v.id WHERE m.user_id = ? AND m.role = 'staff' ORDER BY v.created_at", userId)) as unknown as VenueRow[];
   return rows.map(toRecord);
 }
 
-export function venueRole(userId: string, venueId: string): string | null {
-  const row = getDb().prepare("SELECT role FROM venue_members WHERE user_id = ? AND venue_id = ?").get(userId, venueId) as { role: string } | undefined;
+export async function venueRole(userId: string, venueId: string): Promise<string | null> {
+  const row = (await (await getDb()).get("SELECT role FROM venue_members WHERE user_id = ? AND venue_id = ?", userId, venueId)) as { role: string } | undefined;
   return row?.role ?? null;
 }
 
@@ -120,106 +113,97 @@ export interface StaffMember {
   joinedAt: string;
 }
 
-export function listStaffMembers(venueId: string): StaffMember[] {
-  const rows = getDb()
-    .prepare(
+export async function listStaffMembers(venueId: string): Promise<StaffMember[]> {
+  const rows = (await (await getDb()).all(
       `SELECT u.id, u.name, u.email, m.created_at FROM venue_members m JOIN users u ON u.id = m.user_id
-        WHERE m.venue_id = ? AND m.role = 'staff' ORDER BY m.created_at`,
-    )
-    .all(venueId) as { id: string; name: string; email: string; created_at: string }[];
+        WHERE m.venue_id = ? AND m.role = 'staff' ORDER BY m.created_at`, venueId)) as { id: string; name: string; email: string; created_at: string }[];
   return rows.map((row) => ({ userId: row.id, name: row.name, email: row.email, joinedAt: row.created_at }));
 }
 
 /** Adds a staff membership; someone who's already a member keeps their existing role. */
-export function addStaffMember(venueId: string, userId: string) {
-  getDb().prepare("INSERT OR IGNORE INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'staff')").run(venueId, userId);
+export async function addStaffMember(venueId: string, userId: string) {
+  (await (await getDb()).run("INSERT INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'staff') ON CONFLICT DO NOTHING", venueId, userId));
 }
 
 /** Removes a staff login and locks any till device that login opened. */
-export function removeStaffMember(venueId: string, userId: string): boolean {
-  return transaction((db) => {
-    const result = db.prepare("DELETE FROM venue_members WHERE venue_id = ? AND user_id = ? AND role = 'staff'").run(venueId, userId);
+export async function removeStaffMember(venueId: string, userId: string): Promise<boolean> {
+  return await transaction(async (db) => {
+    const result = (await db.run("DELETE FROM venue_members WHERE venue_id = ? AND user_id = ? AND role = 'staff'", venueId, userId));
     if (Number(result.changes) === 0) return false;
-    db.prepare("UPDATE staff_devices SET revoked_at = datetime('now') WHERE venue_id = ? AND user_id = ? AND revoked_at IS NULL").run(venueId, userId);
+    (await db.run("UPDATE staff_devices SET revoked_at = now() WHERE venue_id = ? AND user_id = ? AND revoked_at IS NULL", venueId, userId));
     return true;
   });
 }
 
-export function shortCodeTaken(code: string, exceptVenueId = ""): boolean {
-  return !!getDb().prepare("SELECT 1 FROM venues WHERE (short_code = ? OR id = ?) AND id != ?").get(code, code, exceptVenueId);
+export async function shortCodeTaken(code: string, exceptVenueId = ""): Promise<boolean> {
+  return !!(await (await getDb()).get("SELECT 1 FROM venues WHERE (short_code = ? OR id = ?) AND id != ?", code, code, exceptVenueId));
 }
 
-export function createVenue(input: { id: string; shortCode: string; ownerId: string; config: VenueConfig }) {
-  transaction((db) => {
-    db.prepare("INSERT INTO venues (id, short_code, config, updated_at) VALUES (?, ?, ?, datetime('now'))").run(
-      input.id,
+export async function createVenue(input: { id: string; shortCode: string; ownerId: string; config: VenueConfig }) {
+  await transaction(async (db) => {
+    (await db.run("INSERT INTO venues (id, short_code, config, updated_at) VALUES (?, ?, ?, now())", input.id,
       input.shortCode,
-      JSON.stringify(input.config),
-    );
-    db.prepare("INSERT INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'owner')").run(input.id, input.ownerId);
-    startTrial(db, input.id, TRIAL_DAYS);
+      JSON.stringify(input.config),));
+    (await db.run("INSERT INTO venue_members (venue_id, user_id, role) VALUES (?, ?, 'owner')", input.id, input.ownerId));
+    await startTrial(db, input.id, TRIAL_DAYS);
   });
 }
 
 /** Saves a new config and keeps the one it replaces, so the last save can be undone. */
-export function updateVenueConfig(venueId: string, config: VenueConfig) {
-  getDb()
-    .prepare("UPDATE venues SET previous_config = config, config = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(JSON.stringify(config), venueId);
+export async function updateVenueConfig(venueId: string, config: VenueConfig) {
+  (await (await getDb()).run("UPDATE venues SET previous_config = config, config = ?, updated_at = now() WHERE id = ?", JSON.stringify(config), venueId));
 }
 
 /**
  * Swaps the config with the one before the last save. Doing it twice redoes
  * the save. Returns false when there's nothing to go back to.
  */
-export function restorePreviousConfig(venueId: string): boolean {
-  const result = getDb()
-    .prepare("UPDATE venues SET config = previous_config, previous_config = config, updated_at = datetime('now') WHERE id = ? AND previous_config IS NOT NULL")
-    .run(venueId);
+export async function restorePreviousConfig(venueId: string): Promise<boolean> {
+  const result = (await (await getDb()).run("UPDATE venues SET config = previous_config, previous_config = config, updated_at = now() WHERE id = ? AND previous_config IS NOT NULL", venueId));
   return Number(result.changes) > 0;
 }
 
-export function updateShortCode(venueId: string, shortCode: string) {
-  getDb().prepare("UPDATE venues SET short_code = ?, updated_at = datetime('now') WHERE id = ?").run(shortCode, venueId);
+export async function updateShortCode(venueId: string, shortCode: string) {
+  (await (await getDb()).run("UPDATE venues SET short_code = ?, updated_at = now() WHERE id = ?", shortCode, venueId));
 }
 
 /** Owner-only settings (stamp policy, automations), with defaults filled in. */
-export function getVenueSettings(venueId: string): VenueSettings {
-  const row = getDb().prepare("SELECT settings FROM venues WHERE id = ?").get(venueId) as { settings: string | null } | undefined;
+export async function getVenueSettings(venueId: string): Promise<VenueSettings> {
+  const row = (await (await getDb()).get("SELECT settings FROM venues WHERE id = ?", venueId)) as { settings: string | null } | undefined;
   return resolveSettings(row?.settings ? JSON.parse(row.settings) : null);
 }
 
-export function saveVenueSettings(venueId: string, settings: VenueSettings) {
-  getDb().prepare("UPDATE venues SET settings = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(settings), venueId);
+export async function saveVenueSettings(venueId: string, settings: VenueSettings) {
+  (await (await getDb()).run("UPDATE venues SET settings = ?, updated_at = now() WHERE id = ?", JSON.stringify(settings), venueId));
 }
 
-export function setVenueStatus(venueId: string, status: VenueStatus) {
-  getDb().prepare("UPDATE venues SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, venueId);
+export async function setVenueStatus(venueId: string, status: VenueStatus) {
+  (await (await getDb()).run("UPDATE venues SET status = ?, updated_at = now() WHERE id = ?", status, venueId));
 }
 
 /** Removes the venue and everything its guests gave it: data, photos and media. */
-export function deleteVenue(venueId: string) {
-  const photos = getDb().prepare("SELECT image_path FROM feedback WHERE venue_id = ? AND image_path IS NOT NULL").all(venueId) as { image_path: string }[];
-  transaction((db) => {
-    db.prepare("DELETE FROM guest_emails WHERE customer_id IN (SELECT id FROM customers WHERE venue_id = ?)").run(venueId);
+export async function deleteVenue(venueId: string) {
+  const photos = (await (await getDb()).all("SELECT image_path FROM feedback WHERE venue_id = ? AND image_path IS NOT NULL", venueId)) as { image_path: string }[];
+  await transaction(async (db) => {
+    (await db.run("DELETE FROM guest_emails WHERE customer_id IN (SELECT id FROM customers WHERE venue_id = ?)", venueId));
     for (const table of ["visits", "stamp_events", "loyalty_cards", "customers", "feedback", "events", "ai_usage", "venue_members", "subscriptions"]) {
-      db.prepare(`DELETE FROM ${table} WHERE venue_id = ?`).run(venueId);
+      (await db.run(`DELETE FROM ${table} WHERE venue_id = ?`, venueId));
     }
-    db.prepare("DELETE FROM venues WHERE id = ?").run(venueId);
+    (await db.run("DELETE FROM venues WHERE id = ?", venueId));
   });
-  for (const photo of photos) fs.rmSync(path.join(DATA_DIR, photo.image_path), { force: true });
-  fs.rmSync(path.join(DATA_DIR, "media", venueId), { recursive: true, force: true });
+  for (const photo of photos) {
+    const key = storageKey(photo.image_path);
+    if (key) await storage().remove(key);
+  }
+  await storage().remove(`media/${venueId}/`);
 }
 
 /** Venues where this user is the only owner, which go with the account. */
-export function venuesOwnedSolelyBy(userId: string): string[] {
-  const rows = getDb()
-    .prepare(
+export async function venuesOwnedSolelyBy(userId: string): Promise<string[]> {
+  const rows = (await (await getDb()).all(
       `SELECT m.venue_id FROM venue_members m
        WHERE m.user_id = ? AND m.role = 'owner'
-         AND NOT EXISTS (SELECT 1 FROM venue_members o WHERE o.venue_id = m.venue_id AND o.user_id != m.user_id AND o.role = 'owner')`,
-    )
-    .all(userId) as { venue_id: string }[];
+         AND NOT EXISTS (SELECT 1 FROM venue_members o WHERE o.venue_id = m.venue_id AND o.user_id != m.user_id AND o.role = 'owner')`, userId)) as { venue_id: string }[];
   return rows.map((row) => row.venue_id);
 }
 
@@ -243,21 +227,18 @@ export interface AdminVenueRow {
   lastScanAt: string | null;
 }
 
-export function listVenuesForAdmin(limit = 500): AdminVenueRow[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT v.id, v.short_code, json_extract(v.config, '$.name') AS name, v.status, v.created_at,
+export async function listVenuesForAdmin(limit = 500): Promise<AdminVenueRow[]> {
+  const rows = (await (await getDb()).all(
+      `SELECT v.id, v.short_code, (v.config::jsonb->>'name') AS name, v.status, v.created_at,
               (SELECT u.email FROM venue_members m JOIN users u ON u.id = m.user_id WHERE m.venue_id = v.id AND m.role = 'owner' LIMIT 1) AS owner_email,
               s.plan, s.status AS sub_status, s.trial_ends_at, s.current_period_end, s.provider, s.cancel_at_period_end, s.updated_at AS sub_updated_at,
               (SELECT COUNT(*) FROM customers c WHERE c.venue_id = v.id) AS guests,
-              (SELECT COUNT(*) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= datetime('now', '-7 days')
-                 AND COALESCE(json_extract(e.params, '$.source'), '') != 'preview') AS scans_7d,
+              (SELECT COUNT(*) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= now() + INTERVAL '-7 days'
+                 AND COALESCE((e.params->>'source'), '') != 'preview') AS scans_7d,
               (SELECT MAX(e.created_at) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened'
-                 AND COALESCE(json_extract(e.params, '$.source'), '') != 'preview') AS last_scan_at
+                 AND COALESCE((e.params->>'source'), '') != 'preview') AS last_scan_at
        FROM venues v LEFT JOIN subscriptions s ON s.venue_id = v.id
-       ORDER BY v.created_at DESC LIMIT ?`,
-    )
-    .all(limit) as {
+       ORDER BY v.created_at DESC LIMIT ?`, limit)) as {
     id: string;
     short_code: string;
     name: string;

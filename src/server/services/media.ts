@@ -1,17 +1,15 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import { DATA_DIR } from "../db";
 import { ServiceError } from "../http";
 import { newId } from "../ids";
+import { storage } from "../storage";
 
 /**
- * Merchant images (logo, cover, menu photos) stored under DATA_DIR/media and
+ * Merchant images (logo, cover, menu photos), kept in storage under
+ * media/<venue>/ (disk or an S3-compatible bucket, see ../storage) and
  * served publicly from /media/<venue>/<file>. The type is decided from the
  * file's bytes, never its name or the browser's claim, and SVG is refused
  * because it can carry script.
  */
-export const MEDIA_DIR = path.join(DATA_DIR, "media");
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_FILES_PER_VENUE = 500;
 
@@ -31,18 +29,15 @@ export async function saveVenueMedia(venueId: string, file: File): Promise<strin
   const bytes = Buffer.from(await file.arrayBuffer());
   const ext = sniff(bytes);
   if (!ext) throw new ServiceError(400, "Upload a JPEG, PNG, WebP or GIF image");
-  const dir = path.join(MEDIA_DIR, venueId);
-  fs.mkdirSync(dir, { recursive: true });
-  if (fs.readdirSync(dir).length >= MAX_FILES_PER_VENUE) throw new ServiceError(400, "This venue has reached its image limit");
+  if ((await storage().count(`media/${venueId}/`, MAX_FILES_PER_VENUE)) >= MAX_FILES_PER_VENUE) throw new ServiceError(400, "This venue has reached its image limit");
   const name = `${newId("img")}.${ext}`;
-  fs.writeFileSync(path.join(dir, name), bytes);
+  await storage().put(`media/${venueId}/${name}`, bytes, MEDIA_TYPES[ext]);
   return `/media/${venueId}/${name}`;
 }
 
-/** Resolves a public media path to a file on disk, or null for anything that isn't one. */
-export function resolveMedia(venueId: string, file: string): { filePath: string; contentType: string } | null {
+/** Reads a public media file, or null for anything that isn't one. */
+export async function readMedia(venueId: string, file: string): Promise<{ bytes: Buffer; contentType: string } | null> {
   if (!/^ven_[A-Za-z0-9]+$/.test(venueId) || !/^img_[A-Za-z0-9]+\.(jpg|png|webp|gif)$/.test(file)) return null;
-  const filePath = path.join(MEDIA_DIR, venueId, file);
-  if (!fs.existsSync(filePath)) return null;
-  return { filePath, contentType: MEDIA_TYPES[file.split(".").pop()!] };
+  const bytes = await storage().get(`media/${venueId}/${file}`);
+  return bytes ? { bytes, contentType: MEDIA_TYPES[file.split(".").pop()!] } : null;
 }

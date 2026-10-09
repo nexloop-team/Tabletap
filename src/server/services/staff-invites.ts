@@ -19,16 +19,14 @@ import { completePairing, createPairing, currentStaffDevice } from "./staff";
 const INVITE_DAYS = 7;
 const digest = (token: string) => createHash("sha256").update(token).digest("base64url");
 
-export function createStaffInvite(venue: VenueRecord, inviter: User, rawEmail: string, origin: string): { url: string } {
+export async function createStaffInvite(venue: VenueRecord, inviter: User, rawEmail: string, origin: string): Promise<{ url: string }> {
   const email = normaliseEmail(rawEmail);
   if (!isPlausibleEmail(email)) throw new ServiceError(400, "Enter the staff member's email address");
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString();
-  getDb()
-    .prepare("INSERT INTO staff_invites (id, venue_id, email, invited_by, expires_at) VALUES (?, ?, ?, ?, ?)")
-    .run(digest(token), venue.id, email, inviter.id, expiresAt);
+  (await (await getDb()).run("INSERT INTO staff_invites (id, venue_id, email, invited_by, expires_at) VALUES (?, ?, ?, ?, ?)", digest(token), venue.id, email, inviter.id, expiresAt));
   const url = `${origin}/staff/join?t=${encodeURIComponent(token)}`;
-  sendMail({
+  await sendMail({
     to: email,
     subject: `${inviter.name || venue.config.name} invited you to stamp cards at ${venue.config.name}`,
     text: [
@@ -44,23 +42,23 @@ export function createStaffInvite(venue: VenueRecord, inviter: User, rawEmail: s
 }
 
 /** The venue an unused invite is for, so the sign-up page can say "Join the till at …". Null for a used, expired or unknown link. */
-export function inviteVenueName(token: string): string | null {
-  const invite = getDb().prepare("SELECT venue_id, expires_at, used_at FROM staff_invites WHERE id = ?").get(digest(token)) as
+export async function inviteVenueName(token: string): Promise<string | null> {
+  const invite = (await (await getDb()).get("SELECT venue_id, expires_at, used_at FROM staff_invites WHERE id = ?", digest(token))) as
     | { venue_id: string; expires_at: string; used_at: string | null }
     | undefined;
   if (!invite || invite.used_at || Date.parse(invite.expires_at) <= Date.now()) return null;
-  return getVenueRecord(invite.venue_id)?.config.name ?? null;
+  return (await getVenueRecord(invite.venue_id))?.config.name ?? null;
 }
 
 /** Uses an invite for this signed-in user. Returns the venue id, or null for a used, expired or unknown link. */
-export function acceptStaffInvite(token: string, user: User): string | null {
-  return transaction((db) => {
-    const invite = db.prepare("SELECT venue_id, expires_at, used_at FROM staff_invites WHERE id = ?").get(digest(token)) as
+export async function acceptStaffInvite(token: string, user: User): Promise<string | null> {
+  return await transaction(async (db) => {
+    const invite = (await db.get("SELECT venue_id, expires_at, used_at FROM staff_invites WHERE id = ?", digest(token))) as
       | { venue_id: string; expires_at: string; used_at: string | null }
       | undefined;
     if (!invite || invite.used_at || Date.parse(invite.expires_at) <= Date.now()) return null;
-    db.prepare("UPDATE staff_invites SET used_at = datetime('now') WHERE id = ?").run(digest(token));
-    addStaffMember(invite.venue_id, user.id);
+    (await db.run("UPDATE staff_invites SET used_at = now() WHERE id = ?", digest(token)));
+    await addStaffMember(invite.venue_id, user.id);
     return invite.venue_id;
   });
 }
@@ -70,10 +68,10 @@ export function acceptStaffInvite(token: string, user: User): string | null {
  * device for the venue. Throws for anyone without a membership there.
  */
 export async function openTillForUser(user: User, venueId: string): Promise<void> {
-  const role = venueRole(user.id, venueId);
+  const role = await venueRole(user.id, venueId);
   if (role !== "staff" && !isManagerRole(role)) throw new ServiceError(404, "Venue not found");
   // Already a till for this venue: don't add a duplicate to the owner's device list.
   if ((await currentStaffDevice())?.venueId === venueId) return;
-  const { token } = createPairing(venueId, `${user.name || user.email.split("@")[0]}'s login`, user.id);
+  const { token } = await createPairing(venueId, `${user.name || user.email.split("@")[0]}'s login`, user.id);
   if (!(await completePairing(token))) throw new ServiceError(500, "Couldn't open the till, please try again");
 }

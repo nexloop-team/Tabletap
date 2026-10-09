@@ -23,7 +23,7 @@ export default async function GuestsPage({ params, searchParams }: PageProps<"/d
   const query = await searchParams;
   const q = firstParam(query.q).slice(0, 100);
   const page = Math.max(1, Number(firstParam(query.page)) || 1);
-  const { rows, total } = listGuests(venue.id, { query: q, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const { rows, total } = await listGuests(venue.id, { query: q, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const base = `/dashboard/${venue.id}/guests`;
   const pageHref = (n: number) => `${base}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(n) })}`;

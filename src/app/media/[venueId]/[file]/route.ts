@@ -1,12 +1,11 @@
-import fs from "node:fs";
-import { resolveMedia } from "@/server/services/media";
+import { readMedia } from "@/server/services/media";
 
 /** Public merchant images. Names are random and never reused, so they cache forever. */
 export async function GET(_request: Request, ctx: RouteContext<"/media/[venueId]/[file]">) {
   const { venueId, file } = await ctx.params;
-  const media = resolveMedia(venueId, file);
+  const media = await readMedia(venueId, file);
   if (!media) return new Response("Not found", { status: 404 });
-  return new Response(new Uint8Array(fs.readFileSync(media.filePath)), {
+  return new Response(new Uint8Array(media.bytes), {
     headers: {
       "Content-Type": media.contentType,
       "Cache-Control": "public, max-age=31536000, immutable",

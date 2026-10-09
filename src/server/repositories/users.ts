@@ -37,63 +37,60 @@ function toUser(row: UserRow): User {
   };
 }
 
-export function findUserById(id: string): User | null {
-  const row = getDb().prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
+export async function findUserById(id: string): Promise<User | null> {
+  const row = (await (await getDb()).get("SELECT * FROM users WHERE id = ?", id)) as UserRow | undefined;
   return row ? toUser(row) : null;
 }
 
 /** Includes the hash: only the login and password-change paths need it. */
-export function findUserCredentials(email: string): { user: User; passwordHash: string } | null {
-  const row = getDb().prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+export async function findUserCredentials(email: string): Promise<{ user: User; passwordHash: string } | null> {
+  const row = (await (await getDb()).get("SELECT * FROM users WHERE email = ?", email)) as UserRow | undefined;
   return row ? { user: toUser(row), passwordHash: row.password_hash } : null;
 }
 
-export function findPasswordHash(userId: string): string | null {
-  const row = getDb().prepare("SELECT password_hash FROM users WHERE id = ?").get(userId) as { password_hash: string } | undefined;
+export async function findPasswordHash(userId: string): Promise<string | null> {
+  const row = (await (await getDb()).get("SELECT password_hash FROM users WHERE id = ?", userId)) as { password_hash: string } | undefined;
   return row?.password_hash ?? null;
 }
 
-export function emailTaken(email: string): boolean {
-  return !!getDb().prepare("SELECT 1 FROM users WHERE email = ?").get(email);
+export async function emailTaken(email: string): Promise<boolean> {
+  return !!(await (await getDb()).get("SELECT 1 FROM users WHERE email = ?", email));
 }
 
-export function insertUser(input: { email: string; name: string; passwordHash: string }): User {
+export async function insertUser(input: { email: string; name: string; passwordHash: string }): Promise<User> {
   const id = newId("usr");
-  getDb().prepare("INSERT INTO users (id, email, name, password_hash) VALUES (?, ?, ?, ?)").run(id, input.email, input.name, input.passwordHash);
-  return findUserById(id)!;
+  (await (await getDb()).run("INSERT INTO users (id, email, name, password_hash) VALUES (?, ?, ?, ?)", id, input.email, input.name, input.passwordHash));
+  return (await findUserById(id))!;
 }
 
-export function updateUserName(userId: string, name: string) {
-  getDb().prepare("UPDATE users SET name = ? WHERE id = ?").run(name, userId);
+export async function updateUserName(userId: string, name: string) {
+  (await (await getDb()).run("UPDATE users SET name = ? WHERE id = ?", name, userId));
 }
 
-export function updatePasswordHash(userId: string, passwordHash: string) {
-  getDb().prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, userId);
+export async function updatePasswordHash(userId: string, passwordHash: string) {
+  (await (await getDb()).run("UPDATE users SET password_hash = ? WHERE id = ?", passwordHash, userId));
 }
 
-export function markEmailVerified(userId: string) {
-  getDb().prepare("UPDATE users SET email_verified_at = COALESCE(email_verified_at, datetime('now')) WHERE id = ?").run(userId);
+export async function markEmailVerified(userId: string) {
+  (await (await getDb()).run("UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = ?", userId));
 }
 
-export function setUserBlocked(userId: string, blocked: boolean) {
-  getDb().prepare("UPDATE users SET blocked_at = CASE WHEN ? THEN COALESCE(blocked_at, datetime('now')) ELSE NULL END WHERE id = ?").run(blocked ? 1 : 0, userId);
+export async function setUserBlocked(userId: string, blocked: boolean) {
+  (await (await getDb()).run("UPDATE users SET blocked_at = CASE WHEN ? = 1 THEN COALESCE(blocked_at, now()) ELSE NULL END WHERE id = ?", blocked ? 1 : 0, userId));
 }
 
-export function setAdminRole(userId: string, admin: boolean) {
-  getDb().prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(admin ? 1 : 0, userId);
+export async function setAdminRole(userId: string, admin: boolean) {
+  (await (await getDb()).run("UPDATE users SET is_admin = ? WHERE id = ?", admin ? 1 : 0, userId));
 }
 
 export interface AdminUserRow extends User {
   venueCount: number;
 }
 
-export function listUsersForAdmin(limit = 200): AdminUserRow[] {
-  const rows = getDb()
-    .prepare(
+export async function listUsersForAdmin(limit = 200): Promise<AdminUserRow[]> {
+  const rows = (await (await getDb()).all(
       `SELECT u.id, u.email, u.name, u.email_verified_at, u.blocked_at, u.is_admin, u.created_at, COUNT(m.venue_id) AS venue_count
        FROM users u LEFT JOIN venue_members m ON m.user_id = u.id
-       GROUP BY u.id ORDER BY u.created_at DESC LIMIT ?`,
-    )
-    .all(limit) as unknown as (UserRow & { venue_count: number })[];
+       GROUP BY u.id ORDER BY u.created_at DESC LIMIT ?`, limit)) as unknown as (UserRow & { venue_count: number })[];
   return rows.map((row) => ({ ...toUser(row), venueCount: row.venue_count }));
 }

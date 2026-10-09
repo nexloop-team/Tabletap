@@ -43,12 +43,12 @@ export function aiImportLimits(): { maxImages: number; pdf: boolean } {
 export const AI_DAILY_UNITS = 300;
 
 /** Reserves quota up front; refused requests don't run. */
-function spendUnits(venueId: string, units: number) {
+async function spendUnits(venueId: string, units: number) {
   const day = new Date().toISOString().slice(0, 10);
-  const db = getDb();
-  const row = db.prepare("SELECT units FROM ai_usage WHERE venue_id = ? AND day = ?").get(venueId, day) as { units: number } | undefined;
+  const db = await getDb();
+  const row = (await db.get("SELECT units FROM ai_usage WHERE venue_id = ? AND day = ?", venueId, day)) as { units: number } | undefined;
   if ((row?.units ?? 0) + units > AI_DAILY_UNITS) throw new ServiceError(429, "You've reached today's AI limit for this venue. It resets at midnight (UTC).");
-  db.prepare("INSERT INTO ai_usage (venue_id, day, units) VALUES (?, ?, ?) ON CONFLICT (venue_id, day) DO UPDATE SET units = units + excluded.units").run(venueId, day, units);
+  (await db.run("INSERT INTO ai_usage (venue_id, day, units) VALUES (?, ?, ?) ON CONFLICT (venue_id, day) DO UPDATE SET units = ai_usage.units + excluded.units", venueId, day, units));
 }
 
 export interface MenuFile {
@@ -70,7 +70,7 @@ interface StructuredRequest<T> {
 async function structured<T>(request: StructuredRequest<T>): Promise<T> {
   const provider = aiProvider();
   if (!provider) throw new ServiceError(503, "AI isn't set up on this server");
-  return provider === "groq" ? groqStructured(request) : claudeStructured(request);
+  return provider === "groq" ? await groqStructured(request) : await claudeStructured(request);
 }
 
 // ─── Claude ──────────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ export interface DishInput {
 export async function explainDishes(venue: { id: string; name: string; venueType?: string | null }, dishes: DishInput[], onlyUnfamiliar: boolean) {
   if (!aiConfigured()) throw new ServiceError(503, "AI isn't set up on this server");
   if (dishes.length === 0) return [];
-  spendUnits(venue.id, dishes.length);
+  await spendUnits(venue.id, dishes.length);
   const list = dishes.map((dish) => ({ itemId: dish.id, name: dish.name, description: dish.description || undefined }));
   const task = onlyUnfamiliar
     ? "Return explanations only for the dishes whose names an average guest might not recognise. Skip self-explanatory names such as Flat White, Chocolate Brownie or Cheese Toastie. It's fine to return an empty list."
@@ -297,8 +297,8 @@ export async function importMenu(venueId: string, files: MenuFile[]): Promise<Im
   if (!aiConfigured()) throw new ServiceError(503, "AI isn't set up on this server");
   const limits = aiImportLimits();
   if (files.length > limits.maxImages) throw new ServiceError(400, `Upload up to ${limits.maxImages} photos at a time`);
-  spendUnits(venueId, files.length * 10);
-  return structured({
+  await spendUnits(venueId, files.length * 10);
+  return await structured({
     system: IMPORT_SYSTEM,
     text: "Transcribe this menu.",
     files,

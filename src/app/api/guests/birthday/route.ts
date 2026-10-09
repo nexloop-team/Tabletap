@@ -4,6 +4,6 @@ import { updateBirthday } from "@/server/services/guests";
 
 export const POST = handle(async (request) => {
   rateLimit(request, "birthday", 20);
-  updateBirthday(await parseBody(request, birthdayRequest));
+  await updateBirthday(await parseBody(request, birthdayRequest));
   return Response.json({ ok: true });
 });

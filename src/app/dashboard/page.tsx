@@ -13,8 +13,8 @@ import { listStaffVenuesForUser, listVenuesForUser } from "@/server/repositories
 export default async function DashboardHome({ searchParams }: PageProps<"/dashboard">) {
   const user = await requireUser();
   const verified = firstParam((await searchParams).verified);
-  const venues = listVenuesForUser(user.id);
-  const tills = listStaffVenuesForUser(user.id);
+  const venues = await listVenuesForUser(user.id);
+  const tills = await listStaffVenuesForUser(user.id);
   if (venues.length === 0 && tills.length === 0) redirect(`/onboarding${verified ? `?verified=${encodeURIComponent(verified)}` : ""}`);
   if (venues.length === 1 && tills.length === 0) redirect(`/dashboard/${venues[0].id}${verified ? `?verified=${verified}` : ""}`);
 
@@ -32,8 +32,8 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
         }
       />
       <div className="venue-list">
-        {venues.map((venue) => {
-          const badge = accessBadge(getSubscription(venue.id));
+        {venues.map(async (venue) => {
+          const badge = accessBadge(await getSubscription(venue.id));
           return (
             <Link key={venue.id} href={`/dashboard/${venue.id}`} className="card venue-tile">
               <VenueAvatar venue={{ name: venue.config.name, logoUrl: venue.config.branding.logoUrl ?? null }} />

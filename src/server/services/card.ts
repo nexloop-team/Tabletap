@@ -14,8 +14,8 @@ import { qrSvg } from "./qr";
  * shows the card inline once this device knows it.
  */
 export async function memberCardView(cardId: string, token: string, origin: string): Promise<MemberCardView | null> {
-  const card = token ? findCardForViewer(cardId, token) : null;
-  const venue = card ? findVenue(card.venue_id) : null;
+  const card = token ? await findCardForViewer(cardId, token) : null;
+  const venue = card ? await findVenue(card.venue_id) : null;
   if (!card || !venue) return null;
   const program = hasLoyaltyProgram(venue) ? venue.loyaltyProgram! : null;
   const tiers = programTiers(program);
@@ -33,7 +33,7 @@ export async function memberCardView(cardId: string, token: string, origin: stri
     staffQrSvg: program ? await qrSvg(`${origin}/staff/stamp?c=${card.id}`) : null,
     invite: referral
       ? {
-          url: `${origin}/s?i=${encodeURIComponent(venue.shortCode)}&ref=${ensureReferralCode(card.id)}&s=invite`,
+          url: `${origin}/s?i=${encodeURIComponent(venue.shortCode)}&ref=${await ensureReferralCode(card.id)}&s=invite`,
           referrerStamps: referral.referrerStamps,
           friendStamps: referral.friendStamps,
         }

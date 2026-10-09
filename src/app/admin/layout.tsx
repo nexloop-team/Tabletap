@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: { default: "Admin", template: `%s · 
 /** Operator console shell. Gated by ADMIN_EMAILS; each page checks again, since layouts don't re-run on client navigation. */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await requireAdminPage();
-  const totals = platformCounts();
+  const totals = await platformCounts();
   return (
     <div className={`app ${uiFont.variable}`}>
       <AppShell mode="admin" venues={[]} user={{ name: user.name, email: user.email, isAdmin: true }} counts={{ "/admin/venues": totals.venues, "/admin/accounts": totals.accounts }}>

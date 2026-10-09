@@ -25,7 +25,7 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
   const q = firstParam(query.q).slice(0, 100);
   const filter = FILTERS.find((f) => f.key === firstParam(query.filter))?.key ?? "all";
 
-  const all = adminUsers();
+  const all = await adminUsers();
   const searched = all.filter((user) => matches(q, user.name, user.email));
   const inFilter = (key: string) => (user: (typeof all)[number]) => (key === "unverified" ? !user.emailVerified : key === "no-venue" ? user.venueCount === 0 : key === "blocked" ? user.blocked : key === "admins" ? isAdmin(user) : true);
   const rows = searched.filter(inFilter(filter));

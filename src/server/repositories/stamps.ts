@@ -1,5 +1,5 @@
 import "server-only";
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "../db";
 import { getDb } from "../db";
 
 /**
@@ -22,55 +22,53 @@ export interface StampEvent {
   created_at: string;
 }
 
-export function recordStampEvent(
-  db: DatabaseSync,
+export async function recordStampEvent(
+  db: Db,
   input: { venueId: string; cardId: string; kind: StampEventKind; delta: number; rewardName?: string | null; deviceId?: string | null },
-): number {
-  const result = db
-    .prepare("INSERT INTO stamp_events (venue_id, card_id, kind, delta, reward_name, device_id) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(input.venueId, input.cardId, input.kind, input.delta, input.rewardName ?? null, input.deviceId ?? null);
-  return Number(result.lastInsertRowid);
+): Promise<number> {
+  const row = await db.get<{ id: number }>(
+    "INSERT INTO stamp_events (venue_id, card_id, kind, delta, reward_name, device_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+    input.venueId,
+    input.cardId,
+    input.kind,
+    input.delta,
+    input.rewardName ?? null,
+    input.deviceId ?? null,
+  );
+  return Number(row!.id);
 }
 
 /** The most recent staff action on a card that can still be undone. */
-export function lastUndoableEvent(db: DatabaseSync, cardId: string, withinMinutes: number): StampEvent | null {
+export async function lastUndoableEvent(db: Db, cardId: string, withinMinutes: number): Promise<StampEvent | null> {
   return (
-    (db
-      .prepare(
+    ((await db.get(
         `SELECT * FROM stamp_events
           WHERE card_id = ? AND kind IN ('stamp', 'redeem') AND undone_at IS NULL
-            AND created_at >= datetime('now', ?)
-          ORDER BY id DESC LIMIT 1`,
-      )
-      .get(cardId, `-${withinMinutes} minutes`) as StampEvent | undefined) ?? null
+            AND created_at >= now() + CAST(? AS INTERVAL)
+          ORDER BY id DESC LIMIT 1`, cardId, `-${withinMinutes} minutes`)) as StampEvent | undefined) ?? null
   );
 }
 
 /** When staff last stamped this card (ignoring undone stamps), for the cooldown. */
-export function lastStaffStampAt(db: DatabaseSync, cardId: string): string | null {
-  const row = db
-    .prepare("SELECT created_at FROM stamp_events WHERE card_id = ? AND kind = 'stamp' AND undone_at IS NULL ORDER BY id DESC LIMIT 1")
-    .get(cardId) as { created_at: string } | undefined;
+export async function lastStaffStampAt(db: Db, cardId: string): Promise<string | null> {
+  const row = (await db.get("SELECT created_at FROM stamp_events WHERE card_id = ? AND kind = 'stamp' AND undone_at IS NULL ORDER BY id DESC LIMIT 1", cardId)) as { created_at: string } | undefined;
   return row?.created_at ?? null;
 }
 
-export function markUndone(db: DatabaseSync, eventId: number) {
-  db.prepare("UPDATE stamp_events SET undone_at = datetime('now') WHERE id = ?").run(eventId);
+export async function markUndone(db: Db, eventId: number) {
+  (await db.run("UPDATE stamp_events SET undone_at = now() WHERE id = ?", eventId));
 }
 
-export function recentEvents(cardId: string, limit = 5): StampEvent[] {
-  return getDb().prepare("SELECT * FROM stamp_events WHERE card_id = ? ORDER BY id DESC LIMIT ?").all(cardId, limit) as unknown as StampEvent[];
+export async function recentEvents(cardId: string, limit = 5): Promise<StampEvent[]> {
+  return (await (await getDb()).all("SELECT * FROM stamp_events WHERE card_id = ? ORDER BY id DESC LIMIT ?", cardId, limit)) as unknown as StampEvent[];
 }
 
 /** Stamps given by staff and rewards handed out over the last `days` days. */
-export function stampActivity(venueId: string, days: number): { stampsGiven: number; rewardsRedeemed: number } {
-  const row = getDb()
-    .prepare(
+export async function stampActivity(venueId: string, days: number): Promise<{ stampsGiven: number; rewardsRedeemed: number }> {
+  const row = (await (await getDb()).get(
       `SELECT COALESCE(SUM(CASE WHEN kind = 'stamp' THEN delta END), 0) AS stamps,
               COUNT(CASE WHEN kind = 'redeem' THEN 1 END) AS redeemed
          FROM stamp_events
-        WHERE venue_id = ? AND undone_at IS NULL AND created_at >= datetime('now', ?)`,
-    )
-    .get(venueId, `-${days} days`) as { stamps: number; redeemed: number };
+        WHERE venue_id = ? AND undone_at IS NULL AND created_at >= now() + CAST(? AS INTERVAL)`, venueId, `-${days} days`)) as { stamps: number; redeemed: number };
   return { stampsGiven: row.stamps, rewardsRedeemed: row.redeemed };
 }

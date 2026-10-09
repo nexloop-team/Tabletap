@@ -9,7 +9,7 @@ export const PATCH = handle(async (request) => {
   assertSameOrigin(request);
   const user = await requireApiUser();
   const { venueId, weeklyDigest } = await parseBody(request, notificationPrefsRequest);
-  requireVenueAccess(user, venueId);
-  setWeeklyDigest(user.id, venueId, weeklyDigest);
+  await requireVenueAccess(user, venueId);
+  await setWeeklyDigest(user.id, venueId, weeklyDigest);
   return Response.json({ ok: true });
 });

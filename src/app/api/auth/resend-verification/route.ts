@@ -7,6 +7,6 @@ export const POST = handle(async (request) => {
   const user = await requireApiUser();
   if (user.emailVerified) return Response.json({ ok: true });
   rateLimitKey(`verify:${user.id}`, 3, 15 * 60_000);
-  sendVerificationEmail(user, requestOrigin(request));
+  await sendVerificationEmail(user, requestOrigin(request));
   return Response.json({ ok: true });
 });

@@ -25,8 +25,8 @@ export default async function UnsubscribePage({ searchParams }: PageProps<"/unsu
     );
   }
   const token = firstParam(params.token);
-  const guest = token ? findByUnsubscribeToken(token) : null;
-  const venueName = guest ? getVenueRecord(guest.venueId)?.config.name : null;
+  const guest = token ? await findByUnsubscribeToken(token) : null;
+  const venueName = guest ? (await getVenueRecord(guest.venueId))?.config.name : null;
   return (
     <main className="page-wrapper simple-page">
       <div className="simple-card">

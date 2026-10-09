@@ -20,14 +20,14 @@ export const MAX_REFERRAL_REWARDS_PER_MONTH = 5;
  * rewards. Runs after the stamp is committed; a failure here is logged and
  * never undoes the stamp.
  */
-export function onStaffStamp(event: { venue: PublicVenue; cardId: string; before: number; after: number }) {
+export async function onStaffStamp(event: { venue: PublicVenue; cardId: string; before: number; after: number }) {
   try {
-    sendRewardReadyEmail(event.venue, event.cardId, event.before, event.after);
+    await sendRewardReadyEmail(event.venue, event.cardId, event.before, event.after);
   } catch (error) {
     console.error("[retention] reward-ready email failed", error);
   }
   try {
-    rewardReferrer(event.venue, event.cardId);
+    await rewardReferrer(event.venue, event.cardId);
   } catch (error) {
     console.error("[retention] referral reward failed", error);
   }
@@ -37,20 +37,20 @@ export function onStaffStamp(event: { venue: PublicVenue; cardId: string; before
  * Service email (no marketing consent needed) when a stamp takes the card
  * past a reward. At most once per reward per card per day.
  */
-export function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before: number, after: number): boolean {
-  if (!venueHasAccess(venue.id) || !getVenueSettings(venue.id).automations.rewardReady) return false;
+export async function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before: number, after: number): Promise<boolean> {
+  if (!await venueHasAccess(venue.id) || !(await getVenueSettings(venue.id)).automations.rewardReady) return false;
   const unlocked = programTiers(venue.loyaltyProgram).filter((tier) => before < tier.stampsRequired && after >= tier.stampsRequired);
   const tier = unlocked[unlocked.length - 1];
   if (!tier) return false;
-  const card = findCardById(getDb(), cardId);
+  const card = await findCardById(await getDb(), cardId);
   if (!card) return false;
-  const guest = getDb().prepare("SELECT id, email, first_name FROM customers WHERE id = ?").get(card.customer_id) as
+  const guest = (await (await getDb()).get("SELECT id, email, first_name FROM customers WHERE id = ?", card.customer_id)) as
     | { id: string; email: string; first_name: string | null }
     | undefined;
   if (!guest) return false;
   const key = `${card.id}:${tier.stampsRequired}:${localDate(new Date())}`;
-  if (!claimGuestEmail(guest.id, "reward_ready", key)) return false;
-  const sent = sendMail({
+  if (!await claimGuestEmail(guest.id, "reward_ready", key)) return false;
+  const sent = await sendMail({
     to: guest.email,
     subject: `Your ${tier.rewardName} is ready at ${venue.name}`,
     text: [
@@ -63,7 +63,7 @@ export function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before:
       `${venue.name} · via ${BRAND.name}`,
     ].join("\n"),
   });
-  if (!sent) releaseGuestEmail(guest.id, "reward_ready", key);
+  if (!sent) await releaseGuestEmail(guest.id, "reward_ready", key);
   return sent;
 }
 
@@ -71,22 +71,22 @@ export function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before:
  * The friend's first staff stamp proves a real visit, so that's when the
  * member who invited them gets their stamps. Checked once per friend card.
  */
-export function rewardReferrer(venue: PublicVenue, friendCardId: string) {
+export async function rewardReferrer(venue: PublicVenue, friendCardId: string) {
   const referral = venue.loyaltyProgram?.referral;
   const goal = stampGoal(programTiers(venue.loyaltyProgram));
-  const result = transaction((db) => {
-    const referrerId = claimReferralReward(db, friendCardId);
+  const result = await transaction(async (db) => {
+    const referrerId = await claimReferralReward(db, friendCardId);
     if (!referrerId || !referral?.enabled || goal === 0) return null;
-    const referrer = findCardById(db, referrerId);
+    const referrer = await findCardById(db, referrerId);
     if (!referrer || referrer.venue_id !== venue.id) return null;
-    if (referralRewardsInLast(db, referrer.id, 30) >= MAX_REFERRAL_REWARDS_PER_MONTH) return null;
+    if (await referralRewardsInLast(db, referrer.id, 30) >= MAX_REFERRAL_REWARDS_PER_MONTH) return null;
     const next = Math.min(referrer.stamps + referral.referrerStamps, goal);
     if (next === referrer.stamps) return null;
-    setCardStamps(db, referrer.id, next);
-    recordStampEvent(db, { venueId: venue.id, cardId: referrer.id, kind: "referral", delta: next - referrer.stamps });
+    await setCardStamps(db, referrer.id, next);
+    await recordStampEvent(db, { venueId: venue.id, cardId: referrer.id, kind: "referral", delta: next - referrer.stamps });
     return { referrerId: referrer.id, before: referrer.stamps, after: next };
   });
-  if (result) sendRewardReadyEmail(venue, result.referrerId, result.before, result.after);
+  if (result) await sendRewardReadyEmail(venue, result.referrerId, result.before, result.after);
 }
 
 /** Welcome stamps for a friend who joined through an invite, on top of any join bonus. */

@@ -15,15 +15,15 @@ export const metadata: Metadata = { title: { default: "Dashboard", template: `%s
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
-  const venues = listVenuesForUser(user.id).map((venue) => {
-    return {
+  const venues = await Promise.all(
+    (await listVenuesForUser(user.id)).map(async (venue) => ({
       id: venue.id,
       name: venue.config.name,
-      planLabel: accessBadge(getSubscription(venue.id)).label,
-      unreadFeedback: unreadFeedback(venue.id, user.id).count,
+      planLabel: accessBadge(await getSubscription(venue.id)).label,
+      unreadFeedback: (await unreadFeedback(venue.id, user.id)).count,
       logoUrl: venue.config.branding.logoUrl ?? null,
-    };
-  });
+    })),
+  );
   return (
     <div className={`app ${uiFont.variable}`}>
       <AppShell mode="venue" venues={venues} user={{ name: user.name, email: user.email, isAdmin: isAdmin(user) }} lastVenueId={(await cookies()).get("tt_venue")?.value ?? null}>

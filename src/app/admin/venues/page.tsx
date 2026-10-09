@@ -29,7 +29,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
   const segment = SEGMENTS.find((s) => s.key === firstParam(query.segment))?.key ?? "all";
   const origin = await serverOrigin();
 
-  const all = adminVenues();
+  const all = await adminVenues();
   const searched = all.filter((venue) => matches(q, venue.name, venue.shortCode, venue.ownerEmail, venue.id));
   const rows = segment === "all" ? searched : searched.filter((venue) => venue.segment === segment);
   const countFor = (key: string) => (key === "all" ? searched.length : searched.filter((venue) => venue.segment === key).length);

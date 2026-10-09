@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     const form = await request.formData().catch(() => null);
     token = String(form?.get("token") ?? "");
   }
-  const guest = token ? findByUnsubscribeToken(token) : null;
-  if (guest) unsubscribe(guest.customerId);
+  const guest = token ? await findByUnsubscribeToken(token) : null;
+  if (guest) await unsubscribe(guest.customerId);
   // Same answer either way, so tokens can't be probed.
   if (request.headers.get("content-type")?.includes("application/x-www-form-urlencoded") && !new URL(request.url).searchParams.get("token")) {
     return Response.redirect(new URL("/unsubscribe?done=1", request.url), 303);

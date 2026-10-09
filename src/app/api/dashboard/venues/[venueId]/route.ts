@@ -13,7 +13,7 @@ export const GET = handle(async (request, ctx: Ctx) => {
 /** Saves whole top-level config sections (and/or the short code). */
 export const PATCH = handle(async (request, ctx: Ctx) => {
   const { venue } = await venueFromRequest(request, (await ctx.params).venueId, { write: true });
-  return Response.json(updateVenue(venue, await parseBody(request, updateVenueRequest)));
+  return Response.json(await updateVenue(venue, await parseBody(request, updateVenueRequest)));
 });
 
 export const DELETE = handle(async (request, ctx: Ctx) => {

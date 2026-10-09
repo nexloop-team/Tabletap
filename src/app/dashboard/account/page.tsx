@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Account" };
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const venues = listVenuesForUser(user.id).map((venue) => ({ id: venue.id, name: venue.config.name, enabled: weeklyDigestEnabled(user.id, venue.id) }));
+  const venues = await Promise.all((await listVenuesForUser(user.id)).map(async (venue) => ({ id: venue.id, name: venue.config.name, enabled: await weeklyDigestEnabled(user.id, venue.id) })));
   return (
     <div className="page page-narrow">
       <PageHeader title="Account" />

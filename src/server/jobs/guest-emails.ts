@@ -23,22 +23,22 @@ function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-function marketingFooter(venueName: string, customerId: string): { text: string; headers: Record<string, string> } {
-  const url = `${appOrigin()}/unsubscribe?token=${ensureUnsubscribeToken(customerId)}`;
+async function marketingFooter(venueName: string, customerId: string): Promise<{ text: string; headers: Record<string, string> }> {
+  const url = `${appOrigin()}/unsubscribe?token=${await ensureUnsubscribeToken(customerId)}`;
   return {
     text: `\n—\nYou're getting this because you asked ${venueName} for offers. Unsubscribe: ${url}\n${venueName} · via ${BRAND.name}`,
     headers: {
-      "List-Unsubscribe": `<${appOrigin()}/api/unsubscribe?token=${ensureUnsubscribeToken(customerId)}>`,
+      "List-Unsubscribe": `<${appOrigin()}/api/unsubscribe?token=${await ensureUnsubscribeToken(customerId)}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
   };
 }
 
-function send(guest: EmailableGuest, kind: string, key: string, subject: string, body: string[], venueName: string): boolean {
-  if (!claimGuestEmail(guest.id, kind, key)) return false;
-  const footer = marketingFooter(venueName, guest.id);
-  const ok = sendMail({ to: guest.email, subject, text: `${body.join("\n")}\n${footer.text}`, headers: footer.headers });
-  if (!ok) releaseGuestEmail(guest.id, kind, key);
+async function send(guest: EmailableGuest, kind: string, key: string, subject: string, body: string[], venueName: string): Promise<boolean> {
+  if (!await claimGuestEmail(guest.id, kind, key)) return false;
+  const footer = await marketingFooter(venueName, guest.id);
+  const ok = await sendMail({ to: guest.email, subject, text: `${body.join("\n")}\n${footer.text}`, headers: footer.headers });
+  if (!ok) await releaseGuestEmail(guest.id, kind, key);
   return ok;
 }
 
@@ -46,19 +46,19 @@ export async function runGuestAutomations(now: Date): Promise<number> {
   const local = localParts(now);
   if (local.hour < SEND_FROM_HOUR || local.hour >= SEND_UNTIL_HOUR) return 0;
 
-  const venues = getDb().prepare("SELECT id, json_extract(config, '$.name') AS name FROM venues WHERE status = 'active'").all() as { id: string; name: string }[];
+  const venues = (await (await getDb()).all("SELECT id, (config::jsonb->>'name') AS name FROM venues WHERE status = 'active'")) as { id: string; name: string }[];
   let sent = 0;
   for (const venue of venues) {
-    if (!venueHasAccess(venue.id)) continue;
-    const { birthday, winBack } = getVenueSettings(venue.id).automations;
+    if (!await venueHasAccess(venue.id)) continue;
+    const { birthday, winBack } = (await getVenueSettings(venue.id)).automations;
 
     if (birthday.enabled) {
       const target = localParts(new Date(now.getTime() + BIRTHDAY_DAYS_AHEAD * 86_400_000));
       // 29 February birthdays are celebrated on 1 March in other years.
-      const leapDayGuests = target.month === 3 && target.day === 1 && !isLeapYear(target.year) ? birthdayGuests(venue.id, 2, [29]) : [];
-      const guests = [...birthdayGuests(venue.id, target.month, [target.day]), ...leapDayGuests];
+      const leapDayGuests = target.month === 3 && target.day === 1 && !isLeapYear(target.year) ? await birthdayGuests(venue.id, 2, [29]) : [];
+      const guests = [...(await birthdayGuests(venue.id, target.month, [target.day])), ...leapDayGuests];
       for (const guest of guests) {
-        const ok = send(
+        const ok = await send(
           guest,
           "birthday",
           String(target.year),
@@ -79,8 +79,8 @@ export async function runGuestAutomations(now: Date): Promise<number> {
     }
 
     if (winBack.enabled) {
-      for (const guest of lapsedGuests(venue.id, winBack.days)) {
-        const ok = send(
+      for (const guest of await lapsedGuests(venue.id, winBack.days)) {
+        const ok = await send(
           guest,
           "win_back",
           guest.lastSeen.slice(0, 10),

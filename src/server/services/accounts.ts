@@ -26,9 +26,9 @@ import { deleteVenue, venuesOwnedSolelyBy } from "../repositories/venues";
 import { stopBilling } from "./billing";
 import { sendMail } from "./mailer";
 
-export function sendVerificationEmail(user: User, origin: string) {
-  const token = createAuthToken(user.id, "verify_email", 7 * 24 * 60);
-  sendMail({
+export async function sendVerificationEmail(user: User, origin: string) {
+  const token = await createAuthToken(user.id, "verify_email", 7 * 24 * 60);
+  await sendMail({
     to: user.email,
     subject: `Confirm your email for ${BRAND.name}`,
     text: `Hi ${user.name},\n\nConfirm your email address to finish setting up your account:\n${origin}/api/auth/verify?token=${encodeURIComponent(token)}\n\nThe link works for 7 days. If you didn't sign up, ignore this email.\n\n${BRAND.name}`,
@@ -36,17 +36,17 @@ export function sendVerificationEmail(user: User, origin: string) {
 }
 
 export async function signup(input: z.output<typeof signupRequest>, origin: string): Promise<User> {
-  if (emailTaken(input.email)) throw new ServiceError(409, "An account with this email already exists. Try signing in.");
-  const user = insertUser({ email: input.email, name: input.name, passwordHash: await hashPassword(input.password) });
+  if (await emailTaken(input.email)) throw new ServiceError(409, "An account with this email already exists. Try signing in.");
+  const user = await insertUser({ email: input.email, name: input.name, passwordHash: await hashPassword(input.password) });
   await createSession(user.id);
-  sendVerificationEmail(user, origin);
+  await sendVerificationEmail(user, origin);
   return user;
 }
 
 export async function login(input: z.output<typeof loginRequest>): Promise<User> {
   // Per account as well as per address, so a botnet can't grind one password.
   rateLimitKey(`login:${input.email}`, 10, 15 * 60_000);
-  const found = findUserCredentials(input.email);
+  const found = await findUserCredentials(input.email);
   const ok = await verifyPassword(input.password, found?.passwordHash ?? (await dummyPasswordHash()));
   if (!found || !ok) throw new ServiceError(401, "That email and password don't match");
   if (found.user.blocked) throw new ServiceError(403, `This account has been blocked. Email ${BRAND.supportEmail} if you think that's a mistake.`);
@@ -59,16 +59,16 @@ export async function logout() {
 }
 
 /** Always succeeds from the caller's view, so it can't be used to discover accounts. */
-export function requestPasswordReset(email: string, origin: string) {
+export async function requestPasswordReset(email: string, origin: string) {
   rateLimitKey(`reset:${email}`, 3, 15 * 60_000);
-  const found = findUserCredentials(email);
+  const found = await findUserCredentials(email);
   if (!found || found.user.blocked) return;
-  sendPasswordResetEmail(found.user, origin);
+  await sendPasswordResetEmail(found.user, origin);
 }
 
-export function sendPasswordResetEmail(user: User, origin: string) {
-  const token = createAuthToken(user.id, "reset_password", 60);
-  sendMail({
+export async function sendPasswordResetEmail(user: User, origin: string) {
+  const token = await createAuthToken(user.id, "reset_password", 60);
+  await sendMail({
     to: user.email,
     subject: `Reset your ${BRAND.name} password`,
     text: `Hi ${user.name},\n\nSomeone (hopefully you) asked to reset your password. Choose a new one here:\n${origin}/reset-password?token=${encodeURIComponent(token)}\n\nThe link works for one hour. If you didn't ask, ignore this email and your password stays the same.\n\n${BRAND.name}`,
@@ -76,34 +76,34 @@ export function sendPasswordResetEmail(user: User, origin: string) {
 }
 
 export async function resetPassword(token: string, password: string) {
-  const userId = consumeAuthToken(token, "reset_password");
+  const userId = await consumeAuthToken(token, "reset_password");
   if (!userId) throw new ServiceError(400, "This reset link has expired or was already used. Ask for a new one.");
-  updatePasswordHash(userId, await hashPassword(password));
+  await updatePasswordHash(userId, await hashPassword(password));
   // The link went to their inbox, so the address is proven too.
-  markEmailVerified(userId);
-  destroyAllSessions(userId);
+  await markEmailVerified(userId);
+  await destroyAllSessions(userId);
   await createSession(userId);
 }
 
-export function verifyEmail(token: string): boolean {
-  const userId = consumeAuthToken(token, "verify_email");
+export async function verifyEmail(token: string): Promise<boolean> {
+  const userId = await consumeAuthToken(token, "verify_email");
   if (!userId) return false;
-  markEmailVerified(userId);
+  await markEmailVerified(userId);
   return true;
 }
 
 export async function changePassword(user: User, input: z.output<typeof changePasswordRequest>) {
   rateLimitKey(`password:${user.id}`, 5, 15 * 60_000);
-  const hash = findPasswordHash(user.id);
+  const hash = await findPasswordHash(user.id);
   if (!hash || !(await verifyPassword(input.currentPassword, hash))) throw new ServiceError(400, "Your current password isn't right");
-  updatePasswordHash(user.id, await hashPassword(input.newPassword));
+  await updatePasswordHash(user.id, await hashPassword(input.newPassword));
   await destroyOtherSessions(user.id);
 }
 
 /** Deletes the account and every venue it alone owns, with those venues' guest data. */
 export async function deleteAccount(user: User, password: string) {
   rateLimitKey(`delete:${user.id}`, 5, 15 * 60_000);
-  const hash = findPasswordHash(user.id);
+  const hash = await findPasswordHash(user.id);
   if (!hash || !(await verifyPassword(password, hash))) throw new ServiceError(400, "That password isn't right");
   await removeAccount(user.id);
   await destroySession();
@@ -111,11 +111,11 @@ export async function deleteAccount(user: User, password: string) {
 
 /** The account, its sessions and every venue it alone owns. Returns how many venues went with it. */
 export async function removeAccount(userId: string): Promise<number> {
-  const venues = venuesOwnedSolelyBy(userId);
+  const venues = await venuesOwnedSolelyBy(userId);
   for (const venueId of venues) {
     await stopBilling(venueId);
-    deleteVenue(venueId);
+    await deleteVenue(venueId);
   }
-  getDb().prepare("DELETE FROM users WHERE id = ?").run(userId);
+  (await (await getDb()).run("DELETE FROM users WHERE id = ?", userId));
   return venues.length;
 }

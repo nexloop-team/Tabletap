@@ -86,8 +86,8 @@ function attentionList(venues: AdminVenue[], now: number): Attention[] {
 /** Operator home: platform health and money at a glance, and the venues that need a human. */
 export default async function AdminOverview() {
   await requireAdminPage();
-  const users = adminUsers();
-  const venues = adminVenues();
+  const users = await adminUsers();
+  const venues = await adminVenues();
   const money = revenueSummary(venues);
   const origin = await serverOrigin();
   const now = currentTime();

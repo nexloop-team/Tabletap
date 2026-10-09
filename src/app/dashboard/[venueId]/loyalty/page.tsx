@@ -13,7 +13,7 @@ export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[ven
   const { venue } = await loadDashboardVenue((await params).venueId);
   const program = venue.config.loyaltyProgram;
   const crm = venue.config.crm;
-  const settings = getVenueSettings(venue.id);
+  const settings = await getVenueSettings(venue.id);
   return (
     <>
       <div className="page-head">
@@ -26,13 +26,13 @@ export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[ven
         venueId={venue.id}
         venueType={venue.config.venueType}
         initial={{ loyaltyProgram: program ?? null, crm }}
-        referralStats={referralStats(venue.id)}
+        referralStats={await referralStats(venue.id)}
         previewUrl={`/s?i=${encodeURIComponent(venue.shortCode)}&s=preview`}
         automations={settings.automations}
         till={
           <>
-            <StaffDevices venueId={venue.id} devices={listStaffDevices(venue.id)} cooldownMinutes={settings.stampPolicy.cooldownMinutes} enabled={!!program && program.stampsEnabled !== false} />
-            <StaffMembers venueId={venue.id} members={listStaffMembers(venue.id)} />
+            <StaffDevices venueId={venue.id} devices={await listStaffDevices(venue.id)} cooldownMinutes={settings.stampPolicy.cooldownMinutes} enabled={!!program && program.stampsEnabled !== false} />
+            <StaffMembers venueId={venue.id} members={await listStaffMembers(venue.id)} />
           </>
         }
       />

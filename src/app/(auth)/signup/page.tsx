@@ -17,7 +17,7 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
   const joiningStaff = next.startsWith("/staff/");
   // From an invite link: name the venue they're joining.
   const inviteToken = joiningStaff ? new URLSearchParams(next.split("?")[1] ?? "").get("t") : null;
-  const staffVenue = inviteToken ? inviteVenueName(inviteToken) : null;
+  const staffVenue = inviteToken ? await inviteVenueName(inviteToken) : null;
   return (
     <>
       {joiningStaff && <span className="auth-badge">Staff invite</span>}

@@ -1,8 +1,9 @@
 import "server-only";
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "../db";
 import { getDb } from "../db";
 import { newId, newToken } from "../ids";
 import { recordStampEvent } from "./stamps";
+import { parseDbDate } from "@/lib/plans";
 
 export interface LoyaltyCardRow {
   id: string;
@@ -15,59 +16,54 @@ export interface LoyaltyCardRow {
   created_at: string;
 }
 
-export function findCardByCustomer(db: DatabaseSync, customerId: string): LoyaltyCardRow | null {
-  return (db.prepare("SELECT * FROM loyalty_cards WHERE customer_id = ?").get(customerId) as LoyaltyCardRow | undefined) ?? null;
+export async function findCardByCustomer(db: Db, customerId: string): Promise<LoyaltyCardRow | null> {
+  return ((await db.get("SELECT * FROM loyalty_cards WHERE customer_id = ?", customerId)) as LoyaltyCardRow | undefined) ?? null;
 }
 
-export function createCard(db: DatabaseSync, venueId: string, customerId: string, initialStamps: number): LoyaltyCardRow {
+export async function createCard(db: Db, venueId: string, customerId: string, initialStamps: number): Promise<LoyaltyCardRow> {
   const id = newId("crd");
-  db.prepare("INSERT INTO loyalty_cards (id, venue_id, customer_id, access_token, stamps) VALUES (?, ?, ?, ?, ?)").run(
-    id,
+  (await db.run("INSERT INTO loyalty_cards (id, venue_id, customer_id, access_token, stamps) VALUES (?, ?, ?, ?, ?)", id,
     venueId,
     customerId,
     newToken(),
-    initialStamps,
-  );
-  if (initialStamps > 0) recordStampEvent(db, { venueId, cardId: id, kind: "bonus", delta: initialStamps });
-  return db.prepare("SELECT * FROM loyalty_cards WHERE id = ?").get(id) as unknown as LoyaltyCardRow;
+    initialStamps,));
+  if (initialStamps > 0) await recordStampEvent(db, { venueId, cardId: id, kind: "bonus", delta: initialStamps });
+  return (await db.get("SELECT * FROM loyalty_cards WHERE id = ?", id)) as unknown as LoyaltyCardRow;
 }
 
-export function findCardById(db: DatabaseSync, cardId: string): LoyaltyCardRow | null {
-  return (db.prepare("SELECT * FROM loyalty_cards WHERE id = ?").get(cardId) as LoyaltyCardRow | undefined) ?? null;
+export async function findCardById(db: Db, cardId: string): Promise<LoyaltyCardRow | null> {
+  return ((await db.get("SELECT * FROM loyalty_cards WHERE id = ?", cardId)) as LoyaltyCardRow | undefined) ?? null;
 }
 
-export function setCardStamps(db: DatabaseSync, cardId: string, stamps: number) {
-  db.prepare("UPDATE loyalty_cards SET stamps = ? WHERE id = ?").run(stamps, cardId);
+export async function setCardStamps(db: Db, cardId: string, stamps: number) {
+  (await db.run("UPDATE loyalty_cards SET stamps = ? WHERE id = ?", stamps, cardId));
 }
 
-export function addFeedbackStamp(db: DatabaseSync, cardId: string): number {
-  db.prepare("UPDATE loyalty_cards SET stamps = stamps + 1, last_feedback_stamp_at = datetime('now') WHERE id = ?").run(cardId);
-  const card = db.prepare("SELECT venue_id, stamps FROM loyalty_cards WHERE id = ?").get(cardId) as { venue_id: string; stamps: number };
-  recordStampEvent(db, { venueId: card.venue_id, cardId, kind: "feedback", delta: 1 });
+export async function addFeedbackStamp(db: Db, cardId: string): Promise<number> {
+  (await db.run("UPDATE loyalty_cards SET stamps = stamps + 1, last_feedback_stamp_at = now() WHERE id = ?", cardId));
+  const card = (await db.get("SELECT venue_id, stamps FROM loyalty_cards WHERE id = ?", cardId)) as { venue_id: string; stamps: number };
+  await recordStampEvent(db, { venueId: card.venue_id, cardId, kind: "feedback", delta: 1 });
   return card.stamps;
 }
 
-export function markPassEmailed(db: DatabaseSync, cardId: string) {
-  db.prepare("UPDATE loyalty_cards SET last_pass_email_at = datetime('now') WHERE id = ?").run(cardId);
+export async function markPassEmailed(db: Db, cardId: string) {
+  (await db.run("UPDATE loyalty_cards SET last_pass_email_at = now() WHERE id = ?", cardId));
 }
 
 /** For the public card page: the id alone is not enough, the emailed token is required. */
-export function findCardForViewer(cardId: string, token: string) {
+export async function findCardForViewer(cardId: string, token: string) {
   return (
-    (getDb()
-      .prepare(
+    ((await (await getDb()).get(
         `SELECT c.id, c.stamps, c.created_at, c.venue_id, cu.first_name, cu.name
            FROM loyalty_cards c JOIN customers cu ON cu.id = c.customer_id
-          WHERE c.id = ? AND c.access_token = ?`,
-      )
-      .get(cardId, token) as
+          WHERE c.id = ? AND c.access_token = ?`, cardId, token)) as
       | { id: string; stamps: number; created_at: string; venue_id: string; first_name: string | null; name: string | null }
       | undefined) ?? null
   );
 }
 
-/** SQLite datetime('now') strings are UTC without a zone marker. */
+/** SQLite now() strings are UTC without a zone marker. */
 export function hoursSince(sqliteUtc: string | null): number {
   if (!sqliteUtc) return Infinity;
-  return (Date.now() - new Date(`${sqliteUtc.replace(" ", "T")}Z`).getTime()) / 3_600_000;
+  return (Date.now() - (parseDbDate(sqliteUtc) ?? 0)) / 3_600_000;
 }

@@ -5,5 +5,5 @@ import { enroll } from "@/server/services/loyalty";
 export const POST = handle(async (request) => {
   rateLimit(request, "enroll", 20);
   const input = await parseBody(request, enrollRequest);
-  return Response.json(enroll(input, requestOrigin(request)));
+  return Response.json(await enroll(input, requestOrigin(request)));
 });

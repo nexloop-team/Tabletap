@@ -9,5 +9,5 @@ export const POST = handle(async (request, ctx: RouteContext<"/api/dashboard/ven
   const { user, venue } = await venueFromRequest(request, (await ctx.params).venueId, { write: true });
   rateLimit(request, "staff-invite", 20);
   const { email } = await parseBody(request, inviteStaffRequest);
-  return Response.json(createStaffInvite(venue, user, email, publicOrigin(requestOrigin(request))));
+  return Response.json(await createStaffInvite(venue, user, email, publicOrigin(requestOrigin(request))));
 });

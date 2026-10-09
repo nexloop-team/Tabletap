@@ -7,6 +7,6 @@ export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("t") ?? "";
   const user = await currentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/staff/join?t=${token}`)}`);
-  const venueId = token ? acceptStaffInvite(token, user) : null;
+  const venueId = token ? await acceptStaffInvite(token, user) : null;
   redirect(venueId ? `/staff/open?v=${encodeURIComponent(venueId)}` : "/staff?invite=0");
 }

@@ -7,6 +7,6 @@ import { setEditMode } from "@/server/services/operator";
 export const POST = handle(async (request, ctx: RouteContext<"/api/admin/venues/[venueId]/edit-mode">) => {
   const admin = await requireApiAdmin(request);
   const { on } = await parseBody(request, adminEditModeRequest);
-  setEditMode(admin, (await ctx.params).venueId, on);
+  await setEditMode(admin, (await ctx.params).venueId, on);
   return Response.json({ ok: true });
 });

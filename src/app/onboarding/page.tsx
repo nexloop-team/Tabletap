@@ -19,7 +19,7 @@ const REGION_CURRENCY: Record<string, (typeof CURRENCIES)[number]> = {
 export default async function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   const user = await requireUser();
   const verified = firstParam((await searchParams).verified);
-  const hasVenues = listVenuesForUser(user.id).length > 0;
+  const hasVenues = (await listVenuesForUser(user.id)).length > 0;
   const region = /-([A-Z]{2})\b/.exec((await headers()).get("accept-language") ?? "")?.[1] ?? "";
   return (
     <div className={`app ${uiFont.variable}`}>

@@ -62,12 +62,12 @@ export async function startCheckout(venue: VenueRecord, user: User, origin: stri
   const mode = billingMode();
   const billingPage = `${origin}/dashboard/${venue.id}/billing`;
   if (mode === "disabled") throw new ServiceError(503, "Payments aren't set up yet");
-  const existing = getSubscription(venue.id);
+  const existing = await getSubscription(venue.id);
   // "Subscribe again" while a cancelled year is still running: the new subscription starts when it ends, so nobody pays twice.
   const resumeAt = existing?.paid && existing.cancelAtPeriodEnd ? (parseDbDate(existing.currentPeriodEnd) ?? 0) : 0;
   const resuming = resumeAt > Date.now();
   if (mode === "dev") {
-    updateSubscription(
+    await updateSubscription(
       venue.id,
       resuming
         ? { cancelAtPeriodEnd: false }
@@ -110,10 +110,10 @@ export async function confirmCheckout(venue: VenueRecord, input: ConfirmPaymentR
   }
   const sub = await razorpay<RazorpaySubscription>("GET", `/subscriptions/${encodeURIComponent(input.subscriptionId)}`);
   if (venueIdFromNotes(sub.notes) !== venue.id) throw new ServiceError(400, "That payment belongs to a different venue");
-  const existing = getSubscription(venue.id);
+  const existing = await getSubscription(venue.id);
   // A subscription that starts later (subscribing again before a cancelled year ends) keeps the year already paid for.
   const keepPeriod = !sub.current_end && existing?.paid && (parseDbDate(existing.currentPeriodEnd) ?? 0) > Date.now();
-  updateSubscription(venue.id, {
+  await updateSubscription(venue.id, {
     paid: true,
     status: "active",
     provider: "razorpay",
@@ -126,21 +126,21 @@ export async function confirmCheckout(venue: VenueRecord, input: ConfirmPaymentR
 
 /** Stops renewal; the venue stays live until the end of the year it paid for. */
 export async function cancelSubscription(venue: VenueRecord) {
-  const sub = getSubscription(venue.id);
+  const sub = await getSubscription(venue.id);
   if (!sub?.paid) throw new ServiceError(400, "There's no subscription to cancel");
   if (sub.provider === "dev" || billingMode() === "dev") {
     // Dev stand-in: ends straight away so the unpaid state can be tried locally.
-    updateSubscription(venue.id, { paid: false, status: "canceled", cancelAtPeriodEnd: false, currentPeriodEnd: null });
+    await updateSubscription(venue.id, { paid: false, status: "canceled", cancelAtPeriodEnd: false, currentPeriodEnd: null });
     return;
   }
   if (sub.provider !== "razorpay" || !sub.providerSubscriptionId) throw new ServiceError(400, "This subscription is managed by support. Contact us to change it.");
   await razorpay("POST", `/subscriptions/${encodeURIComponent(sub.providerSubscriptionId)}/cancel`, { cancel_at_cycle_end: 1 });
-  updateSubscription(venue.id, { cancelAtPeriodEnd: true });
+  await updateSubscription(venue.id, { cancelAtPeriodEnd: true });
 }
 
 /** Before a venue is deleted: stop Razorpay charging for it. Best effort; a failure is logged for follow-up by hand. */
 export async function stopBilling(venueId: string) {
-  const sub = getSubscription(venueId);
+  const sub = await getSubscription(venueId);
   if (billingMode() !== "razorpay" || sub?.provider !== "razorpay" || !sub.paid || !sub.providerSubscriptionId) return;
   try {
     await razorpay("POST", `/subscriptions/${encodeURIComponent(sub.providerSubscriptionId)}/cancel`, { cancel_at_cycle_end: 0 });
@@ -189,20 +189,20 @@ interface RazorpayEvent {
   payload?: { subscription?: { entity?: RazorpaySubscription } };
 }
 
-export function handleRazorpayEvent(event: RazorpayEvent) {
+export async function handleRazorpayEvent(event: RazorpayEvent) {
   const sub = event.payload?.subscription?.entity;
   if (!event.event.startsWith("subscription.") || !sub) return;
-  const venueId = venueIdFromNotes(sub.notes) ?? findSubscriptionByProviderId(sub.id)?.venueId;
+  const venueId = venueIdFromNotes(sub.notes) ?? (await findSubscriptionByProviderId(sub.id))?.venueId;
   if (!venueId) {
     console.warn(`[billing] subscription ${sub.id} has no venue`);
     return;
   }
   const mapped = mapStatus(sub.status);
   if (!mapped) return;
-  const current = getSubscription(venueId);
+  const current = await getSubscription(venueId);
   // An older subscription for the same venue (say, one replaced after a lapse) mustn't switch the newer one off.
   if (current?.providerSubscriptionId && current.providerSubscriptionId !== sub.id && current.paid && !mapped.paid) return;
-  updateSubscription(venueId, {
+  await updateSubscription(venueId, {
     ...mapped,
     provider: "razorpay",
     providerCustomerId: sub.customer_id ?? null,

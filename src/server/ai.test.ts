@@ -19,10 +19,8 @@ afterEach(() => {
   delete process.env.AI_PROVIDER;
 });
 
-afterAll(() => {
-  globalThis.__appDb?.close();
-  globalThis.__appDb = undefined;
-  globalThis.__appDbMigrations = undefined;
+afterAll(async () => {
+  await (await import("./db")).closeDb();
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -52,7 +50,7 @@ function assertStrict(node: unknown, where = "schema") {
 }
 
 describe("AI provider choice", () => {
-  it("prefers Groq when its key is set, and can be forced", () => {
+  it("prefers Groq when its key is set, and can be forced", async () => {
     expect(ai.aiProvider()).toBeNull();
     process.env.ANTHROPIC_API_KEY = "a";
     expect(ai.aiProvider()).toBe("anthropic");

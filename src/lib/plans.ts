@@ -44,7 +44,7 @@ export interface SubscriptionState {
   currentPeriodEnd: string | null;
 }
 
-/** SQLite's datetime('now') format (UTC, no zone) or ISO; both parse as UTC here. */
+/** The database's "YYYY-MM-DD HH:MM:SS" format (UTC, no zone) or ISO; both parse as UTC here. */
 export function parseDbDate(value: string | null | undefined): number | null {
   if (!value) return null;
   const iso = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;

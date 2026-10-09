@@ -14,44 +14,44 @@ import { removeAccount, sendPasswordResetEmail, sendVerificationEmail } from "./
  * written to `admin_actions` with who did it, so support work can be traced.
  */
 
-export function updateVenueAsAdmin(admin: User, venueId: string, input: z.output<typeof adminVenueRequest>) {
-  const venue = getVenueRecord(venueId);
+export async function updateVenueAsAdmin(admin: User, venueId: string, input: z.output<typeof adminVenueRequest>) {
+  const venue = await getVenueRecord(venueId);
   if (!venue) throw new ServiceError(404, "Venue not found");
   const target = { type: "venue" as const, id: venueId, label: venue.config.name };
   if (input.freeAccess !== undefined) {
-    const sub = getSubscription(venueId);
+    const sub = await getSubscription(venueId);
     if (sub?.provider === "razorpay" && sub.paid && sub.status !== "canceled") {
       throw new ServiceError(409, "This venue pays through Razorpay. Cancel it in the Razorpay dashboard first.");
     }
-    updateSubscription(
+    await updateSubscription(
       venueId,
       input.freeAccess
         ? { paid: true, status: "active", provider: "manual", currentPeriodEnd: null, cancelAtPeriodEnd: false }
         : { paid: false, status: "canceled", currentPeriodEnd: null, cancelAtPeriodEnd: false },
     );
-    logAdminAction(admin, input.freeAccess ? "Gave free access" : "Removed free access", target);
+    await logAdminAction(admin, input.freeAccess ? "Gave free access" : "Removed free access", target);
   }
   if (input.extendTrialDays) {
-    extendTrial(venueId, input.extendTrialDays);
-    logAdminAction(admin, "Extended trial", target, `+${input.extendTrialDays} days`);
+    await extendTrial(venueId, input.extendTrialDays);
+    await logAdminAction(admin, "Extended trial", target, `+${input.extendTrialDays} days`);
   }
   if (input.status && input.status !== venue.status) {
-    setVenueStatus(venueId, input.status);
-    logAdminAction(admin, input.status === "suspended" ? "Suspended venue" : "Restored venue", target);
+    await setVenueStatus(venueId, input.status);
+    await logAdminAction(admin, input.status === "suspended" ? "Suspended venue" : "Restored venue", target);
   }
 }
 
 /** "Edit for owner": lets this admin save changes to the venue for a while. Switching it on is logged, and so is every save. */
-export function setEditMode(admin: User, venueId: string, on: boolean) {
-  const venue = getVenueRecord(venueId);
+export async function setEditMode(admin: User, venueId: string, on: boolean) {
+  const venue = await getVenueRecord(venueId);
   if (!venue) throw new ServiceError(404, "Venue not found");
   const target = { type: "venue" as const, id: venueId, label: venue.config.name };
   if (on) {
-    startEditGrant(admin.id, venueId);
-    logAdminAction(admin, "Started editing for owner", target, `for ${EDIT_GRANT_MINUTES} minutes`);
+    await startEditGrant(admin.id, venueId);
+    await logAdminAction(admin, "Started editing for owner", target, `for ${EDIT_GRANT_MINUTES} minutes`);
   } else {
-    endEditGrant(admin.id, venueId);
-    logAdminAction(admin, "Stopped editing for owner", target);
+    await endEditGrant(admin.id, venueId);
+    await logAdminAction(admin, "Stopped editing for owner", target);
   }
 }
 
@@ -72,47 +72,47 @@ function assertSuperAdminChange(admin: User, user: User) {
   if (user.id === admin.id || isSuperAdmin(user)) throw new ServiceError(400, "Super admins are managed in ADMIN_EMAILS");
 }
 
-export function updateUserAsAdmin(admin: User, userId: string, input: z.output<typeof adminUserRequest>, origin: string) {
-  const user = findUserById(userId);
+export async function updateUserAsAdmin(admin: User, userId: string, input: z.output<typeof adminUserRequest>, origin: string) {
+  const user = await findUserById(userId);
   if (!user) throw new ServiceError(404, "Account not found");
   const target = accountTarget(user);
   switch (input.action) {
     case "resend_verification":
       if (user.emailVerified) throw new ServiceError(400, "That email is already confirmed");
-      sendVerificationEmail(user, origin);
-      logAdminAction(admin, "Resent verification email", target);
+      await sendVerificationEmail(user, origin);
+      await logAdminAction(admin, "Resent verification email", target);
       return;
     case "send_reset":
       if (user.blocked) throw new ServiceError(400, "Unblock the account first");
-      sendPasswordResetEmail(user, origin);
-      logAdminAction(admin, "Sent password reset link", target);
+      await sendPasswordResetEmail(user, origin);
+      await logAdminAction(admin, "Sent password reset link", target);
       return;
     case "block":
       assertCanLockOut(admin, user);
-      setUserBlocked(user.id, true);
-      destroyAllSessions(user.id);
-      logAdminAction(admin, "Blocked account", target);
+      await setUserBlocked(user.id, true);
+      await destroyAllSessions(user.id);
+      await logAdminAction(admin, "Blocked account", target);
       return;
     case "unblock":
-      setUserBlocked(user.id, false);
-      logAdminAction(admin, "Unblocked account", target);
+      await setUserBlocked(user.id, false);
+      await logAdminAction(admin, "Unblocked account", target);
       return;
     case "make_admin":
     case "remove_admin":
       assertSuperAdminChange(admin, user);
       if (input.action === "make_admin" && !user.emailVerified) throw new ServiceError(400, "They need to confirm their email first");
-      setAdminRole(user.id, input.action === "make_admin");
-      logAdminAction(admin, input.action === "make_admin" ? "Made admin" : "Removed admin", target);
+      await setAdminRole(user.id, input.action === "make_admin");
+      await logAdminAction(admin, input.action === "make_admin" ? "Made admin" : "Removed admin", target);
       return;
   }
 }
 
 /** Deletes the account and the venues it alone owns. The operator types the email to confirm. */
 export async function deleteUserAsAdmin(admin: User, userId: string, confirmEmail: string) {
-  const user = findUserById(userId);
+  const user = await findUserById(userId);
   if (!user) throw new ServiceError(404, "Account not found");
   assertCanLockOut(admin, user);
   if (confirmEmail.trim().toLowerCase() !== user.email) throw new ServiceError(400, "Type the account's email exactly to confirm");
   const venues = await removeAccount(user.id);
-  logAdminAction(admin, "Deleted account", accountTarget(user), venues ? `and ${venues} venue${venues === 1 ? "" : "s"}` : null);
+  await logAdminAction(admin, "Deleted account", accountTarget(user), venues ? `and ${venues} venue${venues === 1 ? "" : "s"}` : null);
 }

@@ -8,7 +8,7 @@ export const PATCH = handle(async (request) => {
   assertSameOrigin(request);
   const user = await requireApiUser();
   const { name } = await parseBody(request, updateAccountRequest);
-  updateUserName(user.id, name);
+  await updateUserName(user.id, name);
   return Response.json({ ok: true });
 });
 

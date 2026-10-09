@@ -5,5 +5,5 @@ import { stampForFeedback } from "@/server/services/loyalty";
 export const POST = handle(async (request) => {
   rateLimit(request, "stamp", 20);
   const input = await parseBody(request, stampRequest);
-  return Response.json(stampForFeedback(input));
+  return Response.json(await stampForFeedback(input));
 });

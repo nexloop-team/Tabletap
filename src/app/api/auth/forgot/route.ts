@@ -8,6 +8,6 @@ export const POST = handle(async (request) => {
   rateLimit(request, "forgot", 5);
   const { email, captchaToken } = await parseBody(request, forgotPasswordRequest);
   await verifyCaptcha(captchaToken, request);
-  requestPasswordReset(email, requestOrigin(request));
+  await requestPasswordReset(email, requestOrigin(request));
   return Response.json({ ok: true });
 });

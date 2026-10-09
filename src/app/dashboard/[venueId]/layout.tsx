@@ -19,11 +19,11 @@ export default async function VenueLayout({ children, params }: LayoutProps<"/da
   const { user, venue, subscription, access } = await loadDashboardVenue(venueId);
   const trialDays = trialDaysLeft(subscription);
   // Only operators reach a venue they aren't a member of (loadDashboardVenue 404s everyone else).
-  const operatorView = !isManagerRole(venueRole(user.id, venue.id));
+  const operatorView = !isManagerRole(await venueRole(user.id, venue.id));
 
   return (
     <div className="page">
-      {operatorView && <AdminEditBar venueId={venue.id} venueName={venue.config.name} editingUntil={editGrantExpiry(user.id, venue.id)} minutes={EDIT_GRANT_MINUTES} />}
+      {operatorView && <AdminEditBar venueId={venue.id} venueName={venue.config.name} editingUntil={await editGrantExpiry(user.id, venue.id)} minutes={EDIT_GRANT_MINUTES} />}
       {venue.status === "suspended" && (
         <div className="notice notice-error">This venue is suspended, so its guest page is offline. Contact support to restore it.</div>
       )}

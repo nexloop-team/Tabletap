@@ -7,5 +7,5 @@ export const POST = handle(async (request) => {
   const device = await requireStaffDevice();
   rateLimitKey(`staff:${device.id}`, 60);
   const { cardId } = await parseBody(request, staffUndoRequest);
-  return Response.json(undoLast(device, cardId));
+  return Response.json(await undoLast(device, cardId));
 });

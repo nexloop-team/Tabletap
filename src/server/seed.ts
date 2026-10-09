@@ -1,5 +1,5 @@
 import "server-only";
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "./db";
 import type { PublicVenue } from "@/lib/venue/types";
 
 /**
@@ -215,15 +215,13 @@ export const DEMO_VENUES: PublicVenue[] = [
   },
 ];
 
-export function seedDemoVenues(db: DatabaseSync) {
+export async function seedDemoVenues(db: Db) {
   // Demo venues have no owner, so they're refreshed from this file on every start:
   // new demo content shows up without resetting the database.
-  const insert = db.prepare("INSERT INTO venues (id, short_code, config) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET config = excluded.config");
-  // Demos show every feature, so they sit on the paid plan with no owner.
-  const subscribe = db.prepare("INSERT OR IGNORE INTO subscriptions (venue_id, plan, status) VALUES (?, 'pro', 'active')");
   for (const venue of DEMO_VENUES) {
     const { id, shortCode, ...config } = venue;
-    insert.run(id, shortCode, JSON.stringify(config));
-    subscribe.run(id);
+    await db.run("INSERT INTO venues (id, short_code, config) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET config = excluded.config", id, shortCode, JSON.stringify(config));
+    // Demos show every feature, so they sit on the paid plan with no owner.
+    await db.run("INSERT INTO subscriptions (venue_id, plan, status) VALUES (?, 'pro', 'active') ON CONFLICT (venue_id) DO NOTHING", id);
   }
 }

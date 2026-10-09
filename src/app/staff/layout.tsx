@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: { default: "Staff", template: `%s · 
  */
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const device = await currentStaffDevice();
-  const venue = device ? getVenueRecord(device.venueId) : null;
+  const venue = device ? await getVenueRecord(device.venueId) : null;
   return (
     <div className={`app till ${uiFont.variable}`}>
       <header className="till-bar">

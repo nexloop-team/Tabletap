@@ -7,5 +7,5 @@ export const POST = handle(async (request) => {
   const device = await requireStaffDevice();
   rateLimitKey(`staff:${device.id}`, 60);
   const { cardId, count, force } = await parseBody(request, staffStampRequest);
-  return Response.json(stampCard(device, cardId, count, !!force));
+  return Response.json(await stampCard(device, cardId, count, !!force));
 });

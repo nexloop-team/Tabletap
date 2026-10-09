@@ -8,6 +8,6 @@ export const POST = handle(async (request) => {
   assertSameOrigin(request);
   rateLimit(request, "create-venue", 10);
   const user = await requireApiUser();
-  const venue = createVenueForUser(user, await parseBody(request, createVenueRequest));
+  const venue = await createVenueForUser(user, await parseBody(request, createVenueRequest));
   return Response.json({ id: venue.id, shortCode: venue.shortCode });
 });

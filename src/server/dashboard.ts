@@ -20,11 +20,11 @@ import { requireVenueAccess } from "./services/venue-admin";
 export async function venueFromRequest(request: Request, venueId: string, options: { write?: boolean | "owner" } = {}) {
   if (options.write) assertSameOrigin(request);
   const user = await requireApiUser();
-  const venue = requireVenueAccess(user, venueId);
-  if (options.write && !isManagerRole(venueRole(user.id, venueId))) {
+  const venue = await requireVenueAccess(user, venueId);
+  if (options.write && !isManagerRole(await venueRole(user.id, venueId))) {
     if (options.write === "owner") throw new ServiceError(403, "Only the venue's owner can do this.");
-    if (!isAdmin(user) || !editGrantExpiry(user.id, venueId)) throw new ServiceError(403, "This is a read-only support view. Turn on \"Edit for owner\" to make changes.");
-    logAdminAction(user, "Edited for owner", { type: "venue", id: venueId, label: venue.config.name }, await describeWrite(request, venueId));
+    if (!isAdmin(user) || !await editGrantExpiry(user.id, venueId)) throw new ServiceError(403, "This is a read-only support view. Turn on \"Edit for owner\" to make changes.");
+    await logAdminAction(user, "Edited for owner", { type: "venue", id: venueId, label: venue.config.name }, await describeWrite(request, venueId));
   }
   return { user, venue };
 }
@@ -55,13 +55,13 @@ async function describeWrite(request: Request, venueId: string): Promise<string>
 /** Server pages under /dashboard/[venueId]: the venue with its subscription, or a 404 for anyone else. */
 export const loadDashboardVenue = cache(async (venueId: string) => {
   const user = await requireUser();
-  const venue = getVenueRecord(venueId);
+  const venue = await getVenueRecord(venueId);
   if (!venue) notFound();
-  const role = venueRole(user.id, venueId);
+  const role = await venueRole(user.id, venueId);
   // Staff logins only reach the till; their list of venues says so.
   if (role === "staff" && !isAdmin(user)) redirect("/dashboard");
   if (!isManagerRole(role) && !isAdmin(user)) notFound();
-  const subscription = getSubscription(venue.id);
+  const subscription = await getSubscription(venue.id);
   return { user, venue, subscription, access: accessState(subscription) };
 });
 

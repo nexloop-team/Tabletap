@@ -6,6 +6,7 @@ import { digestRecipients, type DigestRecipient } from "../repositories/notifica
 import { sendMail } from "../services/mailer";
 import { claimJob, releaseJob } from "./claims";
 import { digestWeek } from "./time";
+import { parseDbDate } from "@/lib/plans";
 
 /**
  * The Monday-morning email: last week's scans, guests, stamps and feedback
@@ -16,10 +17,10 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-export function buildDigest(recipient: DigestRecipient, now = new Date()): { subject: string; text: string } {
-  const stats = venueStats(recipient.venueId, 7);
+export async function buildDigest(recipient: DigestRecipient, now = new Date()): Promise<{ subject: string; text: string }> {
+  const stats = await venueStats(recipient.venueId, 7);
   const weekAgo = now.getTime() - 7 * 86_400_000;
-  const notes = listFeedback(recipient.venueId, { limit: 10 }).rows.filter((row) => Date.parse(`${row.createdAt.replace(" ", "T")}Z`) >= weekAgo).slice(0, 3);
+  const notes = (await listFeedback(recipient.venueId, { limit: 10 })).rows.filter((row) => (parseDbDate(row.createdAt) ?? 0) >= weekAgo).slice(0, 3);
   const origin = appOrigin();
   const dashboard = `${origin}/dashboard/${recipient.venueId}`;
 
@@ -54,12 +55,12 @@ export async function runWeeklyDigest(now: Date): Promise<number> {
   const week = digestWeek(now);
   if (!week) return 0;
   let sent = 0;
-  for (const recipient of digestRecipients()) {
+  for (const recipient of await digestRecipients()) {
     const key = `${week}:${recipient.venueId}:${recipient.userId}`;
-    if (!claimJob("digest", key)) continue;
-    const { subject, text } = buildDigest(recipient, now);
-    if (sendMail({ to: recipient.email, subject, text })) sent += 1;
-    else releaseJob("digest", key);
+    if (!await claimJob("digest", key)) continue;
+    const { subject, text } = await buildDigest(recipient, now);
+    if (await sendMail({ to: recipient.email, subject, text })) sent += 1;
+    else await releaseJob("digest", key);
   }
   return sent;
 }

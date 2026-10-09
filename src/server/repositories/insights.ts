@@ -7,7 +7,7 @@ import { stampActivity } from "./stamps";
  * dashboard's own preview (`s=preview`) are left out of every count.
  */
 
-const NOT_PREVIEW = "COALESCE(json_extract(params, '$.source'), '') != 'preview'";
+const NOT_PREVIEW = "COALESCE((params->>'source'), '') != 'preview'";
 
 export interface VenueStats {
   days: number;
@@ -33,56 +33,41 @@ export interface VenueStats {
  * times they refresh or go to the menu and back (see lib/analytics visitId).
  * Days are the venue's own, given its offset from UTC in minutes.
  */
-export function venueStats(venueId: string, days = 30, utcOffsetMinutes = 0): VenueStats {
-  const db = getDb();
+export async function venueStats(venueId: string, days = 30, utcOffsetMinutes = 0): Promise<VenueStats> {
+  const db = await getDb();
   const since = `-${days} days`;
   const local = `${utcOffsetMinutes >= 0 ? "+" : "-"}${Math.abs(utcOffsetMinutes)} minutes`;
-  const count = (name: string) =>
+  const count = async (name: string) =>
     (
-      db
-        .prepare(`SELECT COUNT(*) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}`)
-        .get(venueId, name, since) as { n: number }
+      (await db.get(`SELECT COUNT(*) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}`, venueId, name, since)) as { n: number }
     ).n;
   // Page views count once per visit, so a refresh isn't a second view.
-  const visits = (name: string) =>
+  const visits = async (name: string) =>
     (
-      db
-        .prepare(`SELECT COUNT(DISTINCT json_extract(params, '$.session_id')) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}`)
-        .get(venueId, name, since) as { n: number }
+      (await db.get(`SELECT COUNT(DISTINCT (params->>'session_id')) AS n FROM events WHERE venue_id = ? AND name = ? AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}`, venueId, name, since)) as { n: number }
     ).n;
 
   const visitors = (
-    db
-      .prepare(
-        `SELECT COUNT(DISTINCT json_extract(params, '$.session_id')) AS n FROM events
-         WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}`,
-      )
-      .get(venueId, since) as { n: number }
+    (await db.get(
+        `SELECT COUNT(DISTINCT (params->>'session_id')) AS n FROM events
+         WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}`, venueId, since)) as { n: number }
   ).n;
 
-  const feedback = db
-    .prepare("SELECT COUNT(*) AS n, AVG(sentiment) AS avg FROM feedback WHERE venue_id = ? AND created_at >= datetime('now', ?)")
-    .get(venueId, since) as { n: number; avg: number | null };
+  const feedback = (await db.get("SELECT COUNT(*) AS n, AVG(sentiment) AS avg FROM feedback WHERE venue_id = ? AND created_at >= now() + CAST(? AS INTERVAL)", venueId, since)) as { n: number; avg: number | null };
 
-  const guests = db
-    .prepare(
-      `SELECT COUNT(*) AS total, SUM(CASE WHEN created_at >= datetime('now', ?) THEN 1 ELSE 0 END) AS recent
-       FROM customers WHERE venue_id = ?`,
-    )
-    .get(since, venueId) as { total: number; recent: number | null };
+  const guests = (await db.get(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN created_at >= now() + CAST(? AS INTERVAL) THEN 1 ELSE 0 END) AS recent
+       FROM customers WHERE venue_id = ?`, since, venueId)) as { total: number; recent: number | null };
 
-  const cards = db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(stamps), 0) AS stamps FROM loyalty_cards WHERE venue_id = ?").get(venueId) as {
+  const cards = (await db.get("SELECT COUNT(*) AS n, COALESCE(SUM(stamps), 0) AS stamps FROM loyalty_cards WHERE venue_id = ?", venueId)) as {
     n: number;
     stamps: number;
   };
 
-  const dailyRows = db
-    .prepare(
-      `SELECT date(created_at, ?) AS day, COUNT(DISTINCT json_extract(params, '$.session_id')) AS scans FROM events
-       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
-       GROUP BY day`,
-    )
-    .all(local, venueId, since) as { day: string; scans: number }[];
+  const dailyRows = (await db.all(
+      `SELECT to_char((created_at + CAST(? AS INTERVAL)) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, COUNT(DISTINCT (params->>'session_id')) AS scans FROM events
+       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
+       GROUP BY 1`, local, venueId, since)) as { day: string; scans: number }[];
   const byDay = new Map(dailyRows.map((row) => [row.day, row.scans]));
   const daily: VenueStats["daily"] = [];
   for (let i = days - 1; i >= 0; i--) {
@@ -90,28 +75,25 @@ export function venueStats(venueId: string, days = 30, utcOffsetMinutes = 0): Ve
     daily.push({ day, scans: byDay.get(day) ?? 0 });
   }
 
-  const sources = db
-    .prepare(
-      `SELECT COALESCE(json_extract(params, '$.source'), 'unknown') AS source, COUNT(DISTINCT json_extract(params, '$.session_id')) AS scans FROM events
-       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
-       GROUP BY source ORDER BY scans DESC LIMIT 8`,
-    )
-    .all(venueId, since) as { source: string; scans: number }[];
+  const sources = (await db.all(
+      `SELECT COALESCE((params->>'source'), 'unknown') AS source, COUNT(DISTINCT (params->>'session_id')) AS scans FROM events
+       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
+       GROUP BY source ORDER BY scans DESC LIMIT 8`, venueId, since)) as { source: string; scans: number }[];
 
   return {
     days,
     scans: visitors,
     visitors,
-    menuViews: visits("menu_viewed"),
-    wifiOpens: count("wifi_sheet_opened"),
-    reviewTaps: count("google_review_tapped"),
+    menuViews: await visits("menu_viewed"),
+    wifiOpens: await count("wifi_sheet_opened"),
+    reviewTaps: await count("google_review_tapped"),
     feedbackCount: feedback.n,
     averageSentiment: feedback.avg,
     newGuests: guests.recent ?? 0,
     totalGuests: guests.total,
     members: cards.n,
     stampsHeld: cards.stamps,
-    ...stampActivity(venueId, days),
+    ...(await stampActivity(venueId, days)),
     daily,
     sources,
   };
@@ -127,33 +109,24 @@ export interface VenueEngagement {
 }
 
 /** What guests do once they're on the page: which cards they open, when they come, which dishes they look at. */
-export function venueEngagement(venueId: string, days = 30, utcOffsetMinutes = 0): VenueEngagement {
-  const db = getDb();
+export async function venueEngagement(venueId: string, days = 30, utcOffsetMinutes = 0): Promise<VenueEngagement> {
+  const db = await getDb();
   const since = `-${days} days`;
   const local = `${utcOffsetMinutes >= 0 ? "+" : "-"}${Math.abs(utcOffsetMinutes)} minutes`;
-  const features = db
-    .prepare(
-      `SELECT json_extract(params, '$.feature') AS feature, COUNT(DISTINCT json_extract(params, '$.session_id')) AS visits FROM events
-       WHERE venue_id = ? AND name = 'feature_card_tapped' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
-       GROUP BY feature ORDER BY visits DESC`,
-    )
-    .all(venueId, since) as { feature: string; visits: number }[];
-  const hourRows = db
-    .prepare(
-      `SELECT CAST(strftime('%H', created_at, ?) AS INTEGER) AS hour, COUNT(DISTINCT json_extract(params, '$.session_id')) AS visits FROM events
-       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
-       GROUP BY hour`,
-    )
-    .all(local, venueId, since) as { hour: number; visits: number }[];
+  const features = (await db.all(
+      `SELECT (params->>'feature') AS feature, COUNT(DISTINCT (params->>'session_id')) AS visits FROM events
+       WHERE venue_id = ? AND name = 'feature_card_tapped' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
+       GROUP BY feature ORDER BY visits DESC`, venueId, since)) as { feature: string; visits: number }[];
+  const hourRows = (await db.all(
+      `SELECT CAST(EXTRACT(HOUR FROM (created_at + CAST(? AS INTERVAL)) AT TIME ZONE 'UTC') AS INTEGER) AS hour, COUNT(DISTINCT (params->>'session_id')) AS visits FROM events
+       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
+       GROUP BY 1`, local, venueId, since)) as { hour: number; visits: number }[];
   const hours = new Array<number>(24).fill(0);
   for (const row of hourRows) hours[row.hour] = row.visits;
-  const dishes = db
-    .prepare(
-      `SELECT json_extract(params, '$.item_id') AS itemId, COUNT(DISTINCT json_extract(params, '$.session_id')) AS opens FROM events
-       WHERE venue_id = ? AND name = 'menu_item_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
-       GROUP BY itemId ORDER BY opens DESC LIMIT 5`,
-    )
-    .all(venueId, since) as { itemId: string; opens: number }[];
+  const dishes = (await db.all(
+      `SELECT (params->>'item_id') AS "itemId", COUNT(DISTINCT (params->>'session_id')) AS opens FROM events
+       WHERE venue_id = ? AND name = 'menu_item_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
+       GROUP BY 1 ORDER BY opens DESC LIMIT 5`, venueId, since)) as { itemId: string; opens: number }[];
   return { features: features.filter((f) => f.feature), hours, dishes: dishes.filter((d) => d.itemId) };
 }
 
@@ -170,21 +143,18 @@ export interface GuestRow {
   createdAt: string;
 }
 
-export function listGuests(venueId: string, options: { query?: string; limit?: number; offset?: number } = {}): { rows: GuestRow[]; total: number } {
-  const db = getDb();
+export async function listGuests(venueId: string, options: { query?: string; limit?: number; offset?: number } = {}): Promise<{ rows: GuestRow[]; total: number }> {
+  const db = await getDb();
   const query = (options.query ?? "").trim().toLowerCase();
-  const filter = query ? "AND (c.email LIKE ? OR LOWER(COALESCE(c.first_name, '') || ' ' || COALESCE(c.name, '')) LIKE ?)" : "";
+  const filter = query ? "AND (c.email ILIKE ? OR LOWER(COALESCE(c.first_name, '') || ' ' || COALESCE(c.name, '')) LIKE ?)" : "";
   const filterArgs = query ? [`%${query}%`, `%${query}%`] : [];
-  const total = (db.prepare(`SELECT COUNT(*) AS n FROM customers c WHERE c.venue_id = ? ${filter}`).get(venueId, ...filterArgs) as { n: number }).n;
-  const rows = db
-    .prepare(
+  const total = ((await db.get(`SELECT COUNT(*) AS n FROM customers c WHERE c.venue_id = ? ${filter}`, venueId, ...filterArgs)) as { n: number }).n;
+  const rows = (await db.all(
       `SELECT c.*, l.stamps,
               (SELECT COUNT(*) FROM visits v WHERE v.customer_id = c.id) AS visit_count
        FROM customers c LEFT JOIN loyalty_cards l ON l.customer_id = c.id
        WHERE c.venue_id = ? ${filter}
-       ORDER BY c.created_at DESC LIMIT ? OFFSET ?`,
-    )
-    .all(venueId, ...filterArgs, options.limit ?? 50, options.offset ?? 0) as {
+       ORDER BY c.created_at DESC LIMIT ? OFFSET ?`, venueId, ...filterArgs, options.limit ?? 50, options.offset ?? 0)) as {
     id: string;
     email: string;
     first_name: string | null;
@@ -232,13 +202,11 @@ const SENTIMENT_WHERE: Record<FeedbackFilter, string> = {
   negative: "AND sentiment <= -0.25",
 };
 
-export function listFeedback(venueId: string, options: { filter?: FeedbackFilter; limit?: number; offset?: number } = {}): { rows: FeedbackRow[]; total: number } {
-  const db = getDb();
+export async function listFeedback(venueId: string, options: { filter?: FeedbackFilter; limit?: number; offset?: number } = {}): Promise<{ rows: FeedbackRow[]; total: number }> {
+  const db = await getDb();
   const where = SENTIMENT_WHERE[options.filter ?? "all"];
-  const total = (db.prepare(`SELECT COUNT(*) AS n FROM feedback WHERE venue_id = ? ${where}`).get(venueId) as { n: number }).n;
-  const rows = db
-    .prepare(`SELECT id, text, sentiment, source, image_path, created_at FROM feedback WHERE venue_id = ? ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-    .all(venueId, options.limit ?? 30, options.offset ?? 0) as {
+  const total = ((await db.get(`SELECT COUNT(*) AS n FROM feedback WHERE venue_id = ? ${where}`, venueId)) as { n: number }).n;
+  const rows = (await db.all(`SELECT id, text, sentiment, source, image_path, created_at FROM feedback WHERE venue_id = ? ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, venueId, options.limit ?? 30, options.offset ?? 0)) as {
     id: string;
     text: string;
     sentiment: number;
@@ -252,7 +220,7 @@ export function listFeedback(venueId: string, options: { filter?: FeedbackFilter
   };
 }
 
-export function feedbackPhotoPath(venueId: string, feedbackId: string): string | null {
-  const row = getDb().prepare("SELECT image_path FROM feedback WHERE venue_id = ? AND id = ?").get(venueId, feedbackId) as { image_path: string | null } | undefined;
+export async function feedbackPhotoPath(venueId: string, feedbackId: string): Promise<string | null> {
+  const row = (await (await getDb()).get("SELECT image_path FROM feedback WHERE venue_id = ? AND id = ?", venueId, feedbackId)) as { image_path: string | null } | undefined;
   return row?.image_path ?? null;
 }

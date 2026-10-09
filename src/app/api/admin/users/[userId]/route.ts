@@ -6,7 +6,7 @@ import { deleteUserAsAdmin, updateUserAsAdmin } from "@/server/services/operator
 /** Operator account actions: resend verification, send a reset link, block or unblock. */
 export const PATCH = handle(async (request, ctx: RouteContext<"/api/admin/users/[userId]">) => {
   const admin = await requireApiAdmin(request);
-  updateUserAsAdmin(admin, (await ctx.params).userId, await parseBody(request, adminUserRequest), requestOrigin(request));
+  await updateUserAsAdmin(admin, (await ctx.params).userId, await parseBody(request, adminUserRequest), requestOrigin(request));
   return Response.json({ ok: true });
 });
 

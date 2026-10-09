@@ -81,8 +81,8 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const days = PERIODS.find((p) => String(p) === firstParam(query.days)) ?? 30;
   const config = venue.config;
   const offset = venueUtcOffsetMinutes(config.currencyCode);
-  const stats = venueStats(venue.id, days, offset);
-  const both = venueStats(venue.id, days * 2, offset);
+  const stats = await venueStats(venue.id, days, offset);
+  const both = await venueStats(venue.id, days * 2, offset);
   const url = guestPageUrl(await serverOrigin(), venue.shortCode);
   // Opened from here in preview mode, so the owner's own look doesn't count as a scan.
   const viewUrl = `${url}&s=preview`;
@@ -90,7 +90,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const hideCookie = `tt_hide_${venue.id}`;
   const hidden = new Set(((await cookies()).get(hideCookie)?.value ?? "").split(",").filter(Boolean));
   const base = `/dashboard/${venue.id}`;
-  const unread = unreadFeedback(venue.id, user.id);
+  const unread = await unreadFeedback(venue.id, user.id);
 
   const { firstWeek, sinceDay } = venueAge(venue.createdAt);
   const googleLinked = !!config.socialLinks.google && !!config.branding.showGoogleReviewButton;
@@ -119,8 +119,8 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const nextStep = setupHidden ? null : next;
   const showNext = !settingUp && (unread.count > 0 || !!nextStep);
 
-  const engagement = venueEngagement(venue.id, days, offset);
-  const latestFeedback = listFeedback(venue.id, { limit: 3 }).rows;
+  const engagement = await venueEngagement(venue.id, days, offset);
+  const latestFeedback = (await listFeedback(venue.id, { limit: 3 })).rows;
   const dishNames = new Map(config.menus.flatMap((menu) => menu.sections.flatMap((section) => section.items.map((item) => [item.id, item.name] as const))));
   const topDishes = engagement.dishes.map((dish) => ({ ...dish, name: dishNames.get(dish.itemId) })).filter((dish): dish is typeof dish & { name: string } => !!dish.name);
   const featureLabel = (feature: string) => FEATURE_LABELS[feature] ?? (feature === "loyalty" ? (club ? "Members club" : "Stamp card") : feature);

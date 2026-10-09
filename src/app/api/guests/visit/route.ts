@@ -4,6 +4,6 @@ import { recordGuestVisit } from "@/server/services/guests";
 
 export const POST = handle(async (request) => {
   rateLimit(request, "visit", 30);
-  recordGuestVisit(await parseBody(request, recordVisitRequest));
+  await recordGuestVisit(await parseBody(request, recordVisitRequest));
   return Response.json({ ok: true });
 });

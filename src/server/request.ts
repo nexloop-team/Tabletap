@@ -48,7 +48,7 @@ export async function requestLocale(): Promise<Locale> {
 }
 
 /** A paused venue for the "Back soon" page; see findPausedVenue. */
-export const loadPausedVenue = cache((idOrCode: string) => (idOrCode ? findPausedVenue(idOrCode) : null));
+export const loadPausedVenue = cache(async (idOrCode: string) => (idOrCode ? await findPausedVenue(idOrCode) : null));
 
 /** One lookup per request, shared by generateMetadata and the page. */
-export const loadVenue = cache((idOrCode: string) => (idOrCode ? findVenue(idOrCode) : null));
+export const loadVenue = cache(async (idOrCode: string) => (idOrCode ? await findVenue(idOrCode) : null));

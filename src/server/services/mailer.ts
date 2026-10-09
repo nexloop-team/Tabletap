@@ -16,9 +16,9 @@ export interface Mail {
  * through Resend; delivery runs in the background so a slow provider never
  * holds up the request, and failures are logged rather than shown to guests.
  */
-export function sendMail(mail: Mail): boolean {
+export async function sendMail(mail: Mail): Promise<boolean> {
   try {
-    getDb().prepare("INSERT INTO outbox (recipient, subject, body) VALUES (?, ?, ?)").run(mail.to, mail.subject, mail.text);
+    (await (await getDb()).run("INSERT INTO outbox (recipient, subject, body) VALUES (?, ?, ?)", mail.to, mail.subject, mail.text));
   } catch (error) {
     console.error("[mail] failed", error);
     return false;

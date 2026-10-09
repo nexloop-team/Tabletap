@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     return new Response("Bad signature", { status: 400 });
   }
   try {
-    handleRazorpayEvent(JSON.parse(payload));
+    await handleRazorpayEvent(JSON.parse(payload));
   } catch (error) {
     // A 5xx makes Razorpay retry, which is what we want for a transient failure.
     console.error("[billing] webhook failed", error);

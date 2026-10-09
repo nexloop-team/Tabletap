@@ -27,7 +27,7 @@ function digest(token: string): string {
 export async function createSession(userId: string) {
   const token = newToken();
   const expires = new Date(Date.now() + SESSION_DAYS * DAY_MS);
-  getDb().prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)").run(digest(token), userId, expires.toISOString());
+  (await (await getDb()).run("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)", digest(token), userId, expires.toISOString()));
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -45,34 +45,32 @@ async function sessionToken(): Promise<string | null> {
 export const currentUser = cache(async (): Promise<User | null> => {
   const token = await sessionToken();
   if (!token) return null;
-  const row = getDb().prepare("SELECT user_id, expires_at FROM sessions WHERE id = ?").get(digest(token)) as
+  const row = (await (await getDb()).get("SELECT user_id, expires_at FROM sessions WHERE id = ?", digest(token))) as
     | { user_id: string; expires_at: string }
     | undefined;
   if (!row || Date.parse(row.expires_at) <= Date.now()) return null;
   // Coming back keeps you signed in: slide the end forward, at most one write a day.
   if (Date.parse(row.expires_at) < Date.now() + (SESSION_DAYS - 1) * DAY_MS) {
-    getDb().prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(new Date(Date.now() + SESSION_DAYS * DAY_MS).toISOString(), digest(token));
+    (await (await getDb()).run("UPDATE sessions SET expires_at = ? WHERE id = ?", new Date(Date.now() + SESSION_DAYS * DAY_MS).toISOString(), digest(token)));
   }
-  const user = findUserById(row.user_id);
+  const user = await findUserById(row.user_id);
   return user && !user.blocked ? user : null;
 });
 
 export async function destroySession() {
   const token = await sessionToken();
-  if (token) getDb().prepare("DELETE FROM sessions WHERE id = ?").run(digest(token));
+  if (token) (await (await getDb()).run("DELETE FROM sessions WHERE id = ?", digest(token)));
   (await cookies()).delete(SESSION_COOKIE);
 }
 
 /** After a password change or reset: every other device has to sign in again. */
 export async function destroyOtherSessions(userId: string) {
   const token = await sessionToken();
-  getDb()
-    .prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
-    .run(userId, token ? digest(token) : "");
+  (await (await getDb()).run("DELETE FROM sessions WHERE user_id = ? AND id != ?", userId, token ? digest(token) : ""));
 }
 
-export function destroyAllSessions(userId: string) {
-  getDb().prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+export async function destroyAllSessions(userId: string) {
+  (await (await getDb()).run("DELETE FROM sessions WHERE user_id = ?", userId));
 }
 
 /** Server components: send anonymous visitors to the login page, then back to where they were. */
@@ -110,27 +108,25 @@ export function isAdmin(user: User | null): boolean {
 export type AuthTokenPurpose = "verify_email" | "reset_password";
 
 /** One-time link tokens (email verification, password reset); stored hashed like sessions. */
-export function createAuthToken(userId: string, purpose: AuthTokenPurpose, ttlMinutes: number): string {
+export async function createAuthToken(userId: string, purpose: AuthTokenPurpose, ttlMinutes: number): Promise<string> {
   const token = newToken();
-  const db = getDb();
+  const db = await getDb();
   // A new link supersedes any earlier one for the same purpose.
-  db.prepare("DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?").run(userId, purpose);
-  db.prepare("INSERT INTO auth_tokens (id, user_id, purpose, expires_at) VALUES (?, ?, ?, ?)").run(
-    digest(token),
+  (await db.run("DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?", userId, purpose));
+  (await db.run("INSERT INTO auth_tokens (id, user_id, purpose, expires_at) VALUES (?, ?, ?, ?)", digest(token),
     userId,
     purpose,
-    new Date(Date.now() + ttlMinutes * 60_000).toISOString(),
-  );
+    new Date(Date.now() + ttlMinutes * 60_000).toISOString(),));
   return token;
 }
 
 /** Returns the user id once; a second use, an expired or a wrong-purpose token gives null. */
-export function consumeAuthToken(token: string, purpose: AuthTokenPurpose): string | null {
-  const db = getDb();
-  const row = db.prepare("SELECT user_id, expires_at, used_at FROM auth_tokens WHERE id = ? AND purpose = ?").get(digest(token), purpose) as
+export async function consumeAuthToken(token: string, purpose: AuthTokenPurpose): Promise<string | null> {
+  const db = await getDb();
+  const row = (await db.get("SELECT user_id, expires_at, used_at FROM auth_tokens WHERE id = ? AND purpose = ?", digest(token), purpose)) as
     | { user_id: string; expires_at: string; used_at: string | null }
     | undefined;
   if (!row || row.used_at || Date.parse(row.expires_at) <= Date.now()) return null;
-  const result = db.prepare("UPDATE auth_tokens SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL").run(digest(token));
+  const result = (await db.run("UPDATE auth_tokens SET used_at = now() WHERE id = ? AND used_at IS NULL", digest(token)));
   return result.changes === 1 ? row.user_id : null;
 }

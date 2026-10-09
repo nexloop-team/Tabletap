@@ -16,7 +16,7 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
   if (!device) {
     const user = await currentUser();
     // A signed-in owner or staff member can open the till here without a pairing link.
-    const tills = user ? [...listStaffVenuesForUser(user.id), ...listVenuesForUser(user.id)] : [];
+    const tills = user ? [...(await listStaffVenuesForUser(user.id)), ...(await listVenuesForUser(user.id))] : [];
     return (
       <section className="till-message">
         {paired === "0" && <div className="notice notice-error">That pairing link has expired or was already used. Ask the owner for a new one.</div>}
@@ -48,8 +48,8 @@ export default async function StaffHome({ searchParams }: PageProps<"/staff">) {
   }
 
   const q = firstParam(params.q).slice(0, 80);
-  const matches = q ? searchMembers(device, q) : [];
-  const recent = q ? [] : recentTillActivity(device);
+  const matches = q ? await searchMembers(device, q) : [];
+  const recent = q ? [] : await recentTillActivity(device);
 
   return (
     <>

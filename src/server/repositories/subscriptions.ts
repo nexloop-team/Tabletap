@@ -1,5 +1,5 @@
 import "server-only";
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "../db";
 import { accessState, parseDbDate, type AccessState, type SubscriptionState, type SubscriptionStatus } from "@/lib/plans";
 import { getDb } from "../db";
 
@@ -43,40 +43,38 @@ function toSubscription(row: SubscriptionRow): Subscription {
   };
 }
 
-export function getSubscription(venueId: string): Subscription | null {
-  const row = getDb().prepare("SELECT * FROM subscriptions WHERE venue_id = ?").get(venueId) as SubscriptionRow | undefined;
+export async function getSubscription(venueId: string): Promise<Subscription | null> {
+  const row = (await (await getDb()).get("SELECT * FROM subscriptions WHERE venue_id = ?", venueId)) as SubscriptionRow | undefined;
   return row ? toSubscription(row) : null;
 }
 
-export function findSubscriptionByProviderId(providerSubscriptionId: string): Subscription | null {
-  const row = getDb().prepare("SELECT * FROM subscriptions WHERE provider_subscription_id = ?").get(providerSubscriptionId) as SubscriptionRow | undefined;
+export async function findSubscriptionByProviderId(providerSubscriptionId: string): Promise<Subscription | null> {
+  const row = (await (await getDb()).get("SELECT * FROM subscriptions WHERE provider_subscription_id = ?", providerSubscriptionId)) as SubscriptionRow | undefined;
   return row ? toSubscription(row) : null;
 }
 
-export function venueAccess(venueId: string): AccessState {
-  return accessState(getSubscription(venueId));
+export async function venueAccess(venueId: string): Promise<AccessState> {
+  return accessState(await getSubscription(venueId));
 }
 
 /** Paid or on the trial: the guest page is live and every feature works. */
-export function venueHasAccess(venueId: string): boolean {
-  return venueAccess(venueId) !== "unpaid";
+export async function venueHasAccess(venueId: string): Promise<boolean> {
+  return await venueAccess(venueId) !== "unpaid";
 }
 
 /** New venues start with the free trial running; no card needed. */
-export function startTrial(db: DatabaseSync, venueId: string, trialDays: number) {
-  db.prepare("INSERT INTO subscriptions (venue_id, plan, status, trial_ends_at) VALUES (?, 'free', 'active', ?)").run(
-    venueId,
-    new Date(Date.now() + trialDays * 86_400_000).toISOString(),
-  );
+export async function startTrial(db: Db, venueId: string, trialDays: number) {
+  (await db.run("INSERT INTO subscriptions (venue_id, plan, status, trial_ends_at) VALUES (?, 'free', 'active', ?)", venueId,
+    new Date(Date.now() + trialDays * 86_400_000).toISOString(),));
 }
 
 /** Push the trial end out by `days`, counting from today if it already ended. */
-export function extendTrial(venueId: string, days: number) {
-  const db = getDb();
-  db.prepare("INSERT OR IGNORE INTO subscriptions (venue_id) VALUES (?)").run(venueId);
-  const current = parseDbDate(getSubscription(venueId)?.trialEndsAt) ?? 0;
+export async function extendTrial(venueId: string, days: number) {
+  const db = await getDb();
+  (await db.run("INSERT INTO subscriptions (venue_id) VALUES (?) ON CONFLICT DO NOTHING", venueId));
+  const current = parseDbDate((await getSubscription(venueId))?.trialEndsAt) ?? 0;
   const ends = new Date(Math.max(current, Date.now()) + days * 86_400_000).toISOString();
-  db.prepare("UPDATE subscriptions SET trial_ends_at = ?, updated_at = datetime('now') WHERE venue_id = ?").run(ends, venueId);
+  (await db.run("UPDATE subscriptions SET trial_ends_at = ?, updated_at = now() WHERE venue_id = ?", ends, venueId));
 }
 
 export interface SubscriptionUpdate {
@@ -99,14 +97,12 @@ const COLUMNS: Record<keyof SubscriptionUpdate, string> = {
   cancelAtPeriodEnd: "cancel_at_period_end",
 };
 
-export function updateSubscription(venueId: string, update: SubscriptionUpdate) {
-  const db = getDb();
-  db.prepare("INSERT OR IGNORE INTO subscriptions (venue_id) VALUES (?)").run(venueId);
+export async function updateSubscription(venueId: string, update: SubscriptionUpdate) {
+  const db = await getDb();
+  (await db.run("INSERT INTO subscriptions (venue_id) VALUES (?) ON CONFLICT DO NOTHING", venueId));
   const keys = (Object.keys(update) as (keyof SubscriptionUpdate)[]).filter((key) => update[key] !== undefined);
   if (keys.length === 0) return;
   const sets = keys.map((key) => `${COLUMNS[key]} = ?`).join(", ");
-  db.prepare(`UPDATE subscriptions SET ${sets}, updated_at = datetime('now') WHERE venue_id = ?`).run(
-    ...keys.map((key) => (key === "paid" ? (update.paid ? "pro" : "free") : key === "cancelAtPeriodEnd" ? (update.cancelAtPeriodEnd ? 1 : 0) : (update[key] ?? null))),
-    venueId,
-  );
+  (await db.run(`UPDATE subscriptions SET ${sets}, updated_at = now() WHERE venue_id = ?`, ...keys.map((key) => (key === "paid" ? (update.paid ? "pro" : "free") : key === "cancelAtPeriodEnd" ? (update.cancelAtPeriodEnd ? 1 : 0) : (update[key] ?? null))),
+    venueId,));
 }

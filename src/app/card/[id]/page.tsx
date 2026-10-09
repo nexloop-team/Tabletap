@@ -19,6 +19,7 @@ import { firstParam, requestLocale, serverOrigin } from "@/server/request";
 import { qrSvg } from "@/server/services/qr";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
+import { parseDbDate } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Your card",
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 const MAX_DRAWN_STAMPS = 20;
 
 function dayLabel(sqliteUtc: string, locale: Locale): string {
-  const date = new Date(`${sqliteUtc.replace(" ", "T")}Z`);
+  const date = new Date(parseDbDate(sqliteUtc) ?? 0);
   return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(date);
 }
 
@@ -59,10 +60,10 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
   const locale = await requestLocale();
   const { t, tf } = createTranslator(locale);
 
-  const card = token ? findCardForViewer(id, token) : null;
-  const venue = card ? findVenue(card.venue_id) : null;
+  const card = token ? await findCardForViewer(id, token) : null;
+  const venue = card ? await findVenue(card.venue_id) : null;
   if (card && !venue) {
-    const paused = findPausedVenue(card.venue_id);
+    const paused = await findPausedVenue(card.venue_id);
     if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/card/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`} />;
   }
   if (!card || !venue) return <LandingError locale={locale} message="card_not_found" source="card" />;
@@ -77,13 +78,13 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
   const origin = await serverOrigin();
   const staffQr = program ? await qrSvg(`${origin}/staff/stamp?c=${card.id}`) : null;
   const referral = program?.referral?.enabled ? program.referral : null;
-  const inviteUrl = referral ? `${origin}/s?i=${encodeURIComponent(venue.shortCode)}&ref=${ensureReferralCode(card.id)}&s=invite` : null;
+  const inviteUrl = referral ? `${origin}/s?i=${encodeURIComponent(venue.shortCode)}&ref=${await ensureReferralCode(card.id)}&s=invite` : null;
   const nextTier = tiers.find((tier) => card.stamps < tier.stampsRequired);
   const readyTier = [...tiers].reverse().find((tier) => card.stamps >= tier.stampsRequired);
-  const since = new Date(`${card.created_at.replace(" ", "T")}Z`);
+  const since = new Date(parseDbDate(card.created_at) ?? NaN);
   const sinceText = Number.isNaN(since.getTime()) ? "" : new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(since);
   const code = `${initials(venue.name)} · ${card.id.slice(-4).toUpperCase()}`;
-  const history = recentEvents(card.id, 12)
+  const history = (await recentEvents(card.id, 12))
     .map((event) => ({ event, line: historyLine(event, t, tf) }))
     .filter((row): row is { event: StampEvent; line: string } => !!row.line)
     .slice(0, 6);

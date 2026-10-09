@@ -13,7 +13,7 @@ const LIMIT = 300;
 /** Every change an operator made, newest first. Rows are never edited or removed. */
 export default async function AdminActivityPage() {
   await requireAdminPage();
-  const actions = listAdminActions({ limit: LIMIT });
+  const actions = await listAdminActions({ limit: LIMIT });
 
   return (
     <div className="page">

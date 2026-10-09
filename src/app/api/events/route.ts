@@ -7,6 +7,6 @@ export const POST = handle(async (request) => {
   rateLimit(request, "events", 240);
   const event = await parseBody(request, analyticsEvent);
   const venueId = typeof event.params?.venue_id === "string" ? event.params.venue_id.slice(0, 128) : null;
-  getDb().prepare("INSERT INTO events (name, params, venue_id) VALUES (?, ?, ?)").run(event.name, JSON.stringify(event.params ?? {}), venueId);
+  (await (await getDb()).run("INSERT INTO events (name, params, venue_id) VALUES (?, ?, ?)", event.name, JSON.stringify(event.params ?? {}), venueId));
   return new Response(null, { status: 204 });
 });

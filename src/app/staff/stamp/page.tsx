@@ -23,7 +23,7 @@ export default async function StaffStampPage({ searchParams }: PageProps<"/staff
 
   let view;
   try {
-    view = viewCard(device, cardId);
+    view = await viewCard(device, cardId);
   } catch (error) {
     if (!(error instanceof ServiceError)) throw error;
     return (

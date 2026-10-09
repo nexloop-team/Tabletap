@@ -12,7 +12,7 @@ import "@/styles/landing.css";
 import "@/styles/pages.css";
 
 export async function generateMetadata({ searchParams }: PageProps<"/s">): Promise<Metadata> {
-  const venue = loadVenue(venueParam(await searchParams));
+  const venue = await loadVenue(venueParam(await searchParams));
   return {
     title: venue ? venue.name : BRAND.name,
     // Venue pages are reached by QR code; they have nothing to offer a search index.
@@ -38,9 +38,9 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
   const locale = await requestLocale();
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
-  const venue = loadVenue(code);
+  const venue = await loadVenue(code);
   if (!venue) {
-    const paused = loadPausedVenue(code);
+    const paused = await loadPausedVenue(code);
     if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/s?i=${encodeURIComponent(code)}`} />;
     return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
   }

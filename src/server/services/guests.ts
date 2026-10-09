@@ -10,48 +10,48 @@ import { findVenue } from "../repositories/venues";
 import { deliver, recordConsent } from "./consent";
 
 /** The Wi-Fi gate's "just the Wi-Fi" path: a guest record, no loyalty card. */
-export function captureGuest(input: z.output<typeof captureGuestRequest>, origin: string): CaptureGuestResponse {
-  const venue = findVenue(input.venueId);
+export async function captureGuest(input: z.output<typeof captureGuestRequest>, origin: string): Promise<CaptureGuestResponse> {
+  const venue = await findVenue(input.venueId);
   if (!venue) throw new ServiceError(404, "Venue not found");
   if (!wifiGateActive(venue)) throw new ServiceError(403, "Guest capture is not enabled for this venue");
 
-  const { customer, consent } = transaction((db) => {
-    const { customer } = upsertCustomer(db, {
+  const { customer, consent } = await transaction(async (db) => {
+    const { customer } = await upsertCustomer(db, {
       venueId: venue.id,
       email: input.email,
       firstName: input.firstName ?? null,
       locale: input.locale ?? null,
       captureSource: input.source,
     });
-    recordVisit(db, venue.id, customer.id, "wifi_tap");
-    const consent = recordConsent(db, venue, customer, { marketingConsent: input.marketingConsent, ageAttested: input.ageAttested }, origin);
+    await recordVisit(db, venue.id, customer.id, "wifi_tap");
+    const consent = await recordConsent(db, venue, customer, { marketingConsent: input.marketingConsent, ageAttested: input.ageAttested }, origin);
     return { customer, consent };
   });
-  deliver(consent.mail);
+  await deliver(consent.mail);
   return { customerId: customer.id, confirmationPending: consent.confirmationPending };
 }
 
-export function recordGuestVisit(input: z.output<typeof recordVisitRequest>) {
-  const db = getDb();
-  if (!findCustomerById(db, input.venueId, input.customerId)) throw new ServiceError(404, "Unknown guest");
-  recordVisit(db, input.venueId, input.customerId, input.type);
+export async function recordGuestVisit(input: z.output<typeof recordVisitRequest>) {
+  const db = await getDb();
+  if (!await findCustomerById(db, input.venueId, input.customerId)) throw new ServiceError(404, "Unknown guest");
+  await recordVisit(db, input.venueId, input.customerId, input.type);
 }
 
 /**
  * Answers 200 even where the venue does not ask for birthdays, and writes
  * nothing there, so the response never reveals a venue's settings.
  */
-export function updateBirthday(input: z.output<typeof birthdayRequest>) {
-  const venue = findVenue(input.venueId);
+export async function updateBirthday(input: z.output<typeof birthdayRequest>) {
+  const venue = await findVenue(input.venueId);
   if (!venue) throw new ServiceError(404, "Venue not found");
-  const db = getDb();
-  const customer = findCustomerById(db, venue.id, input.customerId);
+  const db = await getDb();
+  const customer = await findCustomerById(db, venue.id, input.customerId);
   if (!customer) throw new ServiceError(404, "Unknown guest");
   if (!birthdayAskOn(venue)) return;
   if ("skipped" in input) {
-    recordBirthdaySkip(db, customer.id);
+    await recordBirthdaySkip(db, customer.id);
     return;
   }
   if (!isValidBirthday(input.month, input.day)) throw new ServiceError(400, "Invalid date");
-  setBirthday(db, customer.id, input.month, input.day);
+  await setBirthday(db, customer.id, input.month, input.day);
 }
