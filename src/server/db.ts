@@ -234,6 +234,32 @@ const MIGRATIONS: string[] = [
      expires_at TIMESTAMPTZ NOT NULL,
      PRIMARY KEY (admin_id, venue_id)
    );`,
+  // Row-level security on, with no policies: hosted Postgres that also serves a
+  // REST API (Supabase's Data API) then exposes nothing through it. The app
+  // connects as the tables' owner, which RLS doesn't restrict.
+  `ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE loyalty_cards ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE outbox ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE auth_tokens ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE venue_members ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE stamp_events ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE staff_devices ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE staff_pairings ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE notification_prefs ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE job_runs ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE guest_emails ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE staff_invites ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE admin_edit_grants ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE schema_version ENABLE ROW LEVEL SECURITY;`,
 ];
 
 /** "2026-10-09 13:05:00.123+00" → "2026-10-09T13:05:00.123Z": ISO in UTC, so Date.parse reads it right anywhere. */

@@ -63,7 +63,9 @@ When a venue has neither a paid subscription nor trial days left, its guest page
       - **Supabase:** Storage → create a private bucket `tabletap` → Storage settings → S3 access keys. Use the endpoint shown there (`https://<project>.supabase.co/storage/v1/s3`) and the project's region.
       - **MinIO, R2 or AWS:** use their endpoint and keys.
    3. Without `S3_*`, images stay on the server's disk under `DATA_DIR`. That needs a persistent volume, so it won't work on serverless hosts.
-   4. Run a single instance, because rate limits are kept in memory.
+   4. Check both before starting: `node --env-file=.env.local scripts/check-connections.mjs`.
+   5. Run a single instance, because rate limits are kept in memory.
+   6. Every table has row-level security on with no policies. Supabase's automatic REST API can't read them; the app connects as the tables' owner and isn't affected.
 2. **Set `APP_URL`** to your public origin (e.g. `https://tabletap.app`). It's encoded into every QR code, so it must never change.
 3. **Email:** create a [Resend](https://resend.com) account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 4. **Razorpay:**
