@@ -59,50 +59,7 @@
 html:has(.app) {
   background: #f5f5f1;
 }
-@media (prefers-color-scheme: dark) {
-  html:has(.app) {
-    background: #0f1113;
-    color-scheme: dark;
-  }
-}
 
-@media (prefers-color-scheme: dark) {
-  .app {
-    --a-bg: #0f1113;
-    --a-surface: #1a1d21;
-    --a-surface-2: #262a30;
-    --a-surface-3: #2e333a;
-    --a-border: #2a2e34;
-    --a-border-strong: #3a3f46;
-    --a-text: #f2f3f1;
-    --a-text-2: #c3c7c2;
-    --a-text-3: #9aa0a6;
-    --a-accent: #5fbf84;
-    --a-accent-hover: #7fd19e;
-    --a-accent-soft: #16301f;
-    --a-accent-text: #bfe5cc;
-    --a-on-accent: #0e2418;
-    --a-warm: #f2b48a;
-    --a-warm-soft: #3a2414;
-    --a-warm-text: #f2b48a;
-    --a-danger: #f97066;
-    --a-danger-hover: #fda29b;
-    --a-danger-soft: #2d1715;
-    --a-warn: #f2b48a;
-    --a-warn-soft: #3a2414;
-    --a-ok: #7fd19e;
-    --a-ok-soft: #16301f;
-    --a-info: #84caff;
-    --a-info-soft: #102a43;
-    --a-admin: #bdb4fe;
-    --a-admin-soft: #251d47;
-    --mark-ink: #0e2418;
-    --mark-dot: #0e2418;
-    --a-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --a-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5);
-    --a-shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.7);
-  }
-}
 
 body:has(.app) {
   background: var(--a-bg);
@@ -211,12 +168,6 @@ body:has(.app) {
 .btn-danger-solid:hover:not(:disabled) {
   background: var(--a-danger-hover);
   border-color: var(--a-danger-hover);
-}
-@media (prefers-color-scheme: dark) {
-  .btn-danger-solid,
-  .app a.btn-danger-solid {
-    color: #1a0605;
-  }
 }
 .btn-danger,
 .app a.btn-danger {
@@ -1009,12 +960,6 @@ body:has(.app) {
   background: #16181a;
   color: #fff;
 }
-@media (prefers-color-scheme: dark) {
-  .mk .price-card.featured {
-    background: #0b0c0d;
-    box-shadow: inset 0 0 0 1px #3a3f46;
-  }
-}
 .price-top {
   display: flex;
   justify-content: space-between;
@@ -1056,45 +1001,63 @@ body:has(.app) {
 .mk .pricing-single {
   margin: 0 auto;
 }
-.tile-colours {
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+}
+.palette {
   display: grid;
   gap: 8px;
-  padding: 14px;
-  margin: 4px 0 14px;
-  border-radius: var(--a-radius);
-  background: var(--a-surface-2);
+  padding: 6px 6px 10px;
+  border: 1px solid var(--a-border-strong);
+  border-radius: 12px;
+  background: var(--a-surface);
+  color: var(--a-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.tile-colours .hint {
-  margin: 0;
+.palette:hover {
+  border-color: var(--a-text-3);
 }
-.tile-colour-options {
+.palette[aria-pressed="true"] {
+  border-color: var(--a-accent);
+  box-shadow: 0 0 0 1px var(--a-accent);
+}
+.palette > span:last-child {
+  padding: 0 4px;
+}
+/* A tiny bento page: one deep tile, an accent and a soft tile. */
+.palette-mini {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-.tile-colour-option {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-}
-.tile-colour-option:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.tile-strip {
-  align-self: stretch;
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  height: 22px;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--a-border);
-}
-.tile-colour-rows {
-  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 4px;
-  margin-top: 6px;
+  height: 64px;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.palette-mini > span {
+  border-radius: 4px;
+}
+.palette-mini > span:first-child {
+  grid-row: span 2;
+}
+.palette-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .palette {
+    transition: none;
+  }
 }
 .money-grid {
   display: grid;
@@ -5863,11 +5826,6 @@ body:has(.app) {
   flex-wrap: wrap;
 }
 
-@media (prefers-color-scheme: dark) {
-  .swatch {
-    border-color: rgba(255, 255, 255, 0.22);
-  }
-}
 
 /* Room for the floating save bar only on pages that have one. */
 .page:has(.savebar),

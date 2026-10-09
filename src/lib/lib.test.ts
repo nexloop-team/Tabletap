@@ -13,9 +13,9 @@ describe("theme", () => {
     expect(theme.isLightCards).toBe(true);
   });
 
-  it("switches to light text on a dark brand colour, unless cards are forced light", () => {
+  it("switches to light text on a dark brand colour, but keeps cards light", () => {
     expect(computeTheme({ backgroundColorHex: "#1F2A24" }).vars["--text-primary"]).toBe("#FFFFFF");
-    expect(computeTheme({ backgroundColorHex: "#1F2A24", appearance: "light" }).vars["--card-text-primary"]).toBe("#1A1A1A");
+    expect(computeTheme({ backgroundColorHex: "#1F2A24", appearance: "dark" }).vars["--card-text-primary"]).toBe("#1A1A1A");
     expect(isLightColor("#F6E7D8")).toBe(true);
   });
 

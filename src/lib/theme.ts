@@ -1,3 +1,4 @@
+import { findPalette, type Palette } from "./palettes";
 import type { LandingStyle, VenueBranding } from "./venue/types";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -105,15 +106,6 @@ function textOn(hex: string): string {
   return 1.05 / (l + 0.05) >= (l + 0.05) / 0.06 ? "#FFFFFF" : "#1A1A1A";
 }
 
-/** Deep green: the grid's tile colour when the page is white, black or grey and the owner hasn't picked one. */
-const DEFAULT_TILE = "#2F5D3A";
-
-/** Where the bento tile colours come from: the logo, the page colour, or the owner's own pick. */
-export function tileSource(branding: VenueBranding): "logo" | "page" | "custom" {
-  // Before there was a choice, a stored tile colour meant "picked".
-  return branding.tileSource ?? (hexToRgb(branding.tileColorHex?.trim() ?? "") ? "custom" : "page");
-}
-
 /** Nudge a colour's lightness until black or white text on it passes AA (4.5:1). */
 function readable(hex: string, direction: "lighter" | "darker"): string {
   const { h, s, l } = rgbToHsl(hexToRgb(hex)!);
@@ -133,53 +125,67 @@ function readable(hex: string, direction: "lighter" | "darker"): string {
 /**
  * The bento layout's three tile shades:
  *
- * - **hero** (loyalty, Google review): the main tile colour;
- * - **pop** (Wi-Fi, stamp bars, pills, stars): a brighter shade of the main
- *   one, worked out automatically, so green gives greens;
- * - **pale** (everything else): a wash lifted off the page colour.
+ * - **hero** (loyalty, Google review): a deep anchor colour;
+ * - **pop** (Wi-Fi, stamp bars, pills, stars): a soft accent;
+ * - **pale** (everything else): a wash just off the page colour.
  *
- * The main colour comes from the logo, the owner's pick, or the page colour. Text on each is whichever of black or white reads better, and
- * a shade is nudged lighter or darker until that passes AA.
+ * A chosen palette names all three. For the owner's own page colour they're
+ * worked out in the same quiet style: a deep and a muted shade of its hue,
+ * or ink and stone when the page is white, black or grey. Each shade is
+ * nudged until its text passes AA.
  */
 export function tilePalette(branding: VenueBranding, isLightCards: boolean): Record<string, string> {
-  const source = tileSource(branding);
-  const pageHex = branding.backgroundColorHex?.trim() ?? "";
-  const page = hexToRgb(pageHex);
-  const pageHsl = page ? rgbToHsl(page) : null;
-  const pageL = pageHsl?.l ?? 1;
-  const darkPage = !isLightColor(page ? pageHex : "#FFFFFF");
-  const floor = Math.max(pageL, 0.1);
+  return paletteTiles(findPalette(branding.palette) ?? ownPalette(branding.backgroundColorHex, isLightCards));
+}
 
-  const picked = source !== "page" && hexToRgb(branding.tileColorHex?.trim() ?? "") ? `#${branding.tileColorHex!.trim().replace(/^#/, "").toUpperCase()}` : null;
-  const base = picked ?? (pageHsl && pageHsl.s > 0.15 && pageHsl.l > 0.08 && pageHsl.l < 0.92 ? pageHex : DEFAULT_TILE);
-  const { h, s, l: baseL } = rgbToHsl(hexToRgb(base)!);
-  const grey = s < 0.1;
-  const sat = grey ? 0 : Math.max(s, 0.35);
-
-  // A picked colour is used as-is (only nudged for readable text), unless it would vanish into a dark page.
-  const blendsIn = picked && darkPage && Math.abs(baseL - pageL) < 0.08;
-  const hero = picked && !blendsIn
-    ? readable(picked, baseL > 0.5 ? "lighter" : "darker")
-    : darkPage
-      ? hslToHex(h, Math.min(sat, 0.5), Math.min(floor + 0.16, 0.38))
-      : hslToHex(h, Math.min(sat, 0.6), 0.2);
-
-  // The second colour is always automatic: a brighter shade of the same hue, light enough for dark text.
-  // Black, white and greys stay monochrome: the bright shade is a lighter grey.
-  const pop = grey
-    ? readable(hslToHex(0, 0, baseL > 0.85 ? 0.84 : Math.min(0.8, baseL + 0.55)), "lighter")
-    : readable(hslToHex(h, Math.min(Math.max(sat, 0.5), 0.7), 0.58), "lighter");
-
+/** A palette in the house style, from any page colour. */
+function ownPalette(backgroundHex: string | null | undefined, isLightCards: boolean): Palette {
+  const bg = hexToRgb(backgroundHex?.trim() ?? "") ? `#${backgroundHex!.trim().replace(/^#/, "").toUpperCase()}` : "#FFFFFF";
+  const { h, s, l } = rgbToHsl(hexToRgb(bg)!);
+  const darkPage = !isLightColor(bg);
+  const neutral = s < 0.12 || l < 0.05 || l > 0.97;
+  const sat = Math.min(Math.max(s, 0.25), 0.5);
+  const hue = neutral ? 0 : h;
+  const tint = neutral ? 0 : Math.min(s, 0.3);
+  // Deep enough to anchor the page: darker than a light or mid page, a step lighter than a very dark one.
+  const hero = neutral
+    ? darkPage
+      ? hslToHex(0, 0, Math.min(l + 0.14, 0.24))
+      : "#1C1C1E"
+    : darkPage && l < 0.25
+      ? hslToHex(h, Math.min(s, 0.4), l + 0.12)
+      : hslToHex(h, sat, darkPage ? Math.max(l - 0.22, 0.12) : 0.2);
+  // Black, white and grey pages get a honey accent; a coloured page a brighter shade of its own hue.
+  const pop = neutral ? "#E6B85C" : hslToHex(h, Math.min(Math.max(s, 0.45), 0.6), 0.64);
+  // Plain white cards on a light page (a soft grey when the page itself is white).
   const pale = isLightCards
-    ? hslToHex(h, grey ? 0 : Math.min(sat, 0.4), darkPage ? 0.93 : Math.min(0.93, pageL - 0.06))
-    : hslToHex(h, Math.min(sat, 0.25), darkPage ? Math.min(floor + 0.08, 0.3) : 0.17);
+    ? darkPage
+      ? hslToHex(hue, tint, 0.93)
+      : l > 0.97
+        ? "#F3F2EE"
+        : "#FFFFFF"
+    : hslToHex(hue, Math.min(tint, 0.25), darkPage ? Math.min(l + 0.05, 0.3) : 0.17);
+  return { id: "own", name: "Your own colour", bg, hero, pop, pale };
+}
+
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** A palette's shades as tile colours. Text on the soft tiles is the palette's deepest colour when it reads (finer than black), else black or white. */
+function paletteTiles(palette: Palette): Record<string, string> {
+  const hero = readable(palette.hero, relativeLuminance(palette.hero) > 0.4 ? "lighter" : "darker");
+  const pop = readable(palette.pop, "lighter");
+  const deep = relativeLuminance(palette.hero) < relativeLuminance(palette.bg) ? palette.hero : palette.bg;
+  const on = (tile: string) => (contrast(tile, deep) >= 4.5 ? deep : textOn(tile));
   return {
     "--tile-hero": hero,
     "--tile-on-hero": textOn(hero),
     "--tile-pop": pop,
-    "--tile-on-pop": textOn(pop),
-    "--tile-pale": pale,
-    "--tile-on-pale": isLightCards ? hslToHex(h, grey ? 0 : Math.min(sat, 0.5), 0.14) : "#F2F2F2",
+    "--tile-on-pop": on(pop),
+    "--tile-pale": palette.pale,
+    "--tile-on-pale": on(palette.pale),
   };
 }
 
@@ -194,14 +200,14 @@ export interface Theme {
 /**
  * Brand colour drives everything: an unset colour means white, never the
  * visitor's OS theme, so one venue looks the same to every customer.
- * Page text follows the real background; card chrome follows `appearance`
- * when the merchant forces it.
+ * Page text follows the real background. Cards are always light for now
+ * (a saved `appearance` is ignored), so there's no dark theme to keep up.
  */
 export function computeTheme(branding: VenueBranding): Theme {
   const raw = branding.backgroundColorHex?.trim() ?? "";
   const bg = hexToRgb(raw) ? `#${raw.replace(/^#/, "")}` : "#FFFFFF";
   const isLightReal = isLightColor(bg);
-  const isLightCards = branding.appearance === "light" ? true : branding.appearance === "dark" ? false : isLightReal;
+  const isLightCards = true;
   const cards = isLightCards ? LIGHT_CARDS : DARK_CARDS;
   const style = branding.style === "classic" || branding.style === "editorial" || branding.style === "modern" ? branding.style : null;
   return {

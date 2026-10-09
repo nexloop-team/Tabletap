@@ -11,29 +11,9 @@ import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/ve
 import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { useLivePreview } from "@/lib/live-preview";
 import { MobilePreview } from "./MobilePreview";
-import { TileColours } from "./TileColours";
+import { PalettePicker } from "./PalettePicker";
 import { moveTo, useDragReorder } from "./useDragReorder";
 import { useVenueDraft } from "./useVenueDraft";
-
-const SWATCHES: [name: string, hex: string][] = [
-  ["White", "#FFFFFF"],
-  ["Oat", "#F6E7D8"],
-  ["Sage", "#DDE6DA"],
-  ["Mist", "#E8EEF6"],
-  ["Blush", "#FDF2F4"],
-  ["Forest", "#1F2A24"],
-  ["Navy", "#1F3A5F"],
-  ["Espresso", "#3B2A20"],
-  ["Terracotta", "#B5523B"],
-  ["Black", "#111111"],
-];
-
-
-const APPEARANCES = [
-  { value: null, label: "Auto" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-] as const;
 
 const PRESETS = [
   { value: null, label: "Default", hint: "Fastest to load", font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" },
@@ -291,45 +271,7 @@ export function DesignEditor({
           {Object.values(STYLE_FONT_HREF).map((href) => (
             <link key={href} rel="stylesheet" href={href} />
           ))}
-          <div className="field">
-            <span className="field-label">Background colour</span>
-            <div className="swatches">
-              {SWATCHES.map(([name, swatch]) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  className="swatch"
-                  style={{ background: swatch }}
-                  aria-label={name}
-                  title={name}
-                  aria-pressed={(branding.backgroundColorHex ?? "#FFFFFF").toUpperCase() === swatch}
-                  onClick={() => setBranding({ backgroundColorHex: swatch })}
-                />
-              ))}
-              <input
-                className="color-input"
-                type="color"
-                aria-label="Pick a custom colour"
-                value={branding.backgroundColorHex ?? "#FFFFFF"}
-                onChange={(event) => setBranding({ backgroundColorHex: event.target.value.toUpperCase() })}
-              />
-              <HexInput value={branding.backgroundColorHex ?? "#FFFFFF"} onChange={(hex) => setBranding({ backgroundColorHex: hex })} />
-            </div>
-            <span className="hint">Text and buttons adjust automatically so they stay readable.</span>
-          </div>
-
-          <div className="field">
-            <span className="field-label" id="appearance-label">
-              Card appearance
-            </span>
-            <div className="segmented" role="group" aria-labelledby="appearance-label">
-              {APPEARANCES.map((option) => (
-                <button key={option.label} type="button" aria-pressed={(branding.appearance ?? null) === option.value} onClick={() => setBranding({ appearance: option.value })}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <PalettePicker branding={branding} onChange={setBranding} customInput={(value, onChange) => <HexInput value={value} onChange={onChange} />} />
 
           <div className="field">
             <span className="field-label" id="style-label">
@@ -374,7 +316,6 @@ export function DesignEditor({
               ))}
             </div>
           </div>
-          {branding.layout === "grid" && <TileColours branding={branding} onChange={setBranding} />}
           <div className="row">
             <div className="field">
               <span className="field-label" id="header-style-label">

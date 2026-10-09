@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { initials } from "@/lib/format";
+import { PALETTES } from "@/lib/palettes";
 import { computeTheme, isLightColor } from "@/lib/theme";
 import { CURRENCIES, VENUE_TYPES, type CreateVenueRequest } from "@/lib/venue/schema";
 import type { VenueBranding } from "@/lib/venue/types";
@@ -23,22 +24,11 @@ const TYPE_LABELS: Record<(typeof VENUE_TYPES)[number], string> = {
   other: "Something else",
 };
 
-const SWATCHES: [name: string, hex: string][] = [
-  ["White", "#FFFFFF"],
-  ["Oat", "#F6E7D8"],
-  ["Sage", "#DDE6DA"],
-  ["Sky", "#DCE8F2"],
-  ["Forest", "#1F2A24"],
-  ["Navy", "#1F3A5F"],
-  ["Terracotta", "#B5523B"],
-  ["Black", "#111111"],
-];
-
 const STEPS = ["Venue", "Colours", "Essentials", "Loyalty"];
 
 /** The guest page as it will look, drawn from the answers so far (the venue doesn't exist yet). */
-function GuestPreview({ name, tagline, color, cards }: { name: string; tagline: string | null; color: string; cards: { label: string; tint: string }[] }) {
-  const theme = computeTheme({ backgroundColorHex: color } as VenueBranding);
+function GuestPreview({ name, tagline, color, palette, cards }: { name: string; tagline: string | null; color: string; palette: string | null; cards: { label: string; tint: string }[] }) {
+  const theme = computeTheme({ backgroundColorHex: color, palette } as VenueBranding);
   return (
     <div className="ob-guest" style={theme.vars as CSSProperties}>
       <div className="ob-guest-head">
@@ -91,7 +81,12 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
   const [name, setName] = useState("");
   const [venueType, setVenueType] = useState<(typeof VENUE_TYPES)[number]>("cafe");
   const [currencyCode, setCurrency] = useState(defaultCurrency);
-  const [color, setColor] = useState("#FFFFFF");
+  const [color, setColour] = useState(PALETTES[0].bg);
+  const [palette, setPalette] = useState<string | null>(PALETTES[0].id);
+  const setColor = (hex: string) => {
+    setColour(hex);
+    setPalette(null);
+  };
   const [tagline, setTagline] = useState<string | null>(null);
   const [menuUrl, setMenuUrl] = useState<string | null>(null);
   const [ssid, setSsid] = useState<string | null>(null);
@@ -128,6 +123,7 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
       venueType,
       currencyCode,
       backgroundColorHex: color,
+      palette,
       tagline,
       menuUrl: menuUrl?.trim() || null,
       googleReviewUrl: googleReviewUrl?.trim() || null,
@@ -218,12 +214,21 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
               <h1>Pick a colour that feels like {name.trim() || "your place"}</h1>
               <p>We&apos;ll match the text and cards to it so everything stays easy to read. You can change it any time.</p>
               <fieldset className="ob-swatches">
-                <legend className="field-label">Suggested colours</legend>
+                <legend className="field-label">Palettes</legend>
                 <div className="ob-swatch-grid">
-                  {SWATCHES.map(([label, swatch]) => (
-                    <button key={swatch} type="button" className="ob-swatch" aria-pressed={color.toUpperCase() === swatch} onClick={() => setColor(swatch)}>
-                      <span style={{ background: swatch }} aria-hidden />
-                      {label}
+                  {PALETTES.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className="ob-swatch"
+                      aria-pressed={palette === option.id}
+                      onClick={() => {
+                        setColour(option.bg);
+                        setPalette(option.id);
+                      }}
+                    >
+                      <span style={{ background: `linear-gradient(135deg, ${option.bg} 0 50%, ${option.hero} 50% 78%, ${option.pop} 78%)` }} aria-hidden />
+                      {option.name}
                     </button>
                   ))}
                 </div>
@@ -326,7 +331,7 @@ export function OnboardingWizard({ defaultCurrency, exitHref, notice }: { defaul
           <span className="preview-label">Preview</span>
           <div className="phone">
             <div className="phone-screen" style={{ background: color }}>
-              <GuestPreview name={name} tagline={tagline} color={color} cards={previewCards} />
+              <GuestPreview name={name} tagline={tagline} color={color} palette={palette} cards={previewCards} />
             </div>
           </div>
           <p className="ob-preview-caption">This is what guests will see</p>

@@ -85,13 +85,16 @@ export interface VenueBranding {
   titleOverride?: string | null;
   tagline?: string | null;
   backgroundColorHex?: string | null;
-  /** Grid layout: the colour its tiles are shaded from. Absent means the page colour, or a deep green on white or black pages. */
+  /** A named colour palette (see lib/palettes): sets the page colour and the bento tile shades together. */
+  palette?: string | null;
+  /** No longer used (tile colours now come from the palette or the page). Kept so older saves still load. Grid layout: the colour its tiles are shaded from. Absent means the page colour, or a deep green on white or black pages. */
   tileColorHex?: string | null;
   /** No longer used: the second colour is always a brighter shade of the tile colour. Kept so older saves still load. */
   tileAccentHex?: string | null;
   /** Bento: where the tile colours came from, for the editor. Absent: "custom" if a tile colour is set, else "page". */
   tileSource?: "logo" | "page" | "custom" | null;
   /** Forces the card chrome light or dark regardless of the page colour. */
+  /** No longer used: cards are always light. Kept so older saves still load. */
   appearance?: "light" | "dark" | null;
   style?: LandingStyle | null;
   showGoogleReviewButton?: boolean;

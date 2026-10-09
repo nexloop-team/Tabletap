@@ -91,6 +91,7 @@ export const brandingSchema = z.object({
   titleOverride: z.string().max(80).nullish(),
   tagline: optionalText(120),
   backgroundColorHex: hexColor,
+  palette: z.string().trim().max(40).nullish(),
   tileColorHex: hexColor,
   tileAccentHex: hexColor,
   tileSource: z.enum(["logo", "page", "custom"]).nullish(),
@@ -199,6 +200,7 @@ export const createVenueRequest = z.object({
   venueType: z.enum(VENUE_TYPES),
   currencyCode: z.enum(CURRENCIES),
   backgroundColorHex: hexColor,
+  palette: z.string().trim().max(40).nullish(),
   tagline: optionalText(120),
   wifi: wifiSchema,
   googleReviewUrl: optionalUrl,
@@ -234,6 +236,7 @@ export function initialVenueConfig(input: z.output<typeof createVenueRequest>, n
     loyaltyProgram: input.loyalty ? { rewardName: input.loyalty.rewardName, stampsRequired: input.loyalty.stampsRequired } : null,
     branding: {
       backgroundColorHex: input.backgroundColorHex ?? "#FFFFFF",
+      palette: input.palette ?? null,
       tagline: input.tagline ?? null,
       showGoogleReviewButton: !!input.googleReviewUrl,
       sudokuEnabled: true,

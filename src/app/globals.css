@@ -4,6 +4,8 @@
  * visitor's OS theme, because they signal success/failure rather than brand.
  */
 :root {
+  /* Light only for now: form controls and scrollbars stay light whatever the phone is set to. */
+  color-scheme: light;
   --page-bg: #ffffff;
   --card-bg: #ffffff;
   --text-primary: #1a1a1a;
@@ -30,12 +32,6 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --success-green: #30d158;
-    --error-red: #ff453a;
-  }
-}
 
 *,
 *::before,
