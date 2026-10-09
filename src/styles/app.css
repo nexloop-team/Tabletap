@@ -413,7 +413,7 @@ body:has(.app) {
   margin-top: 16px;
 }
 /* Grids space their cards with gap; the stacked-card margin would misalign them. */
-:is(.stats, .overview-grid, .pricing, .feature-grid, .steps, .demo-strip, .venue-list, .feedback-list) > .card {
+:is(.stats, .overview-grid, .pricing, .feature-grid, .steps, .demo-strip, .venue-list, .feedback-list, .qr-grid) > .card {
   margin-top: 0;
 }
 .card-head {
@@ -1003,7 +1003,7 @@ body:has(.app) {
 }
 .palette-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 10px;
 }
 .palette {
@@ -1979,6 +1979,12 @@ body:has(.app) {
     grid-template-columns: minmax(0, 1fr) 340px;
   }
 }
+/* No preview (loyalty switched off): one readable column. */
+@media (min-width: 1180px) {
+  .editor-grid.editor-grid-solo {
+    grid-template-columns: minmax(0, 860px);
+  }
+}
 .preview-pane {
   position: sticky;
   top: 24px;
@@ -2005,6 +2011,93 @@ body:has(.app) {
 @media (max-width: 1179px) {
   .preview-pane {
     display: none;
+  }
+}
+
+/* Section tabs over an editor: sticky, so switching never means scrolling back up. */
+.editor-tabs {
+  position: sticky;
+  top: 64px;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--a-surface-3);
+  border-radius: 12px;
+  box-shadow: 0 0 0 6px var(--a-bg);
+}
+@media (min-width: 1024px) {
+  .editor-tabs {
+    top: 12px;
+  }
+}
+.editor-tabs button {
+  flex: 1 0 auto;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--a-text-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.editor-tabs button:hover {
+  color: var(--a-text);
+}
+@media (max-width: 480px) {
+  .editor-tabs button {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+.editor-tabs button[aria-selected="true"] {
+  background: var(--a-surface);
+  color: var(--a-text);
+  box-shadow: var(--a-shadow-md);
+}
+.editor-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.editor-panel > .card {
+  margin: 0;
+}
+.preview-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.preview-foot a svg {
+  width: 13px;
+  height: 13px;
+}
+/* A preview that has nothing to show yet (loyalty off, a menu that's only a link). */
+.preview-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  width: 320px;
+  height: 650px;
+  max-width: 100%;
+  padding: 32px;
+  border: 1px dashed var(--a-border-strong);
+  border-radius: 44px;
+  color: var(--a-text-3);
+  text-align: center;
+  font-size: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .editor-tabs button {
+    transition: none;
   }
 }
 
@@ -2796,23 +2889,38 @@ body:has(.app) {
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
-@media (min-width: 900px) {
+@media (min-width: 1100px) {
   .qr-grid {
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
+}
+/* The download card: settings on the left, the code they make on the right. */
+.qr-download {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
 }
 .qr-frame {
   background: #fff;
-  border-radius: var(--a-radius);
+  border-radius: 12px;
   border: 1px solid var(--a-border);
-  padding: 16px;
+  padding: 10px;
   display: grid;
   place-items: center;
 }
 .qr-frame img {
-  width: 100%;
-  max-width: 260px;
+  width: 132px;
   aspect-ratio: 1;
+}
+@media (max-width: 520px) {
+  .qr-download {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .qr-frame {
+    justify-self: start;
+  }
 }
 
 /* Venue picker / list */
@@ -3171,13 +3279,39 @@ body:has(.app) {
   gap: 8px;
 }
 .feature-row {
+  display: grid;
+  border: 1px solid var(--a-border);
+  border-radius: 10px;
+  background: var(--a-surface);
+}
+.feature-row-main {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 4px 12px 4px 4px;
-  border: 1px solid var(--a-border);
-  border-radius: 10px;
-  background: var(--a-surface);
+}
+/* A card's own settings, under its row and lined up with its name. */
+.feature-row-settings {
+  display: grid;
+  gap: 10px;
+  padding: 2px 14px 14px 80px;
+}
+.feature-row-settings .row {
+  margin: 0;
+}
+.feature-row-link {
+  padding-top: 0;
+  padding-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.feature-row-link a {
+  color: var(--a-accent-text);
+}
+@media (max-width: 640px) {
+  .feature-row-settings {
+    padding-left: 14px;
+  }
 }
 .feature-row.off {
   background: var(--a-bg);
@@ -3226,36 +3360,30 @@ body:has(.app) {
 }
 
 /* Menu editor: sections → items → item details */
-.menu-panes {
+/* Menus as chips over the editor, then each section as its own card, like the guest menu. */
+.menu-switcher {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-  margin-top: 16px;
-}
-.pane {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
   gap: 8px;
-  padding: 14px;
+  margin-bottom: 14px;
 }
-.pane-sections {
-  flex: 1 1 200px;
+.chip-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-style: dashed;
 }
-.pane-items {
-  flex: 2 1 300px;
+.chip-add svg {
+  width: 14px;
+  height: 14px;
 }
-.pane-detail {
-  flex: 3 1 360px;
-  gap: 16px;
-  padding: 20px;
+.menu-section-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
 }
-@media (min-width: 1100px) {
-  .pane-detail {
-    position: sticky;
-    top: 24px;
-  }
+.menu-section-card .btn-dashed {
+  margin-top: 2px;
 }
 .pane-head {
   display: flex;
@@ -3287,34 +3415,8 @@ body:has(.app) {
   grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
-.pane-items .pane-list {
+.menu-section-card .pane-list {
   gap: 8px;
-}
-.pane-link {
-  width: 100%;
-  min-height: 40px;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--a-text);
-  font-size: 14px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-}
-.pane-link:hover {
-  background: var(--a-surface-2);
-}
-.pane-link[aria-current="true"] {
-  background: var(--a-accent-soft);
-  font-weight: 600;
-}
-.pane-link .muted {
-  font-size: 13px;
 }
 .btn-dashed {
   display: inline-flex;
@@ -3341,6 +3443,7 @@ body:has(.app) {
 }
 .item-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   min-height: 56px;
@@ -3396,6 +3499,36 @@ body:has(.app) {
 .item-row-price {
   font-size: 14px;
   font-weight: 600;
+}
+.item-row-chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--a-text-3);
+  transition: transform 150ms ease;
+}
+.item-row-main[aria-expanded="true"] .item-row-chevron {
+  transform: rotate(180deg);
+}
+/* A dish's editor opens inside its row. */
+.item-editor {
+  flex: 1 0 100%;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid var(--a-border);
+}
+.item-editor-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--a-border);
+}
+@media (prefers-reduced-motion: reduce) {
+  .item-row-chevron {
+    transition: none;
+  }
 }
 .span-all {
   grid-column: 1 / -1;

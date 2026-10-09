@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { VenueHeader } from "@/components/landing/VenueHeader";
 import { createTracker } from "@/lib/analytics";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
+import { usePreviewDraft } from "@/lib/live-preview";
 import { computeTheme } from "@/lib/theme";
 import { safeImageUrl } from "@/lib/venue/features";
 import type { Menu, MenuItem, VenueBranding } from "@/lib/venue/types";
@@ -70,7 +71,16 @@ interface MenuViewProps {
   backHref: string;
 }
 
-export function MenuView({ venueId, venueName, branding, currencyCode, menus, locale, source, backHref }: MenuViewProps) {
+/** What the menu editor sends its preview frame: the unsaved menus, opened on the one being edited. */
+interface MenuDraft {
+  menus: Menu[];
+  menuId: string | null;
+}
+
+export function MenuView({ venueId, venueName, branding, currencyCode, menus: savedMenus, locale, source, backHref }: MenuViewProps) {
+  const draft = usePreviewDraft<MenuDraft>(source === "preview");
+  // Only hosted menus with dishes, the same rule the page applies to saved menus.
+  const menus = useMemo(() => (draft ? draft.menus.filter((m) => !m.externalUrl && m.sections.some((s) => s.items.length > 0)) : savedMenus), [draft, savedMenus]);
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
   const track = useMemo(() => createTracker({ venueId, source, page: "menu" }), [venueId, source]);
   const formatPrice = useMemo(() => priceFormatter(locale, currencyCode), [locale, currencyCode]);
@@ -85,7 +95,9 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const closeDish = useCallback(() => setOpenDish(null), []);
 
-  const menu = menus[menuIndex] ?? null;
+  const focused = draft?.menuId ? menus.findIndex((m) => m.id === draft.menuId) : -1;
+  const shownIndex = focused >= 0 ? focused : Math.min(menuIndex, Math.max(0, menus.length - 1));
+  const menu = menus[shownIndex] ?? null;
   const sections = useMemo(() => (menu ? [...menu.sections].sort((a, b) => a.sortOrder - b.sortOrder).filter((s) => s.items.length > 0) : []), [menu]);
   const allergens = useMemo(() => [...new Set(sections.flatMap((s) => s.items.flatMap((i) => i.allergens.map((a) => a.toLowerCase()))))].sort(), [sections]);
   const dietOptions = useMemo(() => {
@@ -224,7 +236,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
             {menus.length > 1 && (
               <div className="menu-chip-row menu-tabs" role="tablist">
                 {menus.map((m, i) => (
-                  <button key={m.id} type="button" role="tab" aria-selected={i === menuIndex} className="menu-chip" onClick={() => setMenuIndex(i)}>
+                  <button key={m.id} type="button" role="tab" aria-selected={i === shownIndex} className="menu-chip" onClick={() => setMenuIndex(i)}>
                     {m.name}
                   </button>
                 ))}

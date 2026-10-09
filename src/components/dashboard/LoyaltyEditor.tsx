@@ -1,7 +1,12 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Ban, Crown, Plus, Stamp, Trash2, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { useLivePreview } from "@/lib/live-preview";
 import type { VenueConfig } from "@/lib/venue/schema";
+import { AutomationsForm, type Automations } from "./AutomationsForm";
+import { EditorPanel, EditorTabs, PreviewPane, useEditorTab, type EditorTab } from "./EditorFrame";
+import { MobilePreview } from "./MobilePreview";
 import { Card, Field, SaveBar, SwitchRow, TextField } from "./ui";
 import { useVenueDraft } from "./useVenueDraft";
 
@@ -10,6 +15,12 @@ type Program = NonNullable<VenueConfig["loyaltyProgram"]>;
 type Tier = NonNullable<Program["rewardTiers"]>[number];
 
 type Mode = "off" | "stamps" | "membership";
+
+const MODES: { value: Mode; label: string; hint: string; icon: LucideIcon }[] = [
+  { value: "stamps", label: "Stamp card", hint: "Collect stamps, earn rewards", icon: Stamp },
+  { value: "membership", label: "Members club", hint: "A members list for offers, no stamps", icon: Crown },
+  { value: "off", label: "Off", hint: "No loyalty card on your page", icon: Ban },
+];
 
 function modeOf(program: VenueConfig["loyaltyProgram"]): Mode {
   if (!program) return "off";
@@ -34,11 +45,19 @@ export function LoyaltyEditor({
   initial,
   venueType,
   referralStats,
+  previewUrl,
+  automations,
+  till,
 }: {
   venueId: string;
   initial: Draft;
   venueType: string | null | undefined;
   referralStats?: { joined: number; visited: number };
+  /** The guest page in preview mode, which shows this editor's draft. */
+  previewUrl: string;
+  automations: Automations;
+  /** Staff devices and logins, rendered by the page. */
+  till: ReactNode;
 }) {
   const editor = useVenueDraft<Draft>(venueId, initial);
   const { draft, update } = editor;
@@ -61,165 +80,202 @@ export function LoyaltyEditor({
   const setEarlier = (tiers: Tier[]) => update("loyaltyProgram", compose(main, tiers, program?.referral));
   const setReferral = (patch: Partial<typeof referral>) => update("loyaltyProgram", compose(main, earlier, { ...referral, ...patch }));
 
+  const tabs: EditorTab[] = [
+    { id: "programme", label: "Rewards" },
+    { id: "capture", label: "Guest info" },
+    // The till only stamps or checks cards, so it has nothing to do without a programme.
+    ...(mode === "off" ? [] : [{ id: "till", label: "Till", anchors: ["staff", "devices"] }]),
+    { id: "emails", label: "Emails" },
+  ];
+  const [tab, setTab] = useEditorTab(tabs);
+  useLivePreview(draft);
+
   return (
-    <>
+    <div className={`editor-grid${mode === "off" ? " editor-grid-solo" : ""}`}>
+      <div>
+        {mode !== "off" && <MobilePreview src={previewUrl} label="Preview your page" dirty={editor.dirty} />}
+        <EditorTabs tabs={tabs} active={tab} onSelect={setTab} label="Loyalty settings" />
 
-      <Card title="Loyalty programme" description="Guests join with their email and get a card on their phone. Staff stamp it at the till.">
-        <div className="choice-grid">
-          <button type="button" className="choice" aria-pressed={mode === "stamps"} onClick={() => setMode("stamps")}>
-            Stamp card
-          </button>
-          <button type="button" className="choice" aria-pressed={mode === "membership"} onClick={() => setMode("membership")}>
-            Members club
-          </button>
-          <button type="button" className="choice" aria-pressed={mode === "off"} onClick={() => setMode("off")}>
-            Off
-          </button>
-        </div>
-        <p className="hint" style={{ marginTop: 10 }}>
-          {mode === "stamps" && "Collect stamps, earn rewards. The classic."}
-          {mode === "membership" && "No stamps: guests join a members list and you send them offers."}
-          {mode === "off" && "No loyalty card on your page."}
-        </p>
-
-        {mode === "stamps" && (
-          <>
-            <div className="row" style={{ marginTop: 16 }}>
-              <TextField label="Main reward" value={main.rewardName} onChange={(value) => setMain({ rewardName: value ?? "" })} placeholder="Free coffee" maxLength={80} />
-              <Field label="Stamps needed" htmlFor="stamps-required">
-                <input
-                  id="stamps-required"
-                  className="input"
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={main.stampsRequired}
-                  onChange={(event) => setMain({ stampsRequired: Math.min(50, Math.max(1, Number(event.target.value) || 1)) })}
-                />
-              </Field>
-            </div>
-
-            <div className="field" style={{ marginTop: 18 }}>
-              <span className="field-label">Smaller rewards on the way (optional)</span>
-              <div className="list-editor">
-                {earlier.map((tier, index) => (
-                  <div key={index} className="list-row">
-                    <div className="list-row-head">
-                      <input
-                        className="input"
-                        aria-label="Reward"
-                        placeholder="Free pastry"
-                        value={tier.rewardName}
-                        maxLength={80}
-                        onChange={(event) => setEarlier(earlier.map((t, i) => (i === index ? { ...t, rewardName: event.target.value } : t)))}
-                      />
-                      <input
-                        className="input"
-                        style={{ maxWidth: 90 }}
-                        aria-label="Stamps"
-                        type="number"
-                        min={1}
-                        max={Math.max(1, main.stampsRequired - 1)}
-                        value={tier.stampsRequired}
-                        onChange={(event) => setEarlier(earlier.map((t, i) => (i === index ? { ...t, stampsRequired: Math.min(50, Math.max(1, Number(event.target.value) || 1)) } : t)))}
-                      />
-                      <button type="button" className="btn btn-icon btn-ghost" aria-label="Remove reward" onClick={() => setEarlier(earlier.filter((_, i) => i !== index))}>
-                        <Trash2 aria-hidden />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {earlier.length < 4 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    style={{ justifySelf: "start" }}
-                    onClick={() => setEarlier([...earlier, { rewardName: "", stampsRequired: Math.max(1, Math.floor(main.stampsRequired / 2)) }])}
-                  >
-                    <Plus aria-hidden /> Add a smaller reward
+        {tab === "programme" && (
+          <EditorPanel id="programme">
+            <Card title="Loyalty programme" description="Guests join with their email and get a card on their phone.">
+              <div className="preset-grid" role="group" aria-label="Loyalty programme">
+                {MODES.map((option) => (
+                  <button key={option.value} type="button" className="preset" aria-pressed={mode === option.value} onClick={() => setMode(option.value)}>
+                    <option.icon className="preset-icon" aria-hidden />
+                    <span>
+                      {option.label}
+                      <span className="preset-hint">{option.hint}</span>
+                    </span>
                   </button>
-                )}
+                ))}
               </div>
-              {earlier.some((tier) => tier.stampsRequired >= main.stampsRequired) && (
-                <p className="field-error">Smaller rewards should need fewer stamps than the main one.</p>
-              )}
-            </div>
-          </>
+            </Card>
+
+            {mode === "stamps" && (
+              <Card title="Rewards" description="Staff add a stamp per visit. When the card is full, the guest gets the main reward and starts again.">
+                <div className="row">
+                  <TextField label="Main reward" value={main.rewardName} onChange={(value) => setMain({ rewardName: value ?? "" })} placeholder="Free coffee" maxLength={80} />
+                  <Field label="Stamps needed" htmlFor="stamps-required">
+                    <input
+                      id="stamps-required"
+                      className="input"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={main.stampsRequired}
+                      onChange={(event) => setMain({ stampsRequired: Math.min(50, Math.max(1, Number(event.target.value) || 1)) })}
+                    />
+                  </Field>
+                </div>
+
+                <div className="field" style={{ marginTop: 18 }}>
+                  <span className="field-label">Smaller rewards on the way (optional)</span>
+                  <div className="list-editor">
+                    {earlier.map((tier, index) => (
+                      <div key={index} className="list-row">
+                        <div className="list-row-head">
+                          <input
+                            className="input"
+                            aria-label="Reward"
+                            placeholder="Free pastry"
+                            value={tier.rewardName}
+                            maxLength={80}
+                            onChange={(event) => setEarlier(earlier.map((t, i) => (i === index ? { ...t, rewardName: event.target.value } : t)))}
+                          />
+                          <input
+                            className="input"
+                            style={{ maxWidth: 90 }}
+                            aria-label="Stamps"
+                            type="number"
+                            min={1}
+                            max={Math.max(1, main.stampsRequired - 1)}
+                            value={tier.stampsRequired}
+                            onChange={(event) => setEarlier(earlier.map((t, i) => (i === index ? { ...t, stampsRequired: Math.min(50, Math.max(1, Number(event.target.value) || 1)) } : t)))}
+                          />
+                          <button type="button" className="btn btn-icon btn-ghost" aria-label="Remove reward" onClick={() => setEarlier(earlier.filter((_, i) => i !== index))}>
+                            <Trash2 aria-hidden />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {earlier.length < 4 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        style={{ justifySelf: "start" }}
+                        onClick={() => setEarlier([...earlier, { rewardName: "", stampsRequired: Math.max(1, Math.floor(main.stampsRequired / 2)) }])}
+                      >
+                        <Plus aria-hidden /> Add a smaller reward
+                      </button>
+                    )}
+                  </div>
+                  {earlier.some((tier) => tier.stampsRequired >= main.stampsRequired) && <p className="field-error">Smaller rewards should need fewer stamps than the main one.</p>}
+                </div>
+              </Card>
+            )}
+
+            {mode === "stamps" && (
+              <Card title="Refer a friend" description="Members get an invite link on their card. Once their friend's first visit is stamped, the member gets bonus stamps.">
+                <SwitchRow title="Reward invites" checked={referral.enabled} onChange={(on) => setReferral({ enabled: on })} />
+                {referral.enabled && (
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <Field label="Stamps for the member who invited" htmlFor="referrer-stamps">
+                      <select id="referrer-stamps" className="select" value={referral.referrerStamps} onChange={(event) => setReferral({ referrerStamps: Number(event.target.value) })}>
+                        {[1, 2, 3].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Welcome stamps for the friend" htmlFor="friend-stamps">
+                      <select id="friend-stamps" className="select" value={referral.friendStamps} onChange={(event) => setReferral({ friendStamps: Number(event.target.value) })}>
+                        {[0, 1, 2].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                )}
+                {referral.enabled && <p className="hint" style={{ marginTop: 10 }}>To stop abuse, a member can earn invite stamps at most 5 times a month, and only after a real visit.</p>}
+                {referralStats && (referralStats.joined > 0 || referral.enabled) && (
+                  <p className="hint" style={{ marginTop: 6 }}>
+                    So far: {referralStats.joined} friend{referralStats.joined === 1 ? "" : "s"} joined through an invite, {referralStats.visited} visited.
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {mode === "membership" && (
+              <Card title="Members club" description="Guests join a members list from your page. There's no stamp card: you reach members with offers and the automatic emails.">
+                <button type="button" className="btn btn-sm" style={{ justifySelf: "start" }} onClick={() => setTab("emails")}>
+                  Set up member emails
+                </button>
+              </Card>
+            )}
+
+          </EditorPanel>
         )}
-      </Card>
 
-      {mode === "stamps" && (
-        <Card title="Refer a friend" description="Members get an invite link on their card. Their friend joins with it, and once the friend's first visit is stamped, the member gets bonus stamps.">
-          <SwitchRow title="Reward invites" checked={referral.enabled} onChange={(on) => setReferral({ enabled: on })} />
-          {referral.enabled && (
-            <div className="row" style={{ marginTop: 6 }}>
-              <Field label="Stamps for the member who invited" htmlFor="referrer-stamps">
-                <select id="referrer-stamps" className="select" value={referral.referrerStamps} onChange={(event) => setReferral({ referrerStamps: Number(event.target.value) })}>
-                  {[1, 2, 3].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Welcome stamps for the friend" htmlFor="friend-stamps">
-                <select id="friend-stamps" className="select" value={referral.friendStamps} onChange={(event) => setReferral({ friendStamps: Number(event.target.value) })}>
-                  {[0, 1, 2].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          )}
-          {referral.enabled && <p className="hint" style={{ marginTop: 10 }}>To stop abuse, a member can earn invite stamps at most 5 times a month, and only after a real visit.</p>}
-          {referralStats && (referralStats.joined > 0 || referral.enabled) && (
-            <p className="hint" style={{ marginTop: 6 }}>
-              So far: {referralStats.joined} friend{referralStats.joined === 1 ? "" : "s"} joined through an invite, {referralStats.visited} visited.
-            </p>
-          )}
-        </Card>
-      )}
+        {tab === "capture" && (
+          <EditorPanel id="capture">
+            <Card title="Guest details" description="Build a list of guests you can reach again, with their permission.">
+              <SwitchRow title="Collect guest details" description="The main switch for everything below." checked={crm.enabled} onChange={(on) => setCrm({ enabled: on })} />
+              <SwitchRow
+                title="Ask for marketing consent"
+                description={`Join forms get an opt-in for offers by email, confirmed by a link (double opt-in). Guests confirm they're ${adultsOnly ? "18" : "13"}+.`}
+                checked={crm.consentAsk}
+                disabled={!crm.enabled}
+                onChange={(on) => setCrm({ consentAsk: on, wifiCapture: on ? crm.wifiCapture : false })}
+              />
+              <SwitchRow
+                title="Email for Wi-Fi"
+                description="Guests enter their email to see the Wi-Fi password. Needs marketing consent on."
+                checked={crm.wifiCapture}
+                disabled={!crm.enabled || !crm.consentAsk}
+                onChange={(on) => setCrm({ wifiCapture: on })}
+              />
+              {mode !== "off" && (
+                <SwitchRow
+                  title="Offer membership after feedback"
+                  description={mode === "stamps" ? "After leaving feedback, guests are invited to join, with a free stamp." : "After leaving feedback, guests are invited to join the members club."}
+                  checked={crm.feedbackCapture}
+                  disabled={!crm.enabled}
+                  onChange={(on) => setCrm({ feedbackCapture: on })}
+                />
+              )}
+              <SwitchRow
+                title="Ask for birthdays"
+                description="Day and month only, never the year. Great for a birthday treat."
+                checked={crm.birthdayAsk}
+                disabled={!crm.enabled}
+                onChange={(on) => setCrm({ birthdayAsk: on })}
+              />
+            </Card>
+          </EditorPanel>
+        )}
 
-      <Card title="Guest capture" description="Build a list of guests you can reach again, with their permission.">
-        <SwitchRow
-          title="Collect guest details"
-          description="The main switch for everything below."
-          checked={crm.enabled}
-          onChange={(on) => setCrm({ enabled: on })}
-        />
-        <SwitchRow
-          title="Ask for marketing consent"
-          description={`Join forms get an opt-in for offers by email, confirmed by a link (double opt-in). Guests confirm they're ${adultsOnly ? "18" : "13"}+.`}
-          checked={crm.consentAsk}
-          disabled={!crm.enabled}
-          onChange={(on) => setCrm({ consentAsk: on, wifiCapture: on ? crm.wifiCapture : false })}
-        />
-        <SwitchRow
-          title="Email for Wi-Fi"
-          description="Guests enter their email to see the Wi-Fi password. Needs marketing consent on."
-          checked={crm.wifiCapture}
-          disabled={!crm.enabled || !crm.consentAsk}
-          onChange={(on) => setCrm({ wifiCapture: on })}
-        />
-        <SwitchRow
-          title="Offer membership after feedback"
-          description="After leaving feedback, guests are invited to join (with a free stamp on stamp cards)."
-          checked={crm.feedbackCapture}
-          disabled={!crm.enabled}
-          onChange={(on) => setCrm({ feedbackCapture: on })}
-        />
-        <SwitchRow
-          title="Ask for birthdays"
-          description="Day and month only, never the year. Great for a birthday treat."
-          checked={crm.birthdayAsk}
-          disabled={!crm.enabled}
-          onChange={(on) => setCrm({ birthdayAsk: on })}
-        />
-      </Card>
+        {tab === "till" && <EditorPanel id="till">{till}</EditorPanel>}
+
+        {tab === "emails" && (
+          <EditorPanel id="emails">
+            <AutomationsForm
+              venueId={venueId}
+              initial={automations}
+              rewardEmails={mode === "stamps"}
+              collectsConsent={crm.enabled && crm.consentAsk}
+              collectsBirthdays={crm.enabled && crm.birthdayAsk}
+            />
+          </EditorPanel>
+        )}
+      </div>
+
+      {mode !== "off" && <PreviewPane src={`${previewUrl}&embed=1`} version={editor.version} title="Live page preview" fullHref={previewUrl} />}
 
       <SaveBar dirty={editor.dirty} saving={editor.saving} error={editor.error} onSave={editor.save} onReset={editor.reset} />
-    </>
+    </div>
   );
 }

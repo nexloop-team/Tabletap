@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AutomationsForm } from "@/components/dashboard/AutomationsForm";
 import { LoyaltyEditor } from "@/components/dashboard/LoyaltyEditor";
 import { StaffDevices } from "@/components/dashboard/StaffDevices";
 import { StaffMembers } from "@/components/dashboard/StaffMembers";
@@ -28,19 +27,14 @@ export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[ven
         venueType={venue.config.venueType}
         initial={{ loyaltyProgram: program ?? null, crm }}
         referralStats={referralStats(venue.id)}
-      />
-      <StaffDevices
-        venueId={venue.id}
-        devices={listStaffDevices(venue.id)}
-        cooldownMinutes={settings.stampPolicy.cooldownMinutes}
-        enabled={!!program && program.stampsEnabled !== false}
-      />
-      <StaffMembers venueId={venue.id} members={listStaffMembers(venue.id)} />
-      <AutomationsForm
-        venueId={venue.id}
-        initial={settings.automations}
-        collectsConsent={crm.enabled && crm.consentAsk}
-        collectsBirthdays={crm.enabled && crm.birthdayAsk}
+        previewUrl={`/s?i=${encodeURIComponent(venue.shortCode)}&s=preview`}
+        automations={settings.automations}
+        till={
+          <>
+            <StaffDevices venueId={venue.id} devices={listStaffDevices(venue.id)} cooldownMinutes={settings.stampPolicy.cooldownMinutes} enabled={!!program && program.stampsEnabled !== false} />
+            <StaffMembers venueId={venue.id} members={listStaffMembers(venue.id)} />
+          </>
+        }
       />
     </>
   );

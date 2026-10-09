@@ -38,9 +38,7 @@ export function PalettePicker({
   const derived = tilePalette({ backgroundColorHex: background }, computeTheme({ backgroundColorHex: background }).isLightCards);
 
   return (
-    <div className="field">
-      <span className="field-label">Colours</span>
-      <span className="hint">Pick a palette. It sets the page and every tile, and text stays readable on each.</span>
+    <div className="palette-picker">
       <div className="palette-grid" role="group" aria-label="Palettes">
         {PALETTES.map((palette) => (
           <button key={palette.id} type="button" className="palette" aria-pressed={current?.id === palette.id} onClick={() => pick(palette)}>
@@ -48,15 +46,19 @@ export function PalettePicker({
             <span>{palette.name}</span>
           </button>
         ))}
-      </div>
-      <div className="palette-custom">
         <button type="button" className="palette" aria-pressed={!current} onClick={() => custom(background)}>
           <Mini bg={background} hero={derived["--tile-hero"]} pop={derived["--tile-pop"]} pale={derived["--tile-pale"]} />
           <span>Your own colour</span>
         </button>
-        <input className="color-input" type="color" aria-label="Pick your own background colour" value={background} onChange={(event) => custom(event.target.value.toUpperCase())} />
-        {customInput(background, custom)}
       </div>
+      {!current && (
+        <div className="palette-custom">
+          <span className="field-label">Page colour</span>
+          <input className="color-input" type="color" aria-label="Pick your own background colour" value={background} onChange={(event) => custom(event.target.value.toUpperCase())} />
+          {customInput(background, custom)}
+          <span className="hint">Tile shades are worked out from it.</span>
+        </div>
+      )}
     </div>
   );
 }

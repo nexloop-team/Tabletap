@@ -35,7 +35,8 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
   const menus = venue.menus.filter((menu) => !menu.externalUrl && menu.sections.some((section) => section.items.length > 0));
   // Someone landed here (an old link, a typed URL) for a venue whose menu lives elsewhere: send them there.
   const external = sanitiseExternalUrl(menuExternalUrl(venue));
-  if (menus.length === 0 && external) redirect(external);
+  // (Not in the editor's preview frame, which shows the draft instead.)
+  if (menus.length === 0 && external && source !== "preview") redirect(external);
 
   return (
     <>

@@ -1,15 +1,17 @@
 "use client";
 
 import { GripVertical, LayoutGrid, List, Plus, Rows4, Trash2, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { LINK_ICON_TOKENS } from "@/components/icons";
 import { STYLE_FONT_HREF } from "@/lib/theme";
-import { buildFeatures, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
+import { buildFeatures, sanitiseExternalUrl, wifiView, type CoreFeature, type FeatureKey } from "@/lib/venue/features";
 import { expandSocialLink } from "@/lib/venue/social";
 import { LINK_LABEL_TOKENS, type VenueConfig } from "@/lib/venue/schema";
 import type { ButtonShape, HeaderStyle, PageLayout, PublicVenue } from "@/lib/venue/types";
 import { Card, Field, HelpTip, ImageField, newClientId, SaveBar, Switch, SwitchRow, TextField } from "./ui";
 import { useLivePreview } from "@/lib/live-preview";
+import { EditorPanel, EditorTabs, PreviewPane, useEditorTab, type EditorTab } from "./EditorFrame";
 import { MobilePreview } from "./MobilePreview";
 import { PalettePicker } from "./PalettePicker";
 import { moveTo, useDragReorder } from "./useDragReorder";
@@ -92,6 +94,12 @@ const CARD_LABELS: Record<CoreFeature, string> = {
   google_review: "Leave a Google review",
 };
 
+const TABS: EditorTab[] = [
+  { id: "style", label: "Style" },
+  { id: "header", label: "Header", anchors: ["logo"] },
+  { id: "cards", label: "Cards & links", anchors: ["wifi", "google"] },
+];
+
 type Draft = Pick<VenueConfig, "branding" | "wifi" | "socialLinks" | "externalLinks" | "announcement">;
 
 export function DesignEditor({
@@ -112,6 +120,7 @@ export function DesignEditor({
   });
   const { draft, update } = editor;
   useLivePreview(draft);
+  const [tab, setTab] = useEditorTab(TABS);
   const branding = draft.branding;
   const setBranding = (patch: Partial<Draft["branding"]>) => update("branding", { ...branding, ...patch });
   const links = draft.externalLinks;
@@ -122,9 +131,14 @@ export function DesignEditor({
   // What the guest page would show with this draft, in order.
   const previewVenue = { ...config, ...draft, id: venueId, shortCode, crm: config.crm } as unknown as PublicVenue;
   const features = buildFeatures(previewVenue);
-  // The same list with the two switchable cards forced on, so a hidden one keeps its row and can be switched back.
   // Every card the page could show, switched on or not, so a hidden one keeps its row and can come back.
-  const allFeatures = buildFeatures({ ...previewVenue, branding: { ...previewVenue.branding, sudokuEnabled: true, showGoogleReviewButton: true, hiddenFeatures: [] } } as PublicVenue);
+  // Wi-Fi and Google reviews are listed even before they're set up, since their settings live on their rows.
+  const allFeatures = buildFeatures({
+    ...previewVenue,
+    wifi: { ...previewVenue.wifi, ssid: previewVenue.wifi?.ssid || "-" },
+    socialLinks: { ...previewVenue.socialLinks, google: sanitiseExternalUrl(previewVenue.socialLinks.google) ? previewVenue.socialLinks.google : "https://g.page/" },
+    branding: { ...previewVenue.branding, sudokuEnabled: true, showGoogleReviewButton: true, hiddenFeatures: [] },
+  } as PublicVenue);
   const hidden = branding.hiddenFeatures ?? [];
   const [renaming, setRenaming] = useState<FeatureKey | null>(null);
   const wifi = wifiView(previewVenue);
@@ -185,13 +199,13 @@ export function DesignEditor({
       case "menu":
         return config.menus.some((menu) => menu.externalUrl) ? "Links to your menu" : "Hosted menu";
       case "wifi":
-        return wifi.ssid || "Expands · Wi-Fi details";
+        return wifi.ssid ? `Network ${wifi.ssid}` : "Add your network below to show this card";
       case "feedback":
         return branding.featureLabels?.feedback?.trim()
           ? "Then invites a Google review"
           : "Guests see “Suggestion box” or “Anonymous feedback” while we test which gets more replies. Rename it to choose.";
       case "google_review":
-        return "Links to your Google page";
+        return sanitiseExternalUrl(social.google) ? "Links to your Google page" : "Add your review link below to show this card";
       case "sudoku":
         return "Expands · a quick puzzle";
       default:
@@ -209,331 +223,353 @@ export function DesignEditor({
     };
   }
 
+  /** Settings that belong to one card, shown under its row so they're never far from it. */
+  function cardSettings(key: FeatureKey) {
+    if (key === "wifi")
+      return (
+        <div className="feature-row-settings" id="wifi">
+              <div className="row">
+                <TextField
+                  label="Network name"
+                  value={draft.wifi?.ssid}
+                  onChange={(value) => update("wifi", value ? { ...(draft.wifi ?? {}), ssid: value } : null)}
+                  maxLength={64}
+                />
+                <TextField
+                  label="Password"
+                  value={draft.wifi?.password}
+                  onChange={(value) => draft.wifi && update("wifi", { ...draft.wifi, password: value, security: value ? "WPA2" : "open" })}
+                  maxLength={128}
+                  hint={draft.wifi ? undefined : "Add a network name first."}
+                />
+              </div>
+        </div>
+      );
+    if (key === "google_review")
+      return (
+        <div className="feature-row-settings" id="google">
+              <TextField
+                label="Review link"
+                value={social.google}
+                onChange={(value) => setSocial({ google: value })}
+                placeholder="https://g.page/r/…/review"
+                type="url"
+                hint="Google Business Profile → Ask for reviews → copy link."
+              />
+              <HelpTip question="How do I find my Google review link?">
+                <ol>
+                  <li>On your phone, open Google Maps (or search for your venue on Google) while signed in to the account that manages it.</li>
+                  <li>Open your Business Profile and tap <strong>Ask for reviews</strong> (sometimes &ldquo;Get more reviews&rdquo;).</li>
+                  <li>Tap <strong>Copy link</strong> and paste it above. It starts with https://g.page/ or https://g.co/.</li>
+                </ol>
+              </HelpTip>
+        </div>
+      );
+    if (key === "menu")
+      return (
+        <div className="feature-row-settings feature-row-link">
+          <Link href={`/dashboard/${venueId}/menu`}>Edit your menu</Link>
+        </div>
+      );
+    if (key === "loyalty")
+      return (
+        <div className="feature-row-settings feature-row-link">
+          <Link href={`/dashboard/${venueId}/loyalty`}>Rewards and stamps</Link>
+        </div>
+      );
+    return null;
+  }
+
   return (
     <div className="editor-grid">
       <div>
         <MobilePreview src={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} label="Preview your page" dirty={editor.dirty} />
-        <Card id="logo" title="Header" description="The top of your page: who you are at a glance.">
-          <div className="row">
-            <ImageField venueId={venueId} label="Logo" value={branding.logoUrl} onChange={(url) => setBranding({ logoUrl: url })} hint="Square, at least 300×300." />
-            <ImageField venueId={venueId} label="Cover photo" value={branding.coverImageUrl} onChange={(url) => setBranding({ coverImageUrl: url })} hint="Landscape, about 1200×600." wide />
-          </div>
-          <div className="row" style={{ marginTop: 14 }}>
-            <TextField
-              label="Title"
-              value={titleHidden ? "" : branding.titleOverride}
-              onChange={(value) => setBranding({ titleOverride: value })}
-              placeholder={config.name}
-              maxLength={80}
-              hint="Leave blank to use your venue name."
-            />
-            <TextField
-              label="Tagline"
-              value={branding.tagline}
-              onChange={(value) => setBranding({ tagline: value })}
-              placeholder="Slow coffee, good company"
-              maxLength={Math.max(60, branding.tagline?.length ?? 0)}
-              hint={`${branding.tagline?.length ?? 0} / 60 · short lines read best over your photo`}
-            />
-          </div>
-          <SwitchRow
-            title="Hide the title"
-            description="Useful when your logo already spells out the name."
-            checked={titleHidden}
-            onChange={(on) => setBranding({ titleOverride: on ? " " : null })}
-          />
-        </Card>
+        <EditorTabs tabs={TABS} active={tab} onSelect={setTab} label="Guest page settings" />
 
-        <Card title="Announcement" description="A short message at the top of your page: today's special, an event, holiday hours.">
-          <div className="row">
-            <TextField
-              label="Message"
-              value={draft.announcement?.text}
-              onChange={(value) => update("announcement", value ? { text: value, until: draft.announcement?.until ?? null } : null)}
-              placeholder="Today's special: pumpkin spice latte"
-              maxLength={160}
-            />
-            <Field label="Show until (optional)" htmlFor="announcement-until" hint="It disappears by itself after this day.">
-              <input
-                id="announcement-until"
-                className="input"
-                type="date"
-                disabled={!draft.announcement?.text}
-                value={draft.announcement?.until ?? ""}
-                onChange={(event) => draft.announcement && update("announcement", { ...draft.announcement, until: event.target.value || null })}
-              />
-            </Field>
-          </div>
-        </Card>
-
-        <Card title="Colours and style">
-          {/* Lets each preset tile show its own face. */}
-          {Object.values(STYLE_FONT_HREF).map((href) => (
-            <link key={href} rel="stylesheet" href={href} />
-          ))}
-          <PalettePicker branding={branding} onChange={setBranding} customInput={(value, onChange) => <HexInput value={value} onChange={onChange} />} />
-
-          <div className="field">
-            <span className="field-label" id="style-label">
-              Typography
-            </span>
-            <div className="type-grid" role="group" aria-labelledby="style-label">
-              {PRESETS.map((preset) => (
-                <button key={preset.label} type="button" className="type-option" aria-pressed={(branding.style ?? null) === preset.value} onClick={() => setBranding({ style: preset.value })}>
-                  {/* The venue's own name in this face, as guests will see it. */}
-                  <span className="type-sample" style={{ fontFamily: preset.font, fontWeight: preset.weight }} aria-hidden>
-                    {branding.titleOverride?.trim() || config.name}
-                  </span>
-                  <span className="type-label">
-                    {preset.label}
-                    <span className="preset-hint">{preset.hint}</span>
-                  </span>
-                </button>
+        {tab === "style" && (
+          <EditorPanel id="style">
+            <Card title="Colours" description="Pick a palette. It sets the page and every tile, and text stays readable on each.">
+              {/* Lets each preset tile show its own face. */}
+              {Object.values(STYLE_FONT_HREF).map((href) => (
+                <link key={href} rel="stylesheet" href={href} />
               ))}
-            </div>
-          </div>
-        </Card>
+              <PalettePicker branding={branding} onChange={setBranding} customInput={(value, onChange) => <HexInput value={value} onChange={onChange} />} />
+            </Card>
 
-        <Card title="Layout" description="How the cards and header are arranged. Your name sits big over your cover photo; Bento adds colourful tiles that open as pop-ups.">
-          <div className="field">
-            <span className="field-label" id="layout-label">
-              Cards
-            </span>
-            <div className="preset-grid" role="group" aria-labelledby="layout-label">
-              {LAYOUTS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className="preset"
-                  aria-pressed={(branding.layout ?? "list") === option.value}
-                  onClick={() => setBranding({ layout: option.value === "list" ? null : option.value })}
-                >
-                  <option.icon className="preset-icon" aria-hidden />
-                  <span>
-                    {option.label}
-                    <span className="preset-hint">{option.hint}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="row">
-            <div className="field">
-              <span className="field-label" id="header-style-label">
-                Header
-              </span>
-              <div className="segmented" role="group" aria-labelledby="header-style-label">
-                {HEADER_STYLES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={(branding.headerStyle ?? "cover") === option.value}
-                    onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="field">
-              <span className="field-label" id="shape-label">
-                Corners
-              </span>
-              <div className="segmented" role="group" aria-labelledby="shape-label">
-                {BUTTON_SHAPES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={(branding.buttonShape ?? "rounded") === option.value}
-                    onClick={() => setBranding({ buttonShape: option.value === "rounded" ? null : option.value })}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card id="google" title="Google reviews" description="Every guest who leaves feedback is invited to review you on Google, as Google's rules require.">
-          <TextField
-            label="Review link"
-            value={social.google}
-            onChange={(value) => setSocial({ google: value })}
-            placeholder="https://g.page/r/…/review"
-            type="url"
-            hint="Google Business Profile → Ask for reviews → copy link."
-          />
-          <HelpTip question="How do I find my Google review link?">
-            <ol>
-              <li>On your phone, open Google Maps (or search for your venue on Google) while signed in to the account that manages it.</li>
-              <li>Open your Business Profile and tap <strong>Ask for reviews</strong> (sometimes &ldquo;Get more reviews&rdquo;).</li>
-              <li>Tap <strong>Copy link</strong> and paste it above. It starts with https://g.page/ or https://g.co/.</li>
-            </ol>
-          </HelpTip>
-        </Card>
-
-        <Card id="wifi" title="Wi-Fi" description="Guests copy the password in one tap. Leave the network name blank to hide the card.">
-          <div className="row">
-            <TextField
-              label="Network name"
-              value={draft.wifi?.ssid}
-              onChange={(value) => update("wifi", value ? { ...(draft.wifi ?? {}), ssid: value } : null)}
-              maxLength={64}
-            />
-            <TextField
-              label="Password"
-              value={draft.wifi?.password}
-              onChange={(value) => draft.wifi && update("wifi", { ...draft.wifi, password: value, security: value ? "WPA2" : "open" })}
-              maxLength={128}
-              hint={draft.wifi ? undefined : "Add a network name first."}
-            />
-          </div>
-        </Card>
-
-        <Card title="Features" description="Drag to reorder, switch cards off, or rename them in your own words. A card appears once it has something to show." actions={<span className="hint">{features.length} showing</span>}>
-          <ul className="feature-rows">
-            {allFeatures.map((key, index) => {
-              const toggle = featureSwitch(key);
-              const on = features.includes(key);
-              const tint = key.startsWith("link:") ? "#9C27B0" : (CARD_TINTS[key] ?? "#5C6166");
-              const label = featureLabel(key);
-              return (
-                <li key={key} ref={drag.rowRef(index)} className={`feature-row${on ? "" : " off"}${drag.dragging === index ? " dragging" : ""}`}>
-                  <button type="button" className="drag-handle" aria-label={`Reorder ${label}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
-                    <GripVertical aria-hidden />
-                  </button>
-                  <span className="feature-row-dot" style={{ background: `${tint}22` }} aria-hidden>
-                    <span style={{ background: tint }} />
-                  </span>
-                  <span className="feature-row-text">
-                    {renaming === key ? (
-                      <input
-                        className="input feature-rename"
-                        aria-label={`Card label for ${label}`}
-                        value={customLabel(key)}
-                        placeholder={defaultLabel(key)}
-                        maxLength={40}
-                        autoFocus
-                        onChange={(event) => setLabel(key, event.target.value)}
-                        onBlur={() => setRenaming(null)}
-                        onKeyDown={(event) => (event.key === "Enter" || event.key === "Escape") && setRenaming(null)}
-                      />
-                    ) : (
-                      <strong>{label}</strong>
-                    )}
-                    <span>{on ? featureNote(key) : "Hidden from guests"}</span>
-                  </span>
-                  {renaming !== key && (
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setRenaming(key)}>
-                      Rename
+            <Card title="Typography" description="The face for your name, headings and dish names. Everything else stays in a fast, plain font.">
+                <div className="type-grid" role="group" aria-label="Typography">
+                  {PRESETS.map((preset) => (
+                    <button key={preset.label} type="button" className="type-option" aria-pressed={(branding.style ?? null) === preset.value} onClick={() => setBranding({ style: preset.value })}>
+                      {/* The venue's own name in this face, as guests will see it. */}
+                      <span className="type-sample" style={{ fontFamily: preset.font, fontWeight: preset.weight }} aria-hidden>
+                        {branding.titleOverride?.trim() || config.name}
+                      </span>
+                      <span className="type-label">
+                        {preset.label}
+                        <span className="preset-hint">{preset.hint}</span>
+                      </span>
                     </button>
-                  )}
-                  <Switch label={`Show ${label}`} checked={toggle.checked} onChange={toggle.onChange} />
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+                  ))}
+                </div>
+            </Card>
 
-        <Card
-          title="Custom links"
-          description="Bookings, ordering, events, gift cards: anything with a link."
-          actions={
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={links.length >= 12}
-              onClick={() => setLinks([...links, { id: newClientId("lnk"), url: "", labelCustom: "", icon: "link" }])}
-            >
-              <Plus aria-hidden /> Add link
-            </button>
-          }
-        >
-          {links.length === 0 ? (
-            <p className="muted">No custom links yet.</p>
-          ) : (
-            <div className="list-editor">
-              {links.map((link, index) => {
-                const set = (patch: Partial<typeof link>) => setLinks(links.map((l, i) => (i === index ? { ...l, ...patch } : l)));
-                return (
-                  <div key={link.id} className="list-row">
-                    <div className="row">
-                      <TextField label="Label" value={link.labelCustom} onChange={(value) => set({ labelCustom: value, labelToken: value ? null : link.labelToken })} placeholder="Book a table" maxLength={60} />
-                      <TextField label="Link" value={link.url} onChange={(value) => set({ url: value ?? "" })} placeholder="https://" type="url" />
-                      <Field label="Icon" htmlFor={`icon-${link.id}`}>
-                        <select id={`icon-${link.id}`} className="select" value={link.icon ?? "link"} onChange={(event) => set({ icon: event.target.value as typeof link.icon })}>
-                          {LINK_ICON_TOKENS.map((icon) => (
-                            <option key={icon} value={icon}>
-                              {icon}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                    </div>
-                    <div className="spread" style={{ marginTop: 10 }}>
-                      <span className="hint">{!link.labelCustom && !link.labelToken ? "Add a label so guests know where it goes." : ""}</span>
-                      <button type="button" className="btn btn-sm btn-danger" onClick={() => setLinks(links.filter((_, i) => i !== index))}>
-                        <Trash2 aria-hidden /> Remove
+            <Card title="Layout" description="How your cards and header are arranged. Bento turns the cards into colourful tiles that open as pop-ups.">
+              <div className="field">
+                <span className="field-label" id="layout-label">
+                  Cards
+                </span>
+                <div className="preset-grid" role="group" aria-labelledby="layout-label">
+                  {LAYOUTS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className="preset"
+                      aria-pressed={(branding.layout ?? "list") === option.value}
+                      onClick={() => setBranding({ layout: option.value === "list" ? null : option.value })}
+                    >
+                      <option.icon className="preset-icon" aria-hidden />
+                      <span>
+                        {option.label}
+                        <span className="preset-hint">{option.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="row">
+                <div className="field">
+                  <span className="field-label" id="header-style-label">
+                    Header
+                  </span>
+                  <div className="segmented" role="group" aria-labelledby="header-style-label">
+                    {HEADER_STYLES.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={(branding.headerStyle ?? "cover") === option.value}
+                        onClick={() => setBranding({ headerStyle: option.value === "cover" ? null : option.value })}
+                      >
+                        {option.label}
                       </button>
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+                </div>
+                <div className="field">
+                  <span className="field-label" id="shape-label">
+                    Corners
+                  </span>
+                  <div className="segmented" role="group" aria-labelledby="shape-label">
+                    {BUTTON_SHAPES.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={(branding.buttonShape ?? "rounded") === option.value}
+                        onClick={() => setBranding({ buttonShape: option.value === "rounded" ? null : option.value })}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </EditorPanel>
+        )}
 
-        <Card title="Social profiles" description="Shown as icons at the bottom of your page. Type your handle, like @junipercoffee, or paste a link.">
-          <div className="row">
-            <TextField
-              label="Instagram"
-              value={social.instagram}
-              onChange={(value) => setSocial({ instagram: value })}
-              onBlur={() => setSocial({ instagram: expandSocialLink("instagram", social.instagram) })}
-              placeholder="@yourcafe"
-            />
-            <TextField
-              label="Facebook"
-              value={social.facebook}
-              onChange={(value) => setSocial({ facebook: value })}
-              onBlur={() => setSocial({ facebook: expandSocialLink("facebook", social.facebook) })}
-              placeholder="@yourcafe"
-            />
-          </div>
-          <div className="row" style={{ marginTop: 14 }}>
-            <TextField
-              label="Tripadvisor"
-              value={social.tripAdvisor}
-              onChange={(value) => setSocial({ tripAdvisor: value })}
-              onBlur={() => setSocial({ tripAdvisor: expandSocialLink("tripAdvisor", social.tripAdvisor) })}
-              placeholder="Paste your Tripadvisor link"
-            />
-            <TextField
-              label="YouTube"
-              value={social.youtube}
-              onChange={(value) => setSocial({ youtube: value })}
-              onBlur={() => setSocial({ youtube: expandSocialLink("youtube", social.youtube) })}
-              placeholder="@yourchannel"
-            />
-          </div>
-        </Card>
+        {tab === "header" && (
+          <EditorPanel id="header">
+            <Card id="logo" title="Header" description="The top of your page: who you are at a glance.">
+              <div className="row">
+                <ImageField venueId={venueId} label="Logo" value={branding.logoUrl} onChange={(url) => setBranding({ logoUrl: url })} hint="Square, at least 300×300." />
+                <ImageField venueId={venueId} label="Cover photo" value={branding.coverImageUrl} onChange={(url) => setBranding({ coverImageUrl: url })} hint="Landscape, about 1200×600." wide />
+              </div>
+              <div className="row" style={{ marginTop: 14 }}>
+                <TextField
+                  label="Title"
+                  value={titleHidden ? "" : branding.titleOverride}
+                  onChange={(value) => setBranding({ titleOverride: value })}
+                  placeholder={config.name}
+                  maxLength={80}
+                  hint="Leave blank to use your venue name."
+                />
+                <TextField
+                  label="Tagline"
+                  value={branding.tagline}
+                  onChange={(value) => setBranding({ tagline: value })}
+                  placeholder="Slow coffee, good company"
+                  maxLength={Math.max(60, branding.tagline?.length ?? 0)}
+                  hint={`${branding.tagline?.length ?? 0} / 60 · short lines read best over your photo`}
+                />
+              </div>
+              <SwitchRow
+                title="Hide the title"
+                description="Useful when your logo already spells out the name."
+                checked={titleHidden}
+                onChange={(on) => setBranding({ titleOverride: on ? " " : null })}
+              />
+            </Card>
+
+            <Card title="Announcement" description="A short message at the top of your page: today's special, an event, holiday hours.">
+              <div className="row">
+                <TextField
+                  label="Message"
+                  value={draft.announcement?.text}
+                  onChange={(value) => update("announcement", value ? { text: value, until: draft.announcement?.until ?? null } : null)}
+                  placeholder="Today's special: pumpkin spice latte"
+                  maxLength={160}
+                />
+                <Field label="Show until (optional)" htmlFor="announcement-until" hint="It disappears by itself after this day.">
+                  <input
+                    id="announcement-until"
+                    className="input"
+                    type="date"
+                    disabled={!draft.announcement?.text}
+                    value={draft.announcement?.until ?? ""}
+                    onChange={(event) => draft.announcement && update("announcement", { ...draft.announcement, until: event.target.value || null })}
+                  />
+                </Field>
+              </div>
+            </Card>
+          </EditorPanel>
+        )}
+
+        {tab === "cards" && (
+          <EditorPanel id="cards">
+            <Card title="Cards" description="Drag to reorder, switch off, or rename in your own words. Each card's settings sit right under it." actions={<span className="hint">{features.length} showing</span>}>
+              <ul className="feature-rows">
+                {allFeatures.map((key, index) => {
+                  const toggle = featureSwitch(key);
+                  const on = features.includes(key);
+                  const tint = key.startsWith("link:") ? "#9C27B0" : (CARD_TINTS[key] ?? "#5C6166");
+                  const label = featureLabel(key);
+                  return (
+                    <li key={key} ref={drag.rowRef(index)} className={`feature-row${on ? "" : " off"}${drag.dragging === index ? " dragging" : ""}`}>
+                      <div className="feature-row-main">
+                      <button type="button" className="drag-handle" aria-label={`Reorder ${label}. Use the arrow keys to move it.`} {...drag.handleProps(index)}>
+                        <GripVertical aria-hidden />
+                      </button>
+                      <span className="feature-row-dot" style={{ background: `${tint}22` }} aria-hidden>
+                        <span style={{ background: tint }} />
+                      </span>
+                      <span className="feature-row-text">
+                        {renaming === key ? (
+                          <input
+                            className="input feature-rename"
+                            aria-label={`Card label for ${label}`}
+                            value={customLabel(key)}
+                            placeholder={defaultLabel(key)}
+                            maxLength={40}
+                            autoFocus
+                            onChange={(event) => setLabel(key, event.target.value)}
+                            onBlur={() => setRenaming(null)}
+                            onKeyDown={(event) => (event.key === "Enter" || event.key === "Escape") && setRenaming(null)}
+                          />
+                        ) : (
+                          <strong>{label}</strong>
+                        )}
+                        <span>{on ? featureNote(key) : "Hidden from guests"}</span>
+                      </span>
+                      {renaming !== key && (
+                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setRenaming(key)}>
+                          Rename
+                        </button>
+                      )}
+                      <Switch label={`Show ${label}`} checked={toggle.checked} onChange={toggle.onChange} />
+                      </div>
+                      {cardSettings(key)}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+
+            <Card
+              title="Custom links"
+              description="Bookings, ordering, events, gift cards: anything with a link."
+              actions={
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={links.length >= 12}
+                  onClick={() => setLinks([...links, { id: newClientId("lnk"), url: "", labelCustom: "", icon: "link" }])}
+                >
+                  <Plus aria-hidden /> Add link
+                </button>
+              }
+            >
+              {links.length === 0 ? (
+                <p className="muted">No custom links yet.</p>
+              ) : (
+                <div className="list-editor">
+                  {links.map((link, index) => {
+                    const set = (patch: Partial<typeof link>) => setLinks(links.map((l, i) => (i === index ? { ...l, ...patch } : l)));
+                    return (
+                      <div key={link.id} className="list-row">
+                        <div className="row">
+                          <TextField label="Label" value={link.labelCustom} onChange={(value) => set({ labelCustom: value, labelToken: value ? null : link.labelToken })} placeholder="Book a table" maxLength={60} />
+                          <TextField label="Link" value={link.url} onChange={(value) => set({ url: value ?? "" })} placeholder="https://" type="url" />
+                          <Field label="Icon" htmlFor={`icon-${link.id}`}>
+                            <select id={`icon-${link.id}`} className="select" value={link.icon ?? "link"} onChange={(event) => set({ icon: event.target.value as typeof link.icon })}>
+                              {LINK_ICON_TOKENS.map((icon) => (
+                                <option key={icon} value={icon}>
+                                  {icon}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+                        <div className="spread" style={{ marginTop: 10 }}>
+                          <span className="hint">{!link.labelCustom && !link.labelToken ? "Add a label so guests know where it goes." : ""}</span>
+                          <button type="button" className="btn btn-sm btn-danger" onClick={() => setLinks(links.filter((_, i) => i !== index))}>
+                            <Trash2 aria-hidden /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            <Card title="Social profiles" description="Shown as icons at the bottom of your page. Type your handle, like @junipercoffee, or paste a link.">
+              <div className="row">
+                <TextField
+                  label="Instagram"
+                  value={social.instagram}
+                  onChange={(value) => setSocial({ instagram: value })}
+                  onBlur={() => setSocial({ instagram: expandSocialLink("instagram", social.instagram) })}
+                  placeholder="@yourcafe"
+                />
+                <TextField
+                  label="Facebook"
+                  value={social.facebook}
+                  onChange={(value) => setSocial({ facebook: value })}
+                  onBlur={() => setSocial({ facebook: expandSocialLink("facebook", social.facebook) })}
+                  placeholder="@yourcafe"
+                />
+              </div>
+              <div className="row" style={{ marginTop: 14 }}>
+                <TextField
+                  label="Tripadvisor"
+                  value={social.tripAdvisor}
+                  onChange={(value) => setSocial({ tripAdvisor: value })}
+                  onBlur={() => setSocial({ tripAdvisor: expandSocialLink("tripAdvisor", social.tripAdvisor) })}
+                  placeholder="Paste your Tripadvisor link"
+                />
+                <TextField
+                  label="YouTube"
+                  value={social.youtube}
+                  onChange={(value) => setSocial({ youtube: value })}
+                  onBlur={() => setSocial({ youtube: expandSocialLink("youtube", social.youtube) })}
+                  placeholder="@yourchannel"
+                />
+              </div>
+            </Card>
+          </EditorPanel>
+        )}
       </div>
 
-      <aside className="preview-pane">
-        <span className="preview-label">Live preview</span>
-        <div className="phone">
-          <div className="phone-screen">
-            <iframe key={editor.version} data-live-preview src={`/s?i=${encodeURIComponent(shortCode)}&s=preview&embed=1`} title="Live page preview" />
-          </div>
-        </div>
-        <p className="hint preview-foot">
-          <span>390 px · changes show straight away</span>
-          <a href={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} target="_blank" rel="noreferrer">
-            Open full-size preview
-          </a>
-        </p>
-      </aside>
+      <PreviewPane src={`/s?i=${encodeURIComponent(shortCode)}&s=preview&embed=1`} version={editor.version} title="Live page preview" fullHref={`/s?i=${encodeURIComponent(shortCode)}&s=preview`} />
 
       <SaveBar dirty={editor.dirty} saving={editor.saving} error={editor.error} onSave={editor.save} onReset={editor.reset} />
     </div>

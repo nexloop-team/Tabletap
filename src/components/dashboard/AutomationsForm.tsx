@@ -6,7 +6,7 @@ import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import type { VenueSettings } from "@/lib/venue/settings";
 import { Card, Field, SwitchRow } from "./ui";
 
-type Automations = VenueSettings["automations"];
+export type Automations = VenueSettings["automations"];
 
 /** Emails that send themselves: reward ready, birthday treat, win-back. */
 export function AutomationsForm({
@@ -14,9 +14,12 @@ export function AutomationsForm({
   initial,
   collectsConsent,
   collectsBirthdays,
+  rewardEmails = true,
 }: {
   venueId: string;
   initial: Automations;
+  /** Only stamp cards have rewards to announce. */
+  rewardEmails?: boolean;
   collectsConsent: boolean;
   collectsBirthdays: boolean;
 }) {
@@ -44,19 +47,21 @@ export function AutomationsForm({
   return (
     <Card title="Automatic emails" description="Set them once and they send themselves, so regulars keep coming back.">
 
-      <SwitchRow
-        title="“Your reward is ready”"
-        description="When a stamp unlocks a reward, the guest gets a short email with their card. Sent to every member (it's about their card, not marketing)."
-        checked={draft.rewardReady}
-        onChange={(on) => setDraft({ ...draft, rewardReady: on })}
-      />
+      {rewardEmails && (
+        <SwitchRow
+          title="“Your reward is ready”"
+          description="When a stamp unlocks a reward, the guest gets a short email with their card. Sent to every member (it's about their card, not marketing)."
+          checked={draft.rewardReady}
+          onChange={(on) => setDraft({ ...draft, rewardReady: on })}
+        />
+      )}
 
       <SwitchRow
         title="Birthday treat"
         description={
           collectsBirthdays && collectsConsent
             ? "Three days before a guest's birthday. Only to guests who agreed to offers."
-            : "Turn on “Ask for birthdays” and “Ask for marketing consent” above first, so there are birthdays to celebrate."
+            : "Turn on “Ask for birthdays” and “Ask for marketing consent” under Guest info first, so there are birthdays to celebrate."
         }
         checked={draft.birthday.enabled}
         onChange={(on) => setDraft({ ...draft, birthday: { ...draft.birthday, enabled: on } })}
@@ -75,7 +80,7 @@ export function AutomationsForm({
 
       <SwitchRow
         title="“We miss you”"
-        description={collectsConsent ? "When a regular hasn't visited for a while. Once per absence, only to guests who agreed to offers." : "Turn on “Ask for marketing consent” above first."}
+        description={collectsConsent ? "When a regular hasn't visited for a while. Once per absence, only to guests who agreed to offers." : "Turn on “Ask for marketing consent” under Guest info first."}
         checked={draft.winBack.enabled}
         onChange={(on) => setDraft({ ...draft, winBack: { ...draft.winBack, enabled: on } })}
       />
