@@ -2515,19 +2515,6 @@ svg.tile-glyph {
   border-radius: 999px;
   background: var(--text-tint);
 }
-.menu-topbar-logo {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--tile-hero);
-  color: var(--tile-on-hero);
-  font-size: 17px;
-  font-weight: 700;
-}
 .menu-topbar h1 {
   min-width: 0;
   font-family: var(--font-display);

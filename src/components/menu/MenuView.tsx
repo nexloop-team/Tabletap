@@ -4,7 +4,6 @@ import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Spa
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VenueHeader } from "@/components/landing/VenueHeader";
 import { createTracker } from "@/lib/analytics";
-import { initials } from "@/lib/format";
 import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
 import { usePreviewDraft } from "@/lib/live-preview";
 import { computeTheme } from "@/lib/theme";
@@ -220,7 +219,6 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const current = activeSection ?? visibleSections[0]?.id ?? null;
   // Two looks: the card list (also what the retired "photo" layout shows) and the printed classic.
   const layout = menu?.layout === "classic" ? "classic" : "list";
-  const logo = safeImageUrl(branding.logoUrl);
 
   /** The dish's labels, as small coloured text over its name: badges first, then (outside India) dietary tags. */
   function labels(item: MenuItem): { key: string; label: string; icon: LucideIcon }[] {
@@ -293,14 +291,6 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
             <a className="menu-back" href={backHref} aria-label={t("menu_back")}>
               <ChevronLeft aria-hidden />
             </a>
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- merchant image on any host
-              <img className="menu-topbar-logo" src={logo} alt="" />
-            ) : (
-              <span className="menu-topbar-logo" aria-hidden>
-                {initials(venueName)}
-              </span>
-            )}
             <h1>{venueName}</h1>
           </header>
         ) : (
