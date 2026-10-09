@@ -550,6 +550,17 @@ The owner sets **one background colour**, and the code computes the rest:
 
 ---
 
+## 8b. Built from the last design round (October 2026)
+
+These now match the Claude Design boards:
+- **Bento tile colours:** From your logo (two colours read from it), Page colour, or Pick a colour, with a second colour for the Wi-Fi tile, stamp bars and stars (Auto = brighter shades of the main colour).
+- **Rewards card page** (`/card`), **"Back soon"** paused page and "Page not found".
+- **Menu (List layout)** in the tile colours: each dish a pale card, badges as deep chips, diet tags bright, specials as coloured tiles; the dish sheet's allergen reassurance.
+- **Subscription** with every state (trial, last day, unpaid with steps, payment failing, won't renew with "Subscribe again", free access), FAQ and the dark plan card.
+- **Overview** with 7/30/90 days, "What to do next", unread feedback on the nav, and a new-venue checklist with a Next step.
+- **Editor** live preview (no save needed), typography descriptions, tagline counter.
+- **Onboarding** time left and own-colour box; **till** member line and online status; **admin** revenue chart, conversion and attention actions; **marketing** chips, FAQ and closing band; **sign-up** password toggle and staff invite; **print** A6, tent, round sticker and Wi-Fi sign formats.
+
 ## 9. What could be designed next
 
 Pick from these. They're ordered roughly by impact.

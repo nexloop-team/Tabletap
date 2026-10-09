@@ -191,6 +191,8 @@ Newest first. One line per change: what changed and why.
 ```
 
 ### 2026-10-09
+- Added: Bento tile colours from the logo, the page colour, or picked, with a second colour (Auto gives brighter shades of the main one, so green stays green). Shades are nudged until text passes AA.
+- Changed (from the Claude Design round): rewards card page, "Back soon" page for paused venues, menu in tile colours, Subscription page with every state and "Subscribe again" (starts when the paid year ends), Overview with 7/30/90 days, "What to do next" and unread feedback, live preview in the editor, onboarding touches, till member line and online status, admin revenue chart and attention actions, marketing site, sign-up, and print formats (A6, tent, round sticker, Wi-Fi sign).
 - Changed: the Grid layout is now **Bento**: the venue name big over the cover like a poster, then colourful tiles (loyalty with stamps out of total, a tall menu tile, a bright Wi-Fi tile that copies the password in one tap, feedback, Google review, Sudoku). Tiles open as bottom sheets. Their three shades come from one "Tile colour" (default: the page colour, or deep green), and always keep text readable.
 - Changed: on every layout, the guest page shows the venue name big over the cover photo. The Header setting (Logo left, Centred, No logo) now arranges it, including on Bento, where it used to be ignored.
 - Removed: the English / Español switch on the guest page and menu. Guests still get Spanish when their phone is set to it.
