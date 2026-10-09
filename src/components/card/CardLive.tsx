@@ -1,6 +1,7 @@
 "use client";
 
 import { QrCode } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { deviceMemory } from "@/lib/browser";
@@ -17,6 +18,7 @@ export function CardLive({
   token,
   stamps,
   qrSvg,
+  code,
   labels,
 }: {
   venueId: string;
@@ -25,7 +27,9 @@ export function CardLive({
   stamps: number;
   /** Server-generated QR for staff; null when the venue has no stamp card. */
   qrSvg: string | null;
-  labels: { show: string; hide: string; hint: string; added: string; redeemed: string };
+  /** The short card code printed under the QR, for staff who type it in. */
+  code: string;
+  labels: { title: string; show: string; hide: string; hint: string; added: string; redeemed: string };
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -68,16 +72,18 @@ export function CardLive({
 
   if (!qrSvg) return null;
   return (
-    <div className="card-staff">
+    <section className="rc-staff">
       {toast && (
         <div className="card-toast" role="status">
           {toast}
         </div>
       )}
+      <h2>{labels.title}</h2>
       {open ? (
         <>
-          <div className="card-staff-qr" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-          <p className="sub-text">{labels.hint}</p>
+          <div className="rc-qr" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <p className="rc-qr-code">{code}</p>
+          <p className="rc-qr-hint">{labels.hint}</p>
           <button type="button" className="card-staff-btn secondary" onClick={() => setOpen(false)}>
             {labels.hide}
           </button>
@@ -88,6 +94,17 @@ export function CardLive({
           {labels.show}
         </button>
       )}
-    </div>
+    </section>
+  );
+}
+
+/** "Not Maya? Use a different card": forget this card on this phone and go back to the venue's page to join or open another. */
+export function DifferentCard({ venueId, shortCode, label }: { venueId: string; shortCode: string; label: string }) {
+  return (
+    <p className="rc-different">
+      <Link href={`/s?i=${encodeURIComponent(shortCode)}`} onClick={() => deviceMemory.forgetCard(venueId)}>
+        {label}
+      </Link>
+    </p>
   );
 }

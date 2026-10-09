@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
-import { CardLive } from "@/components/card/CardLive";
+import { Check, Gift } from "lucide-react";
+import { CardLive, DifferentCard } from "@/components/card/CardLive";
 import { LandingError } from "@/components/landing/LandingError";
+import { PausedPage } from "@/components/landing/PausedPage";
 import { InviteFriend } from "@/components/card/InviteFriend";
 import { FilledHeart } from "@/components/icons";
 import { ThemeStyle } from "@/components/ThemeStyle";
-import { createTranslator } from "@/lib/i18n";
+import { initials } from "@/lib/format";
+import { createTranslator, type Locale } from "@/lib/i18n";
+import { computeTheme } from "@/lib/theme";
 import { hasLoyaltyProgram, safeImageUrl } from "@/lib/venue/features";
 import { programTiers, stampGoal } from "@/lib/venue/loyalty";
 import { findCardForViewer } from "@/server/repositories/loyalty-cards";
 import { ensureReferralCode } from "@/server/repositories/retention";
-import { findVenue } from "@/server/repositories/venues";
+import { recentEvents, type StampEvent } from "@/server/repositories/stamps";
+import { findPausedVenue, findVenue } from "@/server/repositories/venues";
 import { firstParam, requestLocale, serverOrigin } from "@/server/request";
 import { qrSvg } from "@/server/services/qr";
 import "@/styles/landing.css";
@@ -25,6 +30,28 @@ export const metadata: Metadata = {
 /** Largest stamp grid drawn; bigger programmes show progress as text only. */
 const MAX_DRAWN_STAMPS = 20;
 
+function dayLabel(sqliteUtc: string, locale: Locale): string {
+  const date = new Date(`${sqliteUtc.replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(date);
+}
+
+/** One line of the card's history, or null for bookkeeping rows (undos, undone stamps). */
+function historyLine(event: StampEvent, t: ReturnType<typeof createTranslator>["t"], tf: ReturnType<typeof createTranslator>["tf"]): string | null {
+  if (event.undone_at || event.kind === "undo") return null;
+  switch (event.kind) {
+    case "stamp":
+      return event.delta === 1 ? t("rc_ev_stamp") : tf("rc_ev_stamps", { count: event.delta });
+    case "redeem":
+      return tf("rc_ev_redeem", { reward: event.reward_name ?? "" });
+    case "feedback":
+      return t("rc_ev_feedback");
+    case "referral":
+      return tf("rc_ev_referral", { count: event.delta });
+    default:
+      return tf("rc_ev_bonus", { count: event.delta });
+  }
+}
+
 /** `/card/<id>?t=<token>` — the member's card, linked from their enrolment email. */
 export default async function CardPage({ params, searchParams }: PageProps<"/card/[id]">) {
   const { id } = await params;
@@ -34,6 +61,10 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
 
   const card = token ? findCardForViewer(id, token) : null;
   const venue = card ? findVenue(card.venue_id) : null;
+  if (card && !venue) {
+    const paused = findPausedVenue(card.venue_id);
+    if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/card/${encodeURIComponent(id)}?t=${encodeURIComponent(token)}`} />;
+  }
   if (!card || !venue) return <LandingError locale={locale} message="card_not_found" source="card" />;
 
   const logo = safeImageUrl(venue.branding.logoUrl);
@@ -41,6 +72,7 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
   const program = hasLoyaltyProgram(venue) ? venue.loyaltyProgram! : null;
   const tiers = programTiers(program);
   const goal = stampGoal(tiers);
+  const stamps = Math.min(card.stamps, goal);
   // Staff scan this on a paired till device; the device pairing is what authorises the stamp.
   const origin = await serverOrigin();
   const staffQr = program ? await qrSvg(`${origin}/staff/stamp?c=${card.id}`) : null;
@@ -50,85 +82,131 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
   const readyTier = [...tiers].reverse().find((tier) => card.stamps >= tier.stampsRequired);
   const since = new Date(`${card.created_at.replace(" ", "T")}Z`);
   const sinceText = Number.isNaN(since.getTime()) ? "" : new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(since);
+  const code = `${initials(venue.name)} · ${card.id.slice(-4).toUpperCase()}`;
+  const history = recentEvents(card.id, 12)
+    .map((event) => ({ event, line: historyLine(event, t, tf) }))
+    .filter((row): row is { event: StampEvent; line: string } => !!row.line)
+    .slice(0, 6);
+  const theme = computeTheme(venue.branding);
 
   return (
     <>
       <ThemeStyle branding={venue.branding} />
-      <main className="page-wrapper simple-page">
-        <article className="member-card">
-          <div className="member-card-head">
-            {logo ? (
-              <div className="member-card-logo">
-                {/* eslint-disable-next-line @next/next/no-img-element -- merchant image on any host */}
-                <img src={logo} alt="" />
-              </div>
-            ) : (
-              <div className="member-card-logo heart">
-                <FilledHeart />
-              </div>
-            )}
-            <div>
-              <h1>{venue.name}</h1>
-              <p>{holder ? tf("card_greeting", { name: holder }) : t("card_title")}</p>
-            </div>
-          </div>
+      <main className="page-wrapper rc-page" data-style={theme.style ?? undefined}>
+        <header className="rc-top">
+          <h1>{t("rc_title")}</h1>
+          <p>
+            {program
+              ? holder
+                ? tf("rc_hi", { name: holder, stamps, required: goal })
+                : tf("card_progress", { stamps, required: goal })
+              : holder
+                ? tf("rc_hi_member", { name: holder })
+                : t("card_show_rewards")}
+          </p>
+        </header>
 
+        <section className="rc-hero" aria-label={venue.name}>
+          <div className="rc-hero-head">
+            <span className="rc-logo">
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- merchant image on any host
+                <img src={logo} alt="" />
+              ) : (
+                <FilledHeart />
+              )}
+            </span>
+            <span className="rc-venue">{venue.name}</span>
+            <span className="rc-code">{code}</span>
+          </div>
           {program ? (
             <>
+              <div className="rc-count">
+                <span className="rc-big" aria-label={tf("card_progress", { stamps, required: goal })}>
+                  {stamps}
+                  <small>/{goal}</small>
+                </span>
+                <span className="rc-pill">{readyTier ? tf("rc_ready", { reward: readyTier.rewardName.toLowerCase() }) : nextTier ? tf("tile_stamps_more", { count: nextTier.stampsRequired - card.stamps, reward: nextTier.rewardName.toLowerCase() }) : ""}</span>
+              </div>
               {goal > 0 && goal <= MAX_DRAWN_STAMPS && (
-                <ol className="stamp-grid" aria-label={tf("card_progress", { stamps: Math.min(card.stamps, goal), required: goal })}>
+                <ol className="rc-stamps" aria-hidden>
                   {Array.from({ length: goal }, (_, i) => (
-                    <li key={i} className={i < card.stamps ? "filled" : ""}>
-                      {i < card.stamps ? <FilledHeart /> : i + 1}
+                    <li key={i} className={i < card.stamps ? "on" : ""}>
+                      {i < card.stamps ? <Check /> : i === goal - 1 ? <Gift /> : i + 1}
                     </li>
                   ))}
                 </ol>
               )}
-              <p className="member-card-progress">{tf("card_progress", { stamps: Math.min(card.stamps, goal), required: goal })}</p>
-              {readyTier && <p className="member-card-ready">{tf("card_reward_ready", { reward: readyTier.rewardName })}</p>}
-              {nextTier && !readyTier && (
-                <p className="sub-text">{tf("card_next_reward", { count: nextTier.stampsRequired - card.stamps, reward: nextTier.rewardName })}</p>
-              )}
-              {tiers.length > 1 && (
-                <ul className="tier-list">
-                  {tiers.map((tier) => (
-                    <li key={`${tier.rewardName}-${tier.stampsRequired}`} className={card.stamps >= tier.stampsRequired ? "unlocked" : ""}>
-                      <span>{tier.rewardName}</span>
-                      <span>{card.stamps >= tier.stampsRequired ? t("card_unlocked") : `${tier.stampsRequired}`}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </>
           ) : (
-            sinceText && <p className="member-card-progress">{tf("card_member", { date: sinceText })}</p>
+            sinceText && <p className="rc-since">{tf("card_member", { date: sinceText })}</p>
           )}
+        </section>
 
-          <CardLive
-            venueId={venue.id}
-            cardId={card.id}
-            token={token}
-            stamps={card.stamps}
-            qrSvg={staffQr}
-            labels={{ show: t("card_show_staff"), hide: t("card_hide_staff"), hint: t("card_staff_hint"), added: t("card_stamp_added"), redeemed: t("card_reward_used") }}
+        <CardLive
+          venueId={venue.id}
+          cardId={card.id}
+          token={token}
+          stamps={card.stamps}
+          qrSvg={staffQr}
+          code={code}
+          labels={{ title: t("rc_show_title"), show: t("card_show_staff"), hide: t("card_hide_staff"), hint: t("rc_hint"), added: t("card_stamp_added"), redeemed: t("card_reward_used") }}
+        />
+
+        {program && tiers.length > 0 && (
+          <ul className="rc-tiers">
+            {tiers.map((tier) => {
+              const left = tier.stampsRequired - card.stamps;
+              return (
+                <li key={`${tier.rewardName}-${tier.stampsRequired}`}>
+                  <span className="rc-tier-icon" aria-hidden>
+                    <Gift />
+                  </span>
+                  <span className="rc-tier-text">
+                    <strong>{tier.rewardName}</strong>
+                    <span>{tf("rc_at", { count: tier.stampsRequired })}</span>
+                  </span>
+                  <span className={`rc-chip${left <= 0 ? " ready" : ""}`}>{left <= 0 ? t("card_tier_ready") : tf("card_tier_to_go", { count: left })}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {referral && inviteUrl && (
+          <InviteFriend
+            url={inviteUrl}
+            venueName={venue.name}
+            labels={{
+              title: t("card_invite_title"),
+              body:
+                referral.referrerStamps === 1 && referral.friendStamps === 1
+                  ? t("rc_invite_both")
+                  : tf("card_invite_body", { stamps: referral.referrerStamps }) + (referral.friendStamps > 0 ? ` ${tf("card_invite_friend", { stamps: referral.friendStamps })}` : ""),
+              share: t("card_invite_share"),
+              copied: t("copied"),
+            }}
           />
-          {referral && inviteUrl && (
-            <InviteFriend
-              url={inviteUrl}
-              venueName={venue.name}
-              labels={{
-                title: t("card_invite_title"),
-                body:
-                  tf("card_invite_body", { stamps: referral.referrerStamps }) +
-                  (referral.friendStamps > 0 ? ` ${tf("card_invite_friend", { stamps: referral.friendStamps })}` : ""),
-                share: t("card_invite_share"),
-                copied: t("copied"),
-              }}
-            />
-          )}
-          <p className="member-card-foot">{program ? t("card_show") : t("card_show_rewards")}</p>
-          <p className="member-card-number">{tf("card_number", { number: card.id.slice(-8).toUpperCase() })}</p>
-        </article>
+        )}
+
+        {history.length > 0 && (
+          <section className="rc-history">
+            <h2>{t("rc_history")}</h2>
+            <ul>
+              {history.map(({ event, line }) => (
+                <li key={event.id}>
+                  <span>{line}</span>
+                  <span className="rc-history-date">{dayLabel(event.created_at, locale)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <DifferentCard venueId={venue.id} shortCode={venue.shortCode} label={holder ? tf("rc_not_you", { name: holder }) : t("rc_different_card")} />
+        <p className="rc-foot">
+          © {new Date().getFullYear()} {venue.name}
+        </p>
       </main>
     </>
   );

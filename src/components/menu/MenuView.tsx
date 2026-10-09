@@ -8,6 +8,7 @@ import { createTranslator, type Locale, type MessageKey } from "@/lib/i18n";
 import { computeTheme } from "@/lib/theme";
 import { safeImageUrl } from "@/lib/venue/features";
 import type { Menu, MenuItem, VenueBranding } from "@/lib/venue/types";
+import { ALLERGENS } from "@/lib/venue/schema";
 import { DishSheet } from "./DishSheet";
 
 type Badge = NonNullable<MenuItem["badges"]>[number];
@@ -184,6 +185,13 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
     );
   }
 
+  /** "Contains: …" plus the reassurance that the rest of the 14 major allergens aren't in it. */
+  function allergenLines(item: MenuItem): string[] {
+    const listed = item.allergens.filter((allergen) => (ALLERGENS as readonly string[]).includes(allergen.toLowerCase())).length;
+    if (item.allergens.length === 0) return [t("menu_no_allergens")];
+    return [tf("menu_contains", { allergens: item.allergens.map(titleCase).join(", ") }), tf("menu_allergens_rest", { count: ALLERGENS.length - listed })];
+  }
+
   const current = activeSection ?? visibleSections[0]?.id ?? null;
 
   return (
@@ -280,7 +288,10 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
 
             {highlights.items.length > 0 && !needle && (
               <section className="menu-specials" aria-label={highlights.title}>
-                <h2>{highlights.title}</h2>
+                <h2>
+                  {highlights.title}
+                  {highlights.title === t("menu_specials") && <span className="menu-specials-sub">{t("menu_specials_sub")}</span>}
+                </h2>
                 <div className="menu-specials-row">
                   {highlights.items.map((item) => {
                     const image = safeImageUrl(item.imageUrl);
@@ -320,6 +331,15 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
                         <li key={item.id} id={`item-${item.id}`} className={`menu-item${item.isAvailable ? "" : " unavailable"}`}>
                           <button type="button" className="menu-item-open" aria-haspopup="dialog" onClick={() => showDish(item, "list")}>
                             <span className="menu-item-text">
+                              {(item.badges ?? []).length > 0 && (
+                                <span className="menu-badges-top">
+                                  {(item.badges ?? []).map((badge) => (
+                                    <span key={badge} className={`menu-badge-chip ${badge}`}>
+                                      {t(BADGES[badge].key)}
+                                    </span>
+                                  ))}
+                                </span>
+                              )}
                               <span className="menu-item-head">
                                 <span className="menu-item-name">{item.name}</span>
                                 {/* The classic layout prints the price on the name line, with dotted leaders. */}
@@ -350,8 +370,9 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
               ))
             )}
 
-            <p className="menu-note small">
-              {t("menu_allergen_note")}
+            <p className="menu-note small">{t("menu_allergen_note")}</p>
+            <p className="menu-note small menu-copyright">
+              © {new Date().getFullYear()} {venueName}
             </p>
           </>
         )}
@@ -361,7 +382,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus, lo
         item={openDish}
         price={openDish ? formatPrice(openDish.priceInPence) : ""}
         tags={openDish ? tagList(openDish) : null}
-        details={openDish && openDish.allergens.length > 0 ? [tf("menu_contains", { allergens: openDish.allergens.map(titleCase).join(", ") })] : []}
+        details={openDish ? allergenLines(openDish) : []}
         labels={{ close: t("close"), whatsThis: t("menu_whats_this"), explainerNote: t("menu_explainer_allergens"), soldOut: t("menu_unavailable") }}
         onClose={closeDish}
       />

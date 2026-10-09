@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { ChevronRight, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 /** The member's invite link, shared with the phone's share sheet or copied. */
@@ -28,13 +28,15 @@ export function InviteFriend({ url, venueName, labels }: { url: string; venueNam
   }
 
   return (
-    <section className="card-invite">
-      <h2>{labels.title}</h2>
-      <p className="sub-text">{labels.body}</p>
-      <button type="button" className="card-staff-btn secondary" onClick={share}>
-        <Share2 aria-hidden />
-        {copied ? labels.copied : labels.share}
-      </button>
-    </section>
+    <button type="button" className="rc-invite" onClick={share} aria-label={`${labels.title}: ${labels.share}`}>
+      <span className="rc-invite-icon" aria-hidden>
+        <UserPlus />
+      </span>
+      <span className="rc-invite-text">
+        <strong>{labels.title}</strong>
+        <span aria-live="polite">{copied ? labels.copied : labels.body}</span>
+      </span>
+      <ChevronRight className="rc-invite-go" aria-hidden />
+    </button>
   );
 }

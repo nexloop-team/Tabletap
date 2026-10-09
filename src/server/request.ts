@@ -2,7 +2,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { detectLocale, isSupportedLocale, LANGUAGE_COOKIE, type Locale } from "@/lib/i18n";
-import { findVenue } from "./repositories/venues";
+import { findPausedVenue, findVenue } from "./repositories/venues";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -46,6 +46,9 @@ export async function requestLocale(): Promise<Locale> {
   if (isSupportedLocale(chosen)) return chosen;
   return detectLocale((await headers()).get("accept-language"));
 }
+
+/** A paused venue for the "Back soon" page; see findPausedVenue. */
+export const loadPausedVenue = cache((idOrCode: string) => (idOrCode ? findPausedVenue(idOrCode) : null));
 
 /** One lookup per request, shared by generateMetadata and the page. */
 export const loadVenue = cache((idOrCode: string) => (idOrCode ? findVenue(idOrCode) : null));

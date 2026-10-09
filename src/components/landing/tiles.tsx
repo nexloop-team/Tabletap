@@ -66,7 +66,7 @@ export function LoyaltyTile({ label, credentials }: { label: string; credentials
           <span className="tile-big">
             <Heart aria-hidden className="tile-big-icon" fill="currentColor" />
           </span>
-          <TileTitle>{label}</TileTitle>
+          <TileTitle sub={t("tile_club_sub")}>{label}</TileTitle>
         </span>
         <span className="tile-chip tile-chip-light">{t("tile_join")}</span>
       </>
@@ -93,9 +93,9 @@ export function LoyaltyTile({ label, credentials }: { label: string; credentials
           )}
         </span>
         <span className="tile-text">
-          <span className="tile-eyebrow">{credentials ? t("feature_my_card") : label}</span>
+          <span className="tile-eyebrow">{credentials ? (card?.holder ? tf("tile_stamps_name", { name: card.holder.split(" ")[0] }) : t("feature_my_card")) : label}</span>
           <span className="tile-pill">
-            {ready ? t("tile_reward_ready") : card && next ? tf("tile_stamps_more", { count: next.stampsRequired - card.stamps, reward: next.rewardName }) : card ? program.rewardName : tf("tile_collect", { count: goal, reward: program.rewardName })}
+            {ready ? t("tile_reward_ready") : card && next ? tf("tile_stamps_more", { count: next.stampsRequired - card.stamps, reward: next.rewardName.toLowerCase() }) : card ? program.rewardName : tf("tile_collect", { count: goal, reward: program.rewardName.toLowerCase() })}
           </span>
         </span>
       </span>
@@ -107,10 +107,12 @@ export function LoyaltyTile({ label, credentials }: { label: string; credentials
 
 /** Tall pale tile with a big faint knife and fork, and an arrow out. */
 export function MenuTile({ label }: { label: string }) {
-  const { t } = useLanding();
+  const { venue, t, tf } = useLanding();
+  // "Today: Pumpkin Spice Latte" when a dish is marked as today's special.
+  const special = venue.menus.flatMap((menu) => menu.sections.flatMap((section) => section.items)).find((item) => item.featured && item.isAvailable);
   return (
     <>
-      <TileTitle sub={t("tile_menu_sub")}>{label}</TileTitle>
+      <TileTitle sub={special ? tf("tile_menu_today", { name: special.name }) : t("tile_menu_sub")}>{label}</TileTitle>
       <UtensilsCrossed className="tile-art" aria-hidden strokeWidth={1.25} />
       <span className="tile-go" aria-hidden>
         <ArrowUpRight />

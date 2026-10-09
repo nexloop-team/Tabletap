@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LandingError } from "@/components/landing/LandingError";
+import { PausedPage } from "@/components/landing/PausedPage";
 import { menuExternalUrl, sanitiseExternalUrl } from "@/lib/venue/features";
 import { MenuView } from "@/components/menu/MenuView";
 import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
-import { firstParam, loadVenue, queryString, requestLocale, sourceParam, venueParam } from "@/server/request";
+import { firstParam, loadPausedVenue, loadVenue, queryString, requestLocale, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
 
@@ -24,7 +25,11 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
   const venue = loadVenue(code);
-  if (!venue) return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
+  if (!venue) {
+    const paused = loadPausedVenue(code);
+    if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/s?i=${encodeURIComponent(code)}`} />;
+    return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
+  }
 
   // Only hosted menus with something on them; an external-link menu has its own site.
   const menus = venue.menus.filter((menu) => !menu.externalUrl && menu.sections.some((section) => section.items.length > 0));

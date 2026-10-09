@@ -55,6 +55,18 @@ export function findVenue(idOrCode: string): PublicVenue | null {
   return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date())) };
 }
 
+/**
+ * A venue whose page is switched off (suspended, or no subscription or trial
+ * left): just enough to show a "Back soon" page in its own colours. Null
+ * when the code doesn't belong to any venue.
+ */
+export function findPausedVenue(idOrCode: string): { name: string; branding: PublicVenue["branding"] } | null {
+  const row = getDb().prepare("SELECT * FROM venues WHERE id = ? OR short_code = ? LIMIT 1").get(idOrCode, idOrCode) as VenueRow | undefined;
+  if (!row || (row.status === "active" && venueHasAccess(row.id))) return null;
+  const venue = toVenue(row);
+  return { name: venue.name, branding: venue.branding };
+}
+
 /** The merchant's own view: the saved configuration, whatever the plan. */
 export interface VenueRecord {
   id: string;

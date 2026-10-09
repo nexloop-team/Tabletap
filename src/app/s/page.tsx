@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FEEDBACK_VARIANT_COOKIE, LandingApp, type FeedbackVariant } from "@/components/landing/LandingApp";
 import { LandingError } from "@/components/landing/LandingError";
+import { PausedPage } from "@/components/landing/PausedPage";
 import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
-import { firstParam, loadVenue, requestLocale, sourceParam, venueParam } from "@/server/request";
+import { firstParam, loadPausedVenue, loadVenue, requestLocale, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
 // The member card (stamp grid, staff code) shows inline on this page.
 import "@/styles/pages.css";
@@ -38,7 +39,11 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
   const venue = loadVenue(code);
-  if (!venue) return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
+  if (!venue) {
+    const paused = loadPausedVenue(code);
+    if (paused) return <PausedPage locale={locale} name={paused.name} branding={paused.branding} retryHref={`/s?i=${encodeURIComponent(code)}`} />;
+    return <LandingError locale={locale} message="could_not_load" source={source} failedCode={code} />;
+  }
 
   // `?cta=` forces a bucket for QA without touching the visitor's stored one.
   // The owner's own dashboard preview always shows the default label, outside the test.
