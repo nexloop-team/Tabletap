@@ -866,7 +866,6 @@ body:has(.app) {
   border: 0;
   border-radius: 44px;
   background: #16181a;
-  box-shadow: 0 30px 60px -20px rgba(22, 24, 26, 0.35);
 }
 .phone-screen {
   height: 100%;
@@ -5827,8 +5826,6 @@ body:has(.app) {
   display: grid;
   place-items: center;
   padding: 24px;
-  border-radius: 32px;
-  background: color-mix(in srgb, var(--a-accent) 9%, transparent);
 }
 .hero-chip {
   position: absolute;
