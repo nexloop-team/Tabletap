@@ -117,6 +117,46 @@ export function venueStats(venueId: string, days = 30, utcOffsetMinutes = 0): Ve
   };
 }
 
+export interface VenueEngagement {
+  /** Visits that opened each card on the guest page ("menu", "wifi", "loyalty"…). */
+  features: { feature: string; visits: number }[];
+  /** Visits by the venue's local hour, 0–23. */
+  hours: number[];
+  /** The dishes guests opened most on the menu. */
+  dishes: { itemId: string; opens: number }[];
+}
+
+/** What guests do once they're on the page: which cards they open, when they come, which dishes they look at. */
+export function venueEngagement(venueId: string, days = 30, utcOffsetMinutes = 0): VenueEngagement {
+  const db = getDb();
+  const since = `-${days} days`;
+  const local = `${utcOffsetMinutes >= 0 ? "+" : "-"}${Math.abs(utcOffsetMinutes)} minutes`;
+  const features = db
+    .prepare(
+      `SELECT json_extract(params, '$.feature') AS feature, COUNT(DISTINCT json_extract(params, '$.session_id')) AS visits FROM events
+       WHERE venue_id = ? AND name = 'feature_card_tapped' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
+       GROUP BY feature ORDER BY visits DESC`,
+    )
+    .all(venueId, since) as { feature: string; visits: number }[];
+  const hourRows = db
+    .prepare(
+      `SELECT CAST(strftime('%H', created_at, ?) AS INTEGER) AS hour, COUNT(DISTINCT json_extract(params, '$.session_id')) AS visits FROM events
+       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
+       GROUP BY hour`,
+    )
+    .all(local, venueId, since) as { hour: number; visits: number }[];
+  const hours = new Array<number>(24).fill(0);
+  for (const row of hourRows) hours[row.hour] = row.visits;
+  const dishes = db
+    .prepare(
+      `SELECT json_extract(params, '$.item_id') AS itemId, COUNT(DISTINCT json_extract(params, '$.session_id')) AS opens FROM events
+       WHERE venue_id = ? AND name = 'menu_item_opened' AND created_at >= datetime('now', ?) AND ${NOT_PREVIEW}
+       GROUP BY itemId ORDER BY opens DESC LIMIT 5`,
+    )
+    .all(venueId, since) as { itemId: string; opens: number }[];
+  return { features: features.filter((f) => f.feature), hours, dishes: dishes.filter((d) => d.itemId) };
+}
+
 export interface GuestRow {
   id: string;
   email: string;

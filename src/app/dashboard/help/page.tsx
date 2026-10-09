@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BookOpen, ChevronRight, Gift, Mail, Printer, Receipt, Smartphone, Star, UtensilsCrossed } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/blocks";
 import { BRAND } from "@/config/brand";
@@ -41,7 +42,8 @@ export default async function HelpPage({ searchParams }: PageProps<"/dashboard/h
   const user = await requireUser();
   const venues = listVenuesForUser(user.id);
   const requested = firstParam((await searchParams).v);
-  const venue = venues.find((v) => v.id === requested) ?? (venues.length === 1 ? venues[0] : null);
+  const remembered = (await cookies()).get("tt_venue")?.value;
+  const venue = venues.find((v) => v.id === requested) ?? venues.find((v) => v.id === remembered) ?? (venues.length === 1 ? venues[0] : null);
   const base = venue ? `/dashboard/${venue.id}` : null;
   const subject = encodeURIComponent(`${BRAND.name} help${venue ? `: ${venue.config.name}` : ""}`);
   const mailto = `mailto:${BRAND.supportEmail}?subject=${subject}`;

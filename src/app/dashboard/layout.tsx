@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { uiFont } from "@/app/fonts";
 import { AppShell } from "@/components/dashboard/Shell";
@@ -25,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   });
   return (
     <div className={`app ${uiFont.variable}`}>
-      <AppShell mode="venue" venues={venues} user={{ name: user.name, email: user.email, isAdmin: isAdmin(user) }}>
+      <AppShell mode="venue" venues={venues} user={{ name: user.name, email: user.email, isAdmin: isAdmin(user) }} lastVenueId={(await cookies()).get("tt_venue")?.value ?? null}>
         {children}
       </AppShell>
     </div>

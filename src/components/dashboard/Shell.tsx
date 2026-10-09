@@ -183,7 +183,23 @@ function Brand({ mode }: { mode: "venue" | "admin" }) {
  * Sidebar app frame for the merchant dashboard and the operator console.
  * The sidebar is static from 1024px up and an off-canvas drawer below.
  */
-export function AppShell({ mode, venues, user, counts, children }: { mode: "venue" | "admin"; venues: ShellVenue[]; user: ShellUser; /** Admin: totals beside nav items, keyed by href. */ counts?: Record<string, number>; children: ReactNode }) {
+export function AppShell({
+  mode,
+  venues,
+  user,
+  counts,
+  lastVenueId,
+  children,
+}: {
+  mode: "venue" | "admin";
+  venues: ShellVenue[];
+  user: ShellUser;
+  /** Admin: totals beside nav items, keyed by href. */
+  counts?: Record<string, number>;
+  /** The venue the owner last had open, so Account and Help keep its sidebar. */
+  lastVenueId?: string | null;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const params = useParams<{ venueId?: string }>();
   // Remembering which path the drawer was opened on closes it on navigation without an effect.
@@ -204,7 +220,14 @@ export function AppShell({ mode, venues, user, counts, children }: { mode: "venu
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const venueId = mode === "venue" ? (params.venueId ?? "") : "";
+  // Pages outside a venue (Account, Help) keep the last venue's sidebar, or the only venue's.
+  const fallbackVenue = venues.some((v) => v.id === lastVenueId) ? lastVenueId! : venues.length === 1 ? venues[0].id : "";
+  const venueId = mode === "venue" ? (params.venueId ?? fallbackVenue) : "";
+
+  // Remember the venue in view for those pages.
+  useEffect(() => {
+    if (mode === "venue" && params.venueId) document.cookie = `tt_venue=${encodeURIComponent(params.venueId)}; path=/; max-age=31536000; SameSite=Lax`;
+  }, [mode, params.venueId]);
   const groups: NavGroup[] =
     mode === "admin"
       ? ADMIN_NAV.map((group) => ({ ...group, items: group.items.map((item) => (counts?.[item.href] !== undefined ? { ...item, total: counts[item.href] } : item)) }))

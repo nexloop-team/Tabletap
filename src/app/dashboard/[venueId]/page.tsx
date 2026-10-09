@@ -9,7 +9,7 @@ import { parseDbDate } from "@/lib/plans";
 import { venueUtcOffsetMinutes } from "@/lib/venue/region";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { unreadFeedback } from "@/server/repositories/feedback";
-import { venueStats } from "@/server/repositories/insights";
+import { listFeedback, venueEngagement, venueStats } from "@/server/repositories/insights";
 import { firstParam, serverOrigin } from "@/server/request";
 import { guestPageUrl } from "@/server/services/qr";
 
@@ -45,6 +45,20 @@ function CountDelta({ current, previous, days }: { current: number; previous: nu
       vs previous {days}
     </>
   );
+}
+
+/** Card names on the guest page, as the owner knows them. */
+const FEATURE_LABELS: Record<string, string> = { menu: "Menu", wifi: "Wi-Fi", feedback: "Feedback", google_review: "Google review", sudoku: "Sudoku", link: "Your links" };
+
+/** 0 → "12am", 13 → "1pm". */
+function hourLabel(hour: number): string {
+  return `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? "am" : "pm"}`;
+}
+
+/** "3 Oct" for a stored timestamp. */
+function shortDate(value: string): string {
+  const date = parseDbDate(value);
+  return date ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
 }
 
 /** Is the venue in its first week, and "Since Tuesday" for its stat tiles. */
@@ -104,6 +118,15 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const settingUp = !setupHidden && (done <= 3 || (firstWeek && done < checklist.length));
   const nextStep = setupHidden ? null : next;
   const showNext = !settingUp && (unread.count > 0 || !!nextStep);
+
+  const engagement = venueEngagement(venue.id, days, offset);
+  const latestFeedback = listFeedback(venue.id, { limit: 3 }).rows;
+  const dishNames = new Map(config.menus.flatMap((menu) => menu.sections.flatMap((section) => section.items.map((item) => [item.id, item.name] as const))));
+  const topDishes = engagement.dishes.map((dish) => ({ ...dish, name: dishNames.get(dish.itemId) })).filter((dish): dish is typeof dish & { name: string } => !!dish.name);
+  const featureLabel = (feature: string) => FEATURE_LABELS[feature] ?? (feature === "loyalty" ? (club ? "Members club" : "Stamp card") : feature);
+  const maxFeature = Math.max(1, ...engagement.features.map((f) => f.visits));
+  const maxHour = Math.max(...engagement.hours);
+  const peakHour = maxHour > 0 ? engagement.hours.indexOf(maxHour) : null;
 
   const sources = [...stats.sources].sort((a, b) => b.scans - a.scans);
   const topSources = sources.slice(0, 5);
@@ -301,7 +324,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               <h2>Scans per day</h2>
               {stats.scans > 0 && (
                 <p>
-                  {stats.scans.toLocaleString("en-GB")} scans{busiest ? ` · busiest on ${busiest}` : ""}
+                  {stats.scans.toLocaleString("en-GB")} visits{busiest ? ` · busiest on ${busiest}` : ""}
                 </p>
               )}
             </div>
@@ -319,6 +342,85 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               <p>Your chart fills in as guests scan your table codes. Check back after the weekend.</p>
             </div>
           )}
+        </section>
+
+        <section className="card overview-side">
+          <div className="card-head">
+            <div>
+              <h2>What guests open</h2>
+              <p>Share of visits that tapped each card</p>
+            </div>
+          </div>
+          {engagement.features.length > 0 ? (
+            <ul className="source-list">
+              {engagement.features.map((f) => (
+                <li key={f.feature}>
+                  <span className="source-row">
+                    <span>{featureLabel(f.feature)}</span>
+                    <span className="muted num">{stats.scans > 0 ? `${Math.min(100, Math.round((f.visits / stats.scans) * 100))}%` : f.visits}</span>
+                  </span>
+                  <span className="meter">
+                    <span style={{ width: `${(f.visits / maxFeature) * 100}%` }} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">Once guests start tapping your menu, Wi-Fi and stamp card, you&apos;ll see which they use most.</p>
+          )}
+        </section>
+      </div>
+
+      <div className="overview-row">
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h2>Busiest times</h2>
+              <p>{peakHour !== null ? `Most visits around ${hourLabel(peakHour)}` : "Visits by hour of the day"}</p>
+            </div>
+          </div>
+          {maxHour > 0 ? (
+            <div className="hour-chart" role="img" aria-label={`Visits by hour. Busiest around ${hourLabel(peakHour ?? 0)}.`}>
+              <div className="hour-bars">
+                {engagement.hours.map((visits, hour) => (
+                  <span key={hour} className={hour === peakHour ? "peak" : undefined} style={{ height: `${Math.max(visits ? 6 : 2, (visits / maxHour) * 100)}%` }} title={`${hourLabel(hour)}: ${visits}`} />
+                ))}
+              </div>
+              <div className="hour-axis" aria-hidden>
+                <span>12am</span>
+                <span>6am</span>
+                <span>12pm</span>
+                <span>6pm</span>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">You&apos;ll see the hours guests scan most, handy for staffing and specials.</p>
+          )}
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h2>Most viewed dishes</h2>
+              <p>Opened on your menu</p>
+            </div>
+          </div>
+          {topDishes.length > 0 ? (
+            <ol className="rank-list">
+              {topDishes.map((dish, index) => (
+                <li key={dish.itemId}>
+                  <span className="rank-num">{index + 1}</span>
+                  <span className="rank-name">{dish.name}</span>
+                  <span className="muted num">{dish.opens}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted">When guests tap dishes on your menu, the favourites show up here.</p>
+          )}
+          <Link className="link-quiet inline sources-manage" href={`${base}/menu`}>
+            Edit menu <ArrowRight aria-hidden />
+          </Link>
         </section>
 
         <section className="card overview-sources">
@@ -354,15 +456,41 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               )}
             </ul>
           ) : (
-            <p className="muted">
-              Nothing yet. Print a <Link href={`${base}/qr`}>QR code per table</Link> to see which ones get scanned.
-            </p>
+            <p className="muted">Nothing yet.</p>
           )}
+          {sources.length <= 1 && <p className="hint">Print a numbered code for each table to see which tables scan most.</p>}
           <Link className="link-quiet inline sources-manage" href={`${base}/qr`}>
-            Manage QR codes <ArrowRight aria-hidden />
+            {sources.length <= 1 ? "Print table codes" : "Manage QR codes"} <ArrowRight aria-hidden />
           </Link>
         </section>
       </div>
+
+      <section className="card overview-feedback">
+        <div className="card-head">
+          <div>
+            <h2>Latest feedback</h2>
+            <p>{unread.count > 0 ? `${unread.count} unread` : "What guests told you"}</p>
+          </div>
+          <Link className="link-quiet inline" href={`${base}/feedback`}>
+            All feedback <ArrowRight aria-hidden />
+          </Link>
+        </div>
+        {latestFeedback.length > 0 ? (
+          <ul className="feedback-mini">
+            {latestFeedback.map((item) => (
+              <li key={item.id}>
+                <span className={`mood ${item.sentiment >= 0.25 ? "good" : item.sentiment <= -0.25 ? "bad" : "neutral"}`} aria-label={item.sentiment >= 0.25 ? "Positive" : item.sentiment <= -0.25 ? "Negative" : "Neutral"} />
+                <p>{item.text}</p>
+                <time className="muted" dateTime={item.createdAt}>
+                  {shortDate(item.createdAt)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No feedback yet. Guests can leave a note from your page; only you see it.</p>
+        )}
+      </section>
     </>
   );
 }
