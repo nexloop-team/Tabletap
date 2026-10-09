@@ -30,6 +30,12 @@ export interface StaffCardView {
   tiers: { index: number; rewardName: string; stampsRequired: number; unlocked: boolean }[];
   /** The last stamp or redemption, if it can still be undone. */
   undoable: { kind: string; delta: number; rewardName: string | null } | null;
+  /** When the card was made (ISO), for "Member since May". */
+  memberSince: string;
+  /** Visits with a stamp, for "23 visits". */
+  visits: number;
+  /** Minutes since the last stamp, while still inside the venue's cooldown; null otherwise. */
+  stampedMinutesAgo: number | null;
 }
 
 export const inviteStaffRequest = z.object({ email: z.string().trim().min(1, "Enter the staff member's email address").max(200) });

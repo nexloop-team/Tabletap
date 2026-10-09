@@ -5088,3 +5088,76 @@ body:has(.app) {
   border-radius: 50%;
   background: var(--a-accent);
 }
+
+/* Till card, as in the design: avatar, member line, count, reward ready, paired buttons. */
+.till-paired.offline {
+  color: #f2b48a;
+}
+.till-paired.offline span {
+  background: var(--a-warm);
+}
+.till-card-head {
+  justify-content: flex-start;
+}
+.till-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #d94d66;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+}
+.app .till-card h1 {
+  font-size: 22px;
+}
+.till-count-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.till-goal {
+  font-size: 13px;
+  color: #5c6166;
+}
+.till-card .till-dots li.on {
+  background: #d94d66;
+}
+.till-ready {
+  justify-content: flex-start;
+  align-items: center;
+}
+.till-ready > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.till-ready > span {
+  display: grid;
+  gap: 1px;
+}
+.till-ready > span span {
+  font-size: 13px;
+}
+.till-recent {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.till-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+.till-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.till-undo {
+  border-style: dashed;
+}

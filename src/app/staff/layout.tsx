@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { BrandMark } from "@/components/icons";
 import { uiFont } from "@/app/fonts";
 import { BRAND } from "@/config/brand";
+import { OnlineStatus } from "@/components/staff/OnlineStatus";
 import { getVenueRecord } from "@/server/repositories/venues";
 import { currentStaffDevice } from "@/server/services/staff";
 import "@/styles/app.css";
@@ -23,15 +24,11 @@ export default async function StaffLayout({ children }: { children: ReactNode })
         <Link className="till-brand" href="/staff">
           <BrandMark size={32} />
           <span>
-            {device ? <span className="till-device">Till · {device.label}</span> : null}
             {venue ? <strong>{venue.config.name}</strong> : <strong className="till-wordmark">{BRAND.name}</strong>}
+            {device ? <span className="till-device">Till · {device.label}</span> : null}
           </span>
         </Link>
-        {device && (
-          <span className="till-paired">
-            <span aria-hidden /> Paired
-          </span>
-        )}
+        {device && <OnlineStatus />}
       </header>
       <main className="staff-main">{children}</main>
     </div>

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ApiRequestError } from "@/lib/api/client";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import type { StaffCardView } from "@/lib/api/staff-contracts";
+import { initials } from "@/lib/format";
 import { ScanCardButton } from "./ScanCardButton";
 
 /** Dots drawn per row on the card; longer cards wrap. */
@@ -79,22 +80,37 @@ export function StaffCardPanel({ initial }: { initial: StaffCardView }) {
     );
   }
 
+  const since = new Date(card.memberSince).toLocaleDateString("en-GB", { month: "long" });
+  const topTier = card.tiers[card.tiers.length - 1];
+
   return (
     <div className="staff-panel">
       <Link className="till-back" href="/staff">
-        <ChevronLeft aria-hidden /> Back
+        <ChevronLeft aria-hidden /> Scan another card
       </Link>
 
       <section className="till-card" aria-label={`${name}'s card`}>
         <div className="till-card-head">
+          <span className="till-avatar" aria-hidden>
+            {initials(name)}
+          </span>
           <div>
             <h1>{name}</h1>
-            <p>{card.guestEmail}</p>
+            <p>
+              Member since {since} · {card.visits} visit{card.visits === 1 ? "" : "s"}
+            </p>
           </div>
+        </div>
+        <div className="till-count-row">
           <span className="till-card-count" aria-live="polite">
             {card.stamps}
-            <span>/{card.goal}</span>
+            <span> of {card.goal} stamps</span>
           </span>
+          {topTier && (
+            <span className="till-goal">
+              {topTier.rewardName} at {topTier.stampsRequired}
+            </span>
+          )}
         </div>
         {card.goal > 0 && (
           <ol className="till-dots" style={{ gridTemplateColumns: `repeat(${Math.min(card.goal, DOTS_PER_ROW)}, minmax(0, 1fr))` }} aria-hidden>
@@ -105,12 +121,20 @@ export function StaffCardPanel({ initial }: { initial: StaffCardView }) {
         )}
         {unlocked.map((tier) => (
           <div key={tier.index} className="till-ready">
-            <strong>{tier.rewardName} ready</strong>
-            <span>{tier.stampsRequired} stamps</span>
+            <Gift aria-hidden />
+            <span>
+              <strong>Reward ready</strong>
+              <span>{tier.rewardName}</span>
+            </span>
           </div>
         ))}
       </section>
 
+      {card.stampedMinutesAgo !== null && !confirmAnother && (
+        <p className="till-hint till-recent">
+          Stamped {card.stampedMinutesAgo === 0 ? "just now" : `${card.stampedMinutesAgo} minute${card.stampedMinutesAgo === 1 ? "" : "s"} ago`}. Only add another if they&apos;ve bought a second drink.
+        </p>
+      )}
       {message && (
         <div className={`notice notice-${message.tone}`} role="status">
           {message.text}
@@ -126,53 +150,58 @@ export function StaffCardPanel({ initial }: { initial: StaffCardView }) {
         </div>
       )}
 
-      {room === 0 ? (
-        <p className="till-hint">This card is full. Redeem the reward to start collecting again.</p>
-      ) : (
-        <>
-          <button type="button" className="staff-btn staff-btn-primary staff-btn-xl" disabled={busy} onClick={() => stamp()}>
-            {busy ? <Loader2 className="spin" aria-hidden /> : <Plus aria-hidden />}
-            {count === 1 ? "Stamp" : `${count} stamps`}
+      <div className="till-actions">
+        {room === 0 ? (
+          <p className="till-hint">This card is full. Redeem the reward to start collecting again.</p>
+        ) : (
+          <>
+            <button type="button" className="staff-btn staff-btn-primary staff-btn-xl" disabled={busy} onClick={() => stamp()}>
+              {busy ? <Loader2 className="spin" aria-hidden /> : <Plus aria-hidden />}
+              {count === 1 ? (card.stampedMinutesAgo !== null ? "Add another stamp" : "Add a stamp") : `Add ${count} stamps`}
+            </button>
+            <div className="till-stepper" aria-label="Stamps to add">
+              <button type="button" aria-label="Fewer stamps" disabled={busy || count <= 1} onClick={() => setCount((c) => c - 1)}>
+                <Minus aria-hidden />
+              </button>
+              <span aria-live="polite">
+                {count} stamp{count === 1 ? "" : "s"} for this order
+              </span>
+              <button type="button" aria-label="More stamps" disabled={busy || count >= Math.min(5, room)} onClick={() => setCount((c) => c + 1)}>
+                <Plus aria-hidden />
+              </button>
+            </div>
+          </>
+        )}
+
+        <div className="till-pair">
+          {unlocked.length > 0 ? (
+            unlocked.map((tier) => (
+              <button
+                key={tier.index}
+                type="button"
+                className="staff-btn staff-btn-secondary"
+                disabled={busy}
+                onClick={() => {
+                  if (!window.confirm(`Give ${tier.rewardName} now? This uses ${tier.stampsRequired} stamps.`)) return;
+                  void act(
+                    () => dashboardApi.staffRedeem({ cardId: card.cardId, tierIndex: tier.index }),
+                    () => setMessage({ tone: "ok", text: `${tier.rewardName} redeemed. Enjoy!` }),
+                  );
+                }}
+              >
+                <Gift aria-hidden /> Redeem reward
+              </button>
+            ))
+          ) : (
+            <button type="button" className="staff-btn staff-btn-secondary" disabled>
+              <Gift aria-hidden /> Redeem reward
+            </button>
+          )}
+          <button type="button" className="staff-btn staff-btn-ghost till-undo" disabled={busy || !card.undoable} onClick={undo}>
+            <Undo2 aria-hidden /> Undo
           </button>
-          <div className="till-stepper" aria-label="Stamps to add">
-            <button type="button" aria-label="Fewer stamps" disabled={busy || count <= 1} onClick={() => setCount((c) => c - 1)}>
-              <Minus aria-hidden />
-            </button>
-            <span aria-live="polite">
-              {count} stamp{count === 1 ? "" : "s"} for this order
-            </span>
-            <button type="button" aria-label="More stamps" disabled={busy || count >= Math.min(5, room)} onClick={() => setCount((c) => c + 1)}>
-              <Plus aria-hidden />
-            </button>
-          </div>
-        </>
-      )}
-
-      {unlocked.map((tier) => (
-        <button
-          key={tier.index}
-          type="button"
-          className="staff-btn staff-btn-secondary"
-          disabled={busy}
-          onClick={() => {
-            if (!window.confirm(`Give ${tier.rewardName} now? This uses ${tier.stampsRequired} stamps.`)) return;
-            void act(
-              () => dashboardApi.staffRedeem({ cardId: card.cardId, tierIndex: tier.index }),
-              () => setMessage({ tone: "ok", text: `${tier.rewardName} redeemed. Enjoy!` }),
-            );
-          }}
-        >
-          <Gift aria-hidden /> Redeem {tier.rewardName.toLowerCase()}
-        </button>
-      ))}
-
-      {card.undoable && (
-        <button type="button" className="staff-btn staff-btn-ghost" disabled={busy} onClick={undo}>
-          <Undo2 aria-hidden /> Undo last {card.undoable.kind === "redeem" ? `reward (${card.undoable.rewardName})` : `stamp${card.undoable.delta === 1 ? "" : "s"}`}
-        </button>
-      )}
-
-      <ScanCardButton label="Scan the next card" variant="secondary" />
+        </div>
+      </div>
     </div>
   );
 }

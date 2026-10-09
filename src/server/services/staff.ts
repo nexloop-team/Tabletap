@@ -147,6 +147,9 @@ export function viewCard(device: StaffDevice, cardId: string): StaffCardView {
     goal: stampGoal(tiers),
     tiers: tiers.map((tier, index) => ({ index, rewardName: tier.rewardName, stampsRequired: tier.stampsRequired, unlocked: card.stamps >= tier.stampsRequired })),
     undoable: undoable ? { kind: undoable.kind, delta: undoable.delta, rewardName: undoable.reward_name } : null,
+    memberSince: new Date(`${card.created_at.replace(" ", "T")}Z`).toISOString(),
+    visits: (getDb().prepare("SELECT COUNT(*) AS n FROM stamp_events WHERE card_id = ? AND kind = 'stamp' AND undone_at IS NULL").get(card.id) as { n: number }).n,
+    stampedMinutesAgo: cooldownMinutesLeft(device.venueId, card.id),
   };
 }
 
