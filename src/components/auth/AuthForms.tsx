@@ -25,11 +25,38 @@ function useSubmit(run: (form: FormData) => Promise<void>) {
   return { pending, error, onSubmit };
 }
 
-function Input({ label, name, type = "text", autoComplete, hint, minLength, autoFocus }: { label: string; name: string; type?: string; autoComplete?: string; hint?: string; minLength?: number; autoFocus?: boolean }) {
+function Input({
+  label,
+  name,
+  type = "text",
+  autoComplete,
+  hint,
+  minLength,
+  autoFocus,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  autoComplete?: string;
+  hint?: string;
+  minLength?: number;
+  autoFocus?: boolean;
+  placeholder?: string;
+}) {
+  const [shown, setShown] = useState(false);
+  const password = type === "password";
   return (
     <div className="field">
       <label htmlFor={name}>{label}</label>
-      <input className="input" id={name} name={name} type={type} autoComplete={autoComplete} required minLength={minLength} autoFocus={autoFocus} />
+      <span className={password ? "password-field" : undefined}>
+        <input className="input" id={name} name={name} type={password && shown ? "text" : type} autoComplete={autoComplete} required minLength={minLength} autoFocus={autoFocus} placeholder={placeholder} />
+        {password && (
+          <button type="button" className="password-toggle" aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown} onClick={() => setShown((value) => !value)}>
+            {shown ? "Hide" : "Show"}
+          </button>
+        )}
+      </span>
       {hint && <p className="hint">{hint}</p>}
     </div>
   );
@@ -73,7 +100,7 @@ export function LoginForm({ next }: { next?: string }) {
   );
 }
 
-export function SignupForm({ next }: { next?: string }) {
+export function SignupForm({ next, staffVenue }: { next?: string; staffVenue?: string | null }) {
   const router = useRouter();
   const { pending, error, onSubmit } = useSubmit(async (form) => {
     await dashboardApi.signup({ name: text(form, "name"), email: text(form, "email"), password: text(form, "password"), captchaToken: captchaToken(form) });
@@ -82,14 +109,14 @@ export function SignupForm({ next }: { next?: string }) {
   });
   return (
     <form onSubmit={onSubmit}>
-      <Input label="Your name" name="name" autoComplete="name" autoFocus />
-      <Input label="Work email" name="email" type="email" autoComplete="email" />
+      <Input label="Your name" name="name" autoComplete="name" autoFocus placeholder="Priya Sharma" />
+      <Input label="Email" name="email" type="email" autoComplete="email" placeholder="you@yourcafe.in" />
       <Input label="Password" name="password" type="password" autoComplete="new-password" minLength={8} hint="At least 8 characters." />
       <Turnstile />
       <ErrorNotice error={error} />
-      <Submit pending={pending}>Create account</Submit>
+      <Submit pending={pending}>{staffVenue ? "Join and open the till" : "Create my account"}</Submit>
       <p className="hint" style={{ marginTop: 12, textAlign: "center" }}>
-        By signing up you agree to our <Link href="/terms">terms</Link> and <Link href="/privacy">privacy notice</Link>.
+        By signing up you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.
       </p>
     </form>
   );

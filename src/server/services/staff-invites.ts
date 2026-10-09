@@ -5,7 +5,7 @@ import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
 import type { User } from "../repositories/users";
 import { getDb, transaction } from "../db";
 import { ServiceError } from "../http";
-import { addStaffMember, isManagerRole, venueRole, type VenueRecord } from "../repositories/venues";
+import { addStaffMember, getVenueRecord, isManagerRole, venueRole, type VenueRecord } from "../repositories/venues";
 import { sendMail } from "./mailer";
 import { completePairing, createPairing, currentStaffDevice } from "./staff";
 
@@ -41,6 +41,15 @@ export function createStaffInvite(venue: VenueRecord, inviter: User, rawEmail: s
     ].join("\n"),
   });
   return { url };
+}
+
+/** The venue an unused invite is for, so the sign-up page can say "Join the till at …". Null for a used, expired or unknown link. */
+export function inviteVenueName(token: string): string | null {
+  const invite = getDb().prepare("SELECT venue_id, expires_at, used_at FROM staff_invites WHERE id = ?").get(digest(token)) as
+    | { venue_id: string; expires_at: string; used_at: string | null }
+    | undefined;
+  if (!invite || invite.used_at || Date.parse(invite.expires_at) <= Date.now()) return null;
+  return getVenueRecord(invite.venue_id)?.config.name ?? null;
 }
 
 /** Uses an invite for this signed-in user. Returns the venue id, or null for a used, expired or unknown link. */
