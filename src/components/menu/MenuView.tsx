@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, ChevronLeft, Flame, Info, Leaf, Search, SlidersHorizontal, Sparkles, Sprout, Star, WheatOff, X, type LucideIcon } from "lucide-react";
+import { ChefHat, ChevronLeft, Flame, Info, Leaf, Menu as MenuLines, Search, Sparkles, Sprout, Star, WheatOff, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VenueHeader } from "@/components/landing/VenueHeader";
 import { createTracker } from "@/lib/analytics";
@@ -12,6 +12,7 @@ import type { Menu, MenuItem, VenueBranding } from "@/lib/venue/types";
 import { ALLERGENS } from "@/lib/venue/schema";
 import { isIndianMenu, menuPriceFormat } from "@/lib/venue/region";
 import { DishSheet } from "./DishSheet";
+import { MenuBrowseSheet } from "./MenuBrowseSheet";
 import { VegMark } from "./VegMark";
 
 type Badge = NonNullable<MenuItem["badges"]>[number];
@@ -30,6 +31,9 @@ const DIETS: Record<string, { key: MessageKey; icon: LucideIcon }> = {
 };
 
 const FOOD_TYPE_KEYS: Record<NonNullable<MenuItem["foodType"]>, MessageKey> = { veg: "food_veg", nonveg: "food_nonveg", egg: "food_egg" };
+
+/** Indian menus filter on the food mark: one of these at a time. */
+const FOOD_FILTERS: string[] = ["veg", "nonveg", "egg"];
 
 /** Filter chips offered when at least one dish carries the tag, in this order. */
 const DIET_FILTERS = ["vegan", "vegetarian", "gluten_free"] as const;
@@ -61,7 +65,7 @@ function matches(item: MenuItem, query: string): boolean {
 function fitsDiets(item: MenuItem, diets: string[]): boolean {
   if (diets.length === 0) return true;
   const tags = item.dietaryTags.map(dietKey);
-  return diets.every((diet) => (diet === "veg" ? item.foodType === "veg" : tags.includes(diet) || (diet === "vegetarian" && tags.includes("vegan"))));
+  return diets.every((diet) => (FOOD_FILTERS.includes(diet) ? item.foodType === diet : tags.includes(diet) || (diet === "vegetarian" && tags.includes("vegan"))));
 }
 
 interface MenuViewProps {
@@ -94,7 +98,8 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const [query, setQuery] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]);
   const [diets, setDiets] = useState<string[]>([]);
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [browseOpen, setBrowseOpen] = useState(false);
+  const closeBrowse = useCallback(() => setBrowseOpen(false), []);
   const [openDish, setOpenDish] = useState<MenuItem | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const closeDish = useCallback(() => setOpenDish(null), []);
@@ -108,7 +113,10 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   const allergens = useMemo(() => (indian ? [] : [...new Set(sections.flatMap((s) => s.items.flatMap((i) => i.allergens.map((a) => a.toLowerCase()))))].sort()), [sections, indian]);
   const dietOptions = useMemo<string[]>(() => {
     const items = sections.flatMap((s) => s.items);
-    if (indian) return items.some((i) => i.foodType === "veg") && items.some((i) => i.foodType && i.foodType !== "veg") ? ["veg"] : [];
+    if (indian) {
+      const present = FOOD_FILTERS.filter((type) => items.some((i) => i.foodType === type));
+      return present.length > 1 ? present : [];
+    }
     const present = new Set(items.flatMap((i) => i.dietaryTags.map(dietKey)));
     return DIET_FILTERS.filter((diet) => present.has(diet) || (diet === "vegetarian" && present.has("vegan")));
   }, [sections, indian]);
@@ -162,7 +170,7 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
   }
 
   function toggleDiet(diet: string) {
-    const next = diets.includes(diet) ? diets.filter((d) => d !== diet) : [...diets, diet];
+    const next = diets.includes(diet) ? diets.filter((d) => d !== diet) : FOOD_FILTERS.includes(diet) ? [diet] : [...diets, diet];
     setDiets(next);
     track("menu_diet_filter_changed", { diets: next.join(",") });
   }
@@ -272,10 +280,27 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
     );
   }
 
+  const hasFilters = dietOptions.length > 0 || allergens.length > 0;
+  const activeFilters = diets.length + excluded.length;
+  const dietLabel = (diet: string) =>
+    FOOD_FILTERS.includes(diet) ? (
+      <>
+        <VegMark type={diet as NonNullable<MenuItem["foodType"]>} label="" />
+        {diet === "egg" ? t("menu_egg") : t(FOOD_TYPE_KEYS[diet as NonNullable<MenuItem["foodType"]>])}
+      </>
+    ) : (
+      t(DIETS[diet].key)
+    );
+  const shownCount = visibleSections.reduce((n, section) => n + section.items.length, 0);
+
   const sectionNav =
-    visibleSections.length > 1 ? (
+    visibleSections.length > 1 || hasFilters ? (
       <nav className={`menu-jump${layout === "list" ? " menu-cats" : ""}`} aria-label={t("menu_sections")}>
-        {visibleSections.map((section) => (
+        <button type="button" className="menu-browse" aria-label={t("menu_browse")} aria-haspopup="dialog" onClick={() => setBrowseOpen(true)}>
+          <MenuLines aria-hidden />
+          {activeFilters > 0 && <span className="menu-browse-count">{activeFilters}</span>}
+        </button>
+        {visibleSections.length > 1 && visibleSections.map((section) => (
           <button key={section.id} type="button" className={layout === "list" ? "menu-cat" : "menu-chip"} aria-current={section.id === current ? "true" : undefined} onClick={() => jumpTo(section.id)}>
             {section.name}
           </button>
@@ -340,45 +365,21 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
 
             {layout === "classic" && sectionNav}
 
-            {(allergens.length > 0 || dietOptions.length > 0) && (
+            {activeFilters > 0 && (
               <div className="menu-filters">
-                {allergens.length > 0 && (
-                  <button type="button" className="menu-pill" aria-expanded={filterOpen} aria-controls="menu-filter" onClick={() => setFilterOpen((open) => !open)}>
-                    <SlidersHorizontal aria-hidden />
-                    {excluded.length > 0 ? tf("menu_filter_count", { count: excluded.length }) : t("menu_filter")}
+                {diets.map((diet) => (
+                  <button key={diet} type="button" className="menu-pill on" aria-label={tf("menu_filter_off", { filter: FOOD_FILTERS.includes(diet) ? t(FOOD_TYPE_KEYS[diet as NonNullable<MenuItem["foodType"]>]) : t(DIETS[diet].key) })} onClick={() => toggleDiet(diet)}>
+                    {dietLabel(diet)}
+                    <X aria-hidden />
                   </button>
-                )}
+                ))}
                 {excluded.map((allergen) => (
                   <button key={allergen} type="button" className="menu-pill on" aria-label={tf("menu_filter_remove", { allergen: titleCase(allergen) })} onClick={() => toggleAllergen(allergen)}>
                     {tf("menu_no_allergen", { allergen })}
                     <X aria-hidden />
                   </button>
                 ))}
-                {dietOptions.map((diet) => (
-                  <button key={diet} type="button" className={`menu-pill${diets.includes(diet) ? " on" : ""}`} aria-pressed={diets.includes(diet)} onClick={() => toggleDiet(diet)}>
-                    {diet === "veg" && <VegMark type="veg" label="" />}
-                    {diet === "veg" ? t("menu_veg_only") : t(DIETS[diet].key)}
-                  </button>
-                ))}
               </div>
-            )}
-
-            {filterOpen && allergens.length > 0 && (
-              <section id="menu-filter" className="menu-filter">
-                <h2>{t("menu_filter_title")}</h2>
-                <div className="menu-chip-row wrap">
-                  {allergens.map((allergen) => (
-                    <button key={allergen} type="button" className="menu-chip" aria-pressed={excluded.includes(allergen)} onClick={() => toggleAllergen(allergen)}>
-                      {titleCase(allergen)}
-                    </button>
-                  ))}
-                </div>
-                {excluded.length > 0 && (
-                  <button type="button" className="menu-link-btn" onClick={() => setExcluded([])}>
-                    {t("menu_filter_clear")}
-                  </button>
-                )}
-              </section>
             )}
 
             {highlights.items.length > 0 && !needle && (
@@ -479,6 +480,35 @@ export function MenuView({ venueId, venueName, branding, currencyCode, menus: sa
           </>
         )}
       </main>
+
+      <MenuBrowseSheet
+        open={browseOpen}
+        groups={[
+          ...(dietOptions.length > 0
+            ? [{ title: t(indian ? "menu_food_type" : "menu_diet"), options: dietOptions.map((diet) => ({ key: diet, label: dietLabel(diet), on: diets.includes(diet), toggle: () => toggleDiet(diet) })) }]
+            : []),
+          ...(allergens.length > 0
+            ? [{ title: t("menu_filter_title"), options: allergens.map((allergen) => ({ key: allergen, label: titleCase(allergen), on: excluded.includes(allergen), toggle: () => toggleAllergen(allergen) })) }]
+            : []),
+        ]}
+        sections={visibleSections.map((section) => ({ id: section.id, name: section.name, count: section.items.length }))}
+        current={current}
+        labels={{ title: t("menu_browse"), categories: t("menu_categories"), clear: t("menu_filter_clear"), show: shownCount === 1 ? t("menu_show_one") : tf("menu_show_count", { count: shownCount }), close: t("close") }}
+        onJump={(sectionId) => {
+          setBrowseOpen(false);
+          // After the sheet lets go of the page's scroll lock.
+          requestAnimationFrame(() => jumpTo(sectionId));
+        }}
+        onClear={
+          activeFilters > 0
+            ? () => {
+                setDiets([]);
+                setExcluded([]);
+              }
+            : null
+        }
+        onClose={closeBrowse}
+      />
 
       <DishSheet
         item={openDish}

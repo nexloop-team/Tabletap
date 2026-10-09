@@ -2798,3 +2798,186 @@ svg.tile-glyph {
 .menu-pill .veg-mark {
   margin-inline-end: 6px;
 }
+
+/* ☰ at the start of the menu's section bar: opens filters and categories.
+   It stays put while the section names scroll sideways. */
+.menu-browse {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  margin-inline-end: -6px;
+  padding: 0;
+  border: 0;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 10px 0 10px -6px var(--page-bg);
+}
+.menu-browse svg {
+  width: 24px;
+  height: 24px;
+}
+.menu-browse-count {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--tile-hero);
+  color: var(--tile-on-hero);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+.menu-browse:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -4px;
+  border-radius: 10px;
+}
+.menu-page[data-layout="list"] .menu-cats {
+  padding-inline-start: 10px;
+}
+
+.browse-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 86vh;
+  max-height: 86dvh;
+  padding-bottom: 0;
+}
+.browse-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px 6px;
+}
+.browse-sheet-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.browse-sheet-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--card-text-primary, #1a1a1a) 7%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+.browse-sheet-close svg {
+  width: 20px;
+  height: 20px;
+}
+.browse-sheet-body {
+  display: grid;
+  gap: 24px;
+  padding: 10px 20px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.browse-group h3 {
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--card-text-secondary, var(--text-secondary));
+}
+.browse-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.browse-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--card-text-primary, #1a1a1a) 18%, transparent);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--card-text-primary, var(--text-primary));
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.browse-chip[aria-pressed="true"] {
+  border-color: var(--card-text-primary, #1a1a1a);
+  background: var(--card-text-primary, #1a1a1a);
+  color: var(--card-bg);
+}
+.browse-sections {
+  list-style: none;
+}
+.browse-sections button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--separator);
+  background: none;
+  color: var(--card-text-primary, var(--text-primary));
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+.browse-sections li:last-child button {
+  border-bottom: 0;
+}
+.browse-sections button[aria-current="true"] {
+  font-weight: 600;
+}
+.browse-count {
+  font-size: 14px;
+  color: var(--card-text-secondary, var(--text-secondary));
+  font-variant-numeric: tabular-nums;
+}
+.browse-sheet-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--separator);
+}
+.browse-clear,
+.browse-show {
+  min-height: 50px;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.browse-clear {
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--card-text-primary, #1a1a1a) 18%, transparent);
+  background: none;
+  color: var(--card-text-primary, var(--text-primary));
+}
+.browse-show {
+  flex: 1;
+  border: 0;
+  background: var(--tile-hero);
+  color: var(--tile-on-hero);
+}
+.menu-pill .veg-mark,
+.browse-chip .veg-mark {
+  margin-inline-end: 7px;
+}
