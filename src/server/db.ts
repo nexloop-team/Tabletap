@@ -231,6 +231,8 @@ const MIGRATIONS: string[] = [
      expires_at TEXT NOT NULL,
      PRIMARY KEY (admin_id, venue_id)
    );`,
+  // When each owner last opened the Feedback inbox, for the unread count.
+  `ALTER TABLE venue_members ADD COLUMN feedback_seen_at TEXT;`,
 ];
 
 function migrate(db: DatabaseSync) {

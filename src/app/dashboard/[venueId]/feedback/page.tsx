@@ -4,6 +4,8 @@ import Link from "next/link";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { listFeedback, type FeedbackFilter } from "@/server/repositories/insights";
 import { firstParam } from "@/server/request";
+import { markFeedbackSeen, unreadFeedback } from "@/server/repositories/feedback";
+import { RefreshOnce } from "@/components/dashboard/RefreshOnce";
 
 export const metadata: Metadata = { title: "Feedback" };
 
@@ -22,7 +24,10 @@ function mood(score: number): { label: string; tone: string } {
 }
 
 export default async function FeedbackPage({ params, searchParams }: PageProps<"/dashboard/[venueId]/feedback">) {
-  const { venue } = await loadDashboardVenue((await params).venueId);
+  const { venue, user } = await loadDashboardVenue((await params).venueId);
+  // Opening the inbox reads everything in it; the sidebar count then refreshes.
+  const hadUnread = unreadFeedback(venue.id, user.id).count > 0;
+  markFeedbackSeen(venue.id, user.id);
   const query = await searchParams;
   const filter = (FILTERS.find((f) => f.key === firstParam(query.filter))?.key ?? "all") as FeedbackFilter;
   const page = Math.max(1, Number(firstParam(query.page)) || 1);
@@ -33,6 +38,7 @@ export default async function FeedbackPage({ params, searchParams }: PageProps<"
 
   return (
     <>
+      <RefreshOnce when={hadUnread} />
       <div className="page-head">
         <div>
           <h1>Feedback</h1>

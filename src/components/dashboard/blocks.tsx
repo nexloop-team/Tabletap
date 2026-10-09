@@ -64,7 +64,7 @@ function weekday(day: string): string {
  * longer ranges show a scale and a hover/focus tooltip instead. A visually
  * hidden table carries the same numbers for screen readers.
  */
-export function DailyBars({ data, label, unit }: { data: { day: string; value: number }[]; label: string; unit: [singular: string, plural: string] }) {
+export function DailyBars({ data, label, unit, today = false }: { data: { day: string; value: number }[]; label: string; unit: [singular: string, plural: string]; /** Colour the last bar (today) apart from the rest. */ today?: boolean }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const noun = (n: number) => `${n.toLocaleString("en-GB")} ${n === 1 ? unit[0] : unit[1]}`;
@@ -78,8 +78,8 @@ export function DailyBars({ data, label, unit }: { data: { day: string; value: n
         </div>
       )}
       <div className="chart-plot" aria-hidden>
-        {data.map((d) => (
-          <div key={d.day} className="chart-col" data-tip={labelled ? undefined : `${shortDay(d.day)} · ${noun(d.value)}`}>
+        {data.map((d, i) => (
+          <div key={d.day} className={`chart-col${today && i === data.length - 1 ? " today" : ""}`} data-tip={labelled ? undefined : `${i === data.length - 1 && today ? "Today" : shortDay(d.day)} · ${noun(d.value)}`}>
             {labelled && <span className="chart-value num">{d.value.toLocaleString("en-GB")}</span>}
             <div className="chart-bar" style={{ height: `${(d.value / max) * 100}%` }} data-zero={d.value === 0 || undefined} />
           </div>

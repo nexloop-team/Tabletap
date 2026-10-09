@@ -14,6 +14,8 @@ import { ToastProvider } from "./toast";
 export interface ShellVenue {
   id: string;
   name: string;
+  /** Feedback the owner hasn't opened yet: a count on the Feedback nav item. */
+  unreadFeedback?: number;
   /** "Active", "Trial · 3 days left" or "Unpaid", shown under the name in the switcher. */
   planLabel?: string;
   logoUrl: string | null;
@@ -40,7 +42,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-function venueNav(base: string): NavGroup[] {
+function venueNav(base: string, unreadFeedback = 0): NavGroup[] {
   return [
     { items: [{ href: base, label: "Overview", icon: LayoutDashboard, exact: true }] },
     {
@@ -56,7 +58,7 @@ function venueNav(base: string): NavGroup[] {
       label: "Insights",
       items: [
         { href: `${base}/guests`, label: "Guests", icon: Users },
-        { href: `${base}/feedback`, label: "Feedback", icon: MessageSquareText },
+        { href: `${base}/feedback`, label: "Feedback", icon: MessageSquareText, badge: unreadFeedback > 0 ? String(unreadFeedback) : undefined },
       ],
     },
     {
@@ -101,7 +103,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Link className="nav-link" href={item.href} aria-current={isActive(pathname, item) ? "page" : undefined}>
         {item.venue ? <VenueAvatar venue={item.venue} /> : Icon && <Icon aria-hidden />}
         <span className="nav-label">{item.label}</span>
-        {item.badge && <span className="nav-pro">{item.badge}</span>}
+        {item.badge && <span className="nav-count" aria-label={`${item.badge} unread`}>{item.badge}</span>}
       </Link>
     </li>
   );
@@ -204,7 +206,7 @@ export function AppShell({ mode, venues, user, children }: { mode: "venue" | "ad
     mode === "admin"
       ? ADMIN_NAV
       : venueId
-        ? venueNav(`/dashboard/${venueId}`)
+        ? venueNav(`/dashboard/${venueId}`, venues.find((v) => v.id === venueId)?.unreadFeedback)
         : [
             {
               label: "Your venues",
