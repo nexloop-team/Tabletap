@@ -20,6 +20,10 @@ function productionConfigProblems(env: NodeJS.ProcessEnv = process.env): ConfigP
   if (!has("APP_URL")) error("APP_URL is not set. It's printed into every QR code: set it to your final https:// address before printing any.");
   else if (!/^https:\/\//.test(env.APP_URL!)) warn("APP_URL doesn't start with https://.");
 
+  if (has("DATABASE_URL") && env.VERCEL && /pooler\.supabase\.com:5432\//.test(env.DATABASE_URL!)) {
+    error("DATABASE_URL uses Supabase's Session pooler (port 5432), which allows only a few connections: on Vercel use the Transaction pooler (port 6543).");
+  }
+  if (env.VERCEL && !has("CRON_SECRET")) error("CRON_SECRET is not set: on Vercel, the daily jobs (Monday summary, guest emails, clean-up) only run through Vercel Cron, which needs it.");
   if (!has("DATABASE_URL")) warn("DATABASE_URL is not set, so the embedded database in DATA_DIR is used. It needs a persistent volume and backups.");
   else if (!has("DATABASE_SSL_CA") && !["verify", "off"].includes(env.DATABASE_SSL ?? "")) {
     warn("The database connection is encrypted but its certificate isn't checked. Set DATABASE_SSL_CA (Supabase: Database settings → SSL certificate).");

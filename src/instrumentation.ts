@@ -11,7 +11,9 @@ export async function register() {
     const { reportProductionConfig } = await import("./server/env-check");
     reportProductionConfig();
   }
-  if (process.env.DISABLE_JOBS !== "1") {
+  // Serverless copies come and go, so a timer in each would be unreliable and
+  // multiply database connections: on Vercel, Vercel Cron runs the jobs.
+  if (process.env.DISABLE_JOBS !== "1" && !process.env.VERCEL) {
     const { startJobScheduler } = await import("./server/jobs");
     startJobScheduler();
   }

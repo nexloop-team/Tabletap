@@ -48,7 +48,8 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 
 1. **Database and files:**
    1. Set `DATABASE_URL` to your Postgres.
-      - **Supabase:** Project → Connect → copy the **Session pooler** string (IPv4, port 5432), with your database password filled in.
+      - **Supabase on Vercel (or any serverless host):** Project → Connect → copy the **Transaction pooler** string (port **6543**), with your database password filled in. Vercel runs many copies of the app at once; the Session pooler (port 5432) allows only about 15 connections and runs out ("max clients reached in session mode").
+      - **Supabase on a single server** (Railway, a VPS): the **Session pooler** string (IPv4, port 5432) is fine.
       - **Self-hosted:** `postgres://user:pass@host:5432/tabletap`, plus `DATABASE_SSL=off` if it has no TLS.
       - To have the server's certificate checked, set `DATABASE_SSL_CA` to the provider's CA (PEM text or a file path; Supabase: Project Settings → Database → SSL Configuration), or `DATABASE_SSL=verify` for a publicly signed certificate. Without either the link is encrypted but unchecked, and startup warns.
    2. For images, set the `S3_*` variables to a bucket.
@@ -107,7 +108,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile captcha on sign-up and password reset; off without them |
 | `TRUSTED_PROXY_COUNT`, `CLIENT_IP_HEADER` | Where rate limits read the visitor's address (default: the last `X-Forwarded-For` entry) |
 | `CRON_SECRET` | Enables `POST /api/cron/run` for an external scheduler (`Authorization: Bearer …`) |
-| `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails, daily clean-up), e.g. when running more than one server |
+| `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails, daily clean-up), e.g. when running more than one server. On Vercel it's always off: `vercel.json` runs the jobs daily at 09:00 UTC through Vercel Cron, which needs `CRON_SECRET` set |
 | `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
 

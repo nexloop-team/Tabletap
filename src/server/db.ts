@@ -373,7 +373,12 @@ async function pgDriver(url: string): Promise<Driver> {
   const types = { getTypeParser: (oid: number, format?: string) => (PARSERS[oid] ? (PARSERS[oid] as (v: string) => unknown) : pg.types.getTypeParser(oid, format as "text")) };
   const pool = new pg.Pool({
     connectionString: url,
-    max: Number(process.env.DATABASE_POOL_SIZE || 5),
+    // Serverless hosts (Vercel) run many copies of the app at once, each with
+    // its own pool, so each keeps just a couple of connections; a single
+    // server can keep more. Point serverless at a transaction pooler.
+    max: Number(process.env.DATABASE_POOL_SIZE || (process.env.VERCEL ? 2 : 5)),
+    idleTimeoutMillis: process.env.VERCEL ? 5_000 : 10_000,
+    allowExitOnIdle: true,
     // Hosted Postgres (Supabase and most others) needs TLS; set DATABASE_SSL=off for a local server.
     ssl: databaseSsl(url) || undefined,
     types,
@@ -439,12 +444,16 @@ async function migrate(driver: Driver) {
   if (!row) await db.run("INSERT INTO schema_version (version) VALUES (0)");
   let version = row?.version ?? 0;
   while (version < MIGRATIONS.length) {
-    const next = version + 1;
-    await driver.transaction(async (tx) => {
-      await tx.exec(MIGRATIONS[next - 1]);
-      await tx.run("UPDATE schema_version SET version = ?", next);
+    version = await driver.transaction(async (tx) => {
+      // Several servers (or serverless copies) can start at once: one runs
+      // each update while the others wait, then see it's done.
+      await tx.get("SELECT pg_advisory_xact_lock(7262021)");
+      const current = (await tx.get<{ version: number }>("SELECT version FROM schema_version"))?.version ?? 0;
+      if (current >= MIGRATIONS.length) return current;
+      await tx.exec(MIGRATIONS[current]);
+      await tx.run("UPDATE schema_version SET version = ?", current + 1);
+      return current + 1;
     });
-    version = next;
   }
 }
 

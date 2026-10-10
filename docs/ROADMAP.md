@@ -225,6 +225,7 @@ Newest first. One line per change: what changed and why.
 - Removed: Spanish. Guest pages are English only.
 - Removed: the guest page's "Open Wi-Fi settings" button (a web page can't open them reliably); the Wi-Fi card shows the network and a one-tap password copy.
 - Added: "What guests said this week" on the overview: an AI summary of the last 7 days of feedback (headline, what guests liked, what needs attention, one suggestion). Needs 3+ notes, is saved and only rewritten when new feedback arrives, and is never emailed. The privacy policy now says feedback text is summarised with AI.
+- Fixed (Vercel): "max clients reached in session mode". Each serverless copy now keeps at most 2 database connections and lets idle ones go; no job timer runs on Vercel (Vercel Cron calls `/api/cron/run` daily, `vercel.json`); database updates take a lock so copies starting together don't clash. Use Supabase's Transaction pooler (port 6543) on Vercel.
 - Removed: the `claude design` folder (four exported design mockups, 13 MB); the design lives in the code now.
 - Removed: the unbuilt Apple/Google Wallet placeholder (it never issued a pass); members use the web card.
 - Cleanup: removed dead code (3 unused functions, 3 unused types, 14 unused text strings, about 560 lines of unused CSS), needless exports, 4 unused demo images and the one-off SQLite-to-Postgres copy script.
