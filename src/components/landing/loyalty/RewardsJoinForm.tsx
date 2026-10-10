@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { rewardsPassLine } from "@/lib/landing-copy";
 import { birthdayAskOn } from "@/lib/venue/features";
-import { BirthdayFields, EMPTY_BIRTHDAY, Field, RewardsConsent, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
+import { BirthdayFields, EMPTY_BIRTHDAY, Field, RewardsConsent, SuccessPanel, JoinedCard, birthdayAnswer } from "../forms";
 import { useLanding, type Membership } from "../LandingContext";
 import { useRewardsJoin } from "../useJoin";
 
@@ -14,7 +14,7 @@ export function RewardsJoinedPanel({ membership }: { membership: Membership }) {
     <SuccessPanel icon="heart" title={t("rewards_joined")}>
       {line && <p>{line}</p>}
       {membership.response.confirmationPending && <p className="confirm-notice">{t("check_inbox_confirm")}</p>}
-      <WalletActions response={membership.response} context="rewards_join" />
+      <JoinedCard response={membership.response} />
     </SuccessPanel>
   );
 }

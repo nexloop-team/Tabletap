@@ -157,7 +157,7 @@ export function MyCardToggle({ credentials }: { credentials: CardCredentials }) 
   return open ? (
     <MyCard credentials={credentials} />
   ) : (
-    <button type="button" className="wallet-btn" onClick={() => setOpen(true)}>
+    <button type="button" className="card-open-btn" onClick={() => setOpen(true)}>
       {t("view_card")}
     </button>
   );

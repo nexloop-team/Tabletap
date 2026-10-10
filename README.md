@@ -110,7 +110,6 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails, daily clean-up), e.g. when running more than one server |
 | `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
-| `APPLE_PASS_CERT_PATH`, `GOOGLE_WALLET_ISSUER_ID` | Reserved for Wallet passes (not implemented yet; the web card is used instead) |
 
 ## Routes
 

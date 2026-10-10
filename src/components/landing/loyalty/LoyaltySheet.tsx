@@ -6,7 +6,7 @@ import { isPlausibleEmail } from "@/lib/validation";
 import { birthdayAskOn, consentAskOn } from "@/lib/venue/features";
 import type { LoyaltyProgram } from "@/lib/venue/types";
 import { useSheet } from "../FeatureCard";
-import { BirthdayFields, ConsentLine, EMPTY_BIRTHDAY, Field, SuccessPanel, WalletActions, birthdayAnswer } from "../forms";
+import { BirthdayFields, ConsentLine, EMPTY_BIRTHDAY, Field, SuccessPanel, JoinedCard, birthdayAnswer } from "../forms";
 import { useLanding } from "../LandingContext";
 import { useStampJoin } from "../useJoin";
 
@@ -63,7 +63,7 @@ export function LoyaltySheet() {
         <SuccessPanel icon="check" title={t(response.wasExisting ? "already_enrolled" : "youre_enrolled")} onClose={close}>
           <p>{enrolEmailCopy(response, joinedEmail, t, tf)}</p>
           {response.confirmationPending && <p className="confirm-notice">{t("check_inbox_confirm")}</p>}
-          <WalletActions response={response} context="loyalty_signup" />
+          <JoinedCard response={response} />
         </SuccessPanel>
       </div>
     );

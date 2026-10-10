@@ -39,7 +39,7 @@ export function enrolEmailCopy(response: EnrollResponse, email: string, t: Trans
  * guest is mid-connection) always names where the card went instead.
  */
 export function rewardsPassLine(response: EnrollResponse, email: string, renderButtons: boolean, tf: TranslateFormat): string {
-  const inHand = renderButtons && !!(response.passBase64 || response.googleWalletUrl || response.cardUrl);
+  const inHand = renderButtons && !!response.cardUrl;
   if (inHand) return "";
   return tf(response.passEmailed ? "pass_on_its_way" : "pass_already_sent", { email: maskEmail(email) });
 }

@@ -19,10 +19,6 @@ export function getPlatform(): PlatformKey {
  */
 export const subscribeNever = () => () => {};
 
-export function isApplePlatform(platform = getPlatform()): boolean {
-  return platform === "ios" || platform === "mac";
-}
-
 export async function copyToClipboard(value: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value);

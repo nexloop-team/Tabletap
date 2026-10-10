@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, type ReactNode } from "react";
 import type { EnrollResponse } from "@/lib/api/contracts";
-import { cardCredentialsFromUrl, getPlatform, isApplePlatform } from "@/lib/browser";
+import { cardCredentialsFromUrl } from "@/lib/browser";
 import { daysInMonth } from "@/lib/validation";
 import { consentAgeThreshold } from "@/lib/venue/features";
 import { FilledHeart } from "../icons";
@@ -113,51 +113,10 @@ export function BirthdayFields({ value, onChange, allowBlank = true }: { value: 
   );
 }
 
-function isGoogleWalletSaveUrl(value: string | null): value is string {
-  return typeof value === "string" && value.startsWith("https://pay.google.com/");
-}
-
-/**
- * The pass the member can take away right now, if any: Apple Wallet on Apple
- * platforms, Google Wallet elsewhere, and the web card as the universal
- * fallback.
- */
-export function WalletActions({ response, context }: { response: EnrollResponse; context: string }) {
-  const { t, track } = useLanding();
-  const apple = isApplePlatform(getPlatform());
-  const appleHref = useMemo(() => {
-    if (!apple || !response.passBase64) return null;
-    try {
-      const bytes = Uint8Array.from(atob(response.passBase64), (c) => c.charCodeAt(0));
-      return URL.createObjectURL(new Blob([bytes], { type: "application/vnd.apple.pkpass" }));
-    } catch {
-      return null;
-    }
-  }, [apple, response.passBase64]);
-  const googleHref = !apple && isGoogleWalletSaveUrl(response.googleWalletUrl) ? response.googleWalletUrl : null;
-  const walletShown = !!(appleHref || googleHref);
-  // The web card opens here on the venue's page, not in a new tab.
+/** A member who just joined: their web card opens here on the venue's page, not in a new tab. */
+export function JoinedCard({ response }: { response: EnrollResponse }) {
   const cardCredentials = useMemo(() => cardCredentialsFromUrl(response.cardUrl), [response.cardUrl]);
-
-  useEffect(() => {
-    track("wallet_button_shown", { wallet_type: apple ? "apple" : "google", shown: walletShown, context });
-  }, [apple, walletShown, context, track]);
-
-  return (
-    <>
-      {appleHref && (
-        <a className="wallet-btn" href={appleHref} download="rewards.pkpass" onClick={() => track("wallet_pass_added", { wallet_type: "apple", context })}>
-          {t("add_apple_wallet")}
-        </a>
-      )}
-      {googleHref && (
-        <a className="wallet-btn" href={googleHref} target="_blank" rel="noopener" onClick={() => track("wallet_pass_added", { wallet_type: "google", context })}>
-          {t("add_google_wallet")}
-        </a>
-      )}
-      {!walletShown && cardCredentials && <MyCardToggle credentials={cardCredentials} />}
-    </>
-  );
+  return cardCredentials ? <MyCardToggle credentials={cardCredentials} /> : null;
 }
 
 export function SuccessPanel({

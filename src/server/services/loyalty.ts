@@ -17,7 +17,6 @@ import { friendJoinBonus } from "./retention";
 import { findVenue, getVenueSettings } from "../repositories/venues";
 import { deliver, recordConsent } from "./consent";
 import { sendMail } from "./mailer";
-import { issueWalletPass } from "./wallet";
 
 /**
  * A returning member is emailed their card link again (never shown it on the
@@ -113,18 +112,13 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
   // A returning member is sent their card again by email rather than shown
   // it here: an email address is no proof of who's typing it, and the card's
   // QR code is what staff scan to hand out a reward. The till can still find
-  // them by name or email. Wallet passes are only minted on first join.
-  const pass = wasExisting
-    ? { passBase64: null, googleWalletUrl: null }
-    : issueWalletPass({ cardId: card.id, venueName: venue.name, holderName: customer.first_name ?? customer.name, stamps: card.stamps });
+  // them by name or email.
 
   return {
     customerId: customer.id,
     cardId: card.id,
     wasExisting,
     passEmailed,
-    passBase64: pass.passBase64,
-    googleWalletUrl: pass.googleWalletUrl,
     cardUrl: wasExisting ? null : cardUrl(origin, card),
     confirmationPending: consent.confirmationPending,
   };

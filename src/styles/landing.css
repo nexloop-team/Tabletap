@@ -423,7 +423,7 @@
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
 }
-.wallet-btn {
+.card-open-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -442,7 +442,7 @@
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
-.wallet-btn svg {
+.card-open-btn svg {
   width: 18px;
   height: 18px;
 }
@@ -1386,7 +1386,7 @@
 .landing .feature-card:focus-visible {
   border-radius: var(--shape-card);
 }
-.landing :is(.primary-btn, .feedback-submit-btn, .google-btn, .copy-btn, .sheet-btn, .photo-trigger, .wallet-btn, .card-staff-btn, .copy-row, .text-input, .feedback-textarea) {
+.landing :is(.primary-btn, .feedback-submit-btn, .google-btn, .copy-btn, .sheet-btn, .photo-trigger, .card-open-btn, .card-staff-btn, .copy-row, .text-input, .feedback-textarea) {
   border-radius: var(--shape-btn);
 }
 .landing[data-shape="pill"] :is(.copy-row, .text-input) {

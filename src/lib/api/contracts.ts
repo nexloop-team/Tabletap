@@ -47,10 +47,6 @@ export interface EnrollResponse {
   wasExisting: boolean;
   /** False when a returning member re-joined inside the resend cooldown. */
   passEmailed: boolean;
-  /** Signed .pkpass (base64) — only when Apple Wallet signing is configured. */
-  passBase64: string | null;
-  /** Google Wallet save link — only when a Google issuer is configured. */
-  googleWalletUrl: string | null;
   /** Web version of the card, only to new members; a returning member is emailed it instead. */
   cardUrl: string | null;
   /** The server asked for a double-opt-in confirmation. */

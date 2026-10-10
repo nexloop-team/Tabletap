@@ -6,7 +6,7 @@ import type { FeedbackResponse } from "@/lib/api/contracts";
 import { cardCredentialsFromUrl, deviceMemory, parseCardCredentials, type CardCredentials } from "@/lib/browser";
 import { enrolEmailCopy } from "@/lib/landing-copy";
 import { isPlausibleEmail, maskEmail, normaliseEmail } from "@/lib/validation";
-import { Field, SuccessPanel, WalletActions } from "../forms";
+import { Field, SuccessPanel, JoinedCard } from "../forms";
 import { useLanding } from "../LandingContext";
 import { MyCard } from "../loyalty/MyCard";
 import { useStampJoin } from "../useJoin";
@@ -53,7 +53,7 @@ export function FreeStampJoin({ receipt }: { receipt: NonNullable<FeedbackRespon
         node: (
           <>
             <p>{enrolEmailCopy(response, result.email, t, tf)}</p>
-            <WalletActions response={response} context="feedback_join" />
+            <JoinedCard response={response} />
           </>
         ),
       });

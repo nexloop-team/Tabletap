@@ -44,8 +44,6 @@ export const en = {
   already_enrolled: "You're already a member of this program!",
   pass_sent_to: "We've sent your card to {email} - check your inbox and spam folder.",
   pass_not_emailed: "We couldn't email your card - ask the team to resend it.",
-  add_apple_wallet: "Add to Apple Wallet",
-  add_google_wallet: "Add to Google Wallet",
   view_card: "View my card",
   stamp_added: "Stamp added!",
   no_stamp_this_time: "No stamp this time - show your card on your next visit.",

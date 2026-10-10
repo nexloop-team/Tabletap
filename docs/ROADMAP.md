@@ -95,7 +95,6 @@ These are must-haves. Without them the product is not ready to demo or sell.
 
 ## 4. Next: features that win deals
 
-- [ ] **Apple & Google Wallet cards** with live-updating stamps. Apple needs a $99/year developer account; Google Wallet is free.
 - [x] **AI menu import:** photo or PDF, then draft sections, with AI-suggested allergens flagged for the owner to check. Needs `ANTHROPIC_API_KEY`.
 - [x] **"What's this dish?":** ⓘ button on unusual dishes; AI drafts, the owner approves.
 - [x] **Automatic guest emails:** "your reward is ready", birthday treat, "we miss you" (marketing ones only to opted-in guests, with one-click unsubscribe).
@@ -226,6 +225,8 @@ Newest first. One line per change: what changed and why.
 - Removed: Spanish. Guest pages are English only.
 - Removed: the guest page's "Open Wi-Fi settings" button (a web page can't open them reliably); the Wi-Fi card shows the network and a one-tap password copy.
 - Added: "What guests said this week" on the overview: an AI summary of the last 7 days of feedback (headline, what guests liked, what needs attention, one suggestion). Needs 3+ notes, is saved and only rewritten when new feedback arrives, and is never emailed. The privacy policy now says feedback text is summarised with AI.
+- Removed: the `claude design` folder (four exported design mockups, 13 MB); the design lives in the code now.
+- Removed: the unbuilt Apple/Google Wallet placeholder (it never issued a pass); members use the web card.
 - Cleanup: removed dead code (3 unused functions, 3 unused types, 14 unused text strings, about 560 lines of unused CSS), needless exports, 4 unused demo images and the one-off SQLite-to-Postgres copy script.
 - Fixed: scan counts. Visits by the venue's own team (signed in as owner, staff or admin) no longer count; a phone counts once per 30-minute visit even across tabs; "last N days" totals and the daily chart cover the same days in the venue's time zone (the Monday email too); the admin console counts visits, not page loads.
 - Added: an "NFC links" button next to Print on Table cards: downloads a spreadsheet (CSV) with each table's NFC link beside its QR link, with tag-writing steps under "How do I write the NFC tags?". Tags are sold and set up separately. The overview's "Where scans came from" counts a table's QR scans and NFC taps together as one total per table.
