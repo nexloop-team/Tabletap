@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { BILLING_PERIOD, formatInr, parseDbDate, PRICE_INR, type SubscriptionStatus } from "@/lib/plans";
+import { BILLING_PERIOD, CHARGES_GST, formatInr, parseDbDate, PRICE_INR, type SubscriptionStatus } from "@/lib/plans";
 import { BRAND } from "@/config/brand";
 import type { CheckoutStart, ConfirmPaymentRequest } from "@/lib/api/account-contracts";
 import { ServiceError } from "../http";
@@ -88,7 +88,7 @@ export async function startCheckout(venue: VenueRecord, user: User, origin: stri
     keyId: process.env.RAZORPAY_KEY_ID!,
     subscriptionId: sub.id,
     name: BRAND.name,
-    description: `${venue.config.name}: ${formatInr(PRICE_INR)} + GST a ${BILLING_PERIOD}`,
+    description: `${venue.config.name}: ${formatInr(PRICE_INR)}${CHARGES_GST ? " + GST" : ""} a ${BILLING_PERIOD}`,
     prefill: { name: user.name, email: user.email },
     fallbackUrl: sub.short_url ?? null,
   };
@@ -190,8 +190,14 @@ interface RazorpayEvent {
 }
 
 export async function handleRazorpayEvent(event: RazorpayEvent) {
-  const sub = event.payload?.subscription?.entity;
-  if (!event.event.startsWith("subscription.") || !sub) return;
+  const received = event.payload?.subscription?.entity;
+  if (!event.event.startsWith("subscription.") || !received?.id) return;
+  // Webhooks can arrive late and out of order, so the event is only a nudge:
+  // the subscription's state is read fresh from Razorpay. (Dev mode and
+  // tests, without keys, use the event as sent.)
+  const sub = billingMode() === "razorpay"
+    ? await razorpay<RazorpaySubscription>("GET", `/subscriptions/${encodeURIComponent(received.id)}`)
+    : received;
   const venueId = venueIdFromNotes(sub.notes) ?? (await findSubscriptionByProviderId(sub.id))?.venueId;
   if (!venueId) {
     console.warn(`[billing] subscription ${sub.id} has no venue`);

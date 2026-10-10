@@ -1254,6 +1254,16 @@ body:has(.app) {
 .auth-box form .btn-primary {
   margin-top: 20px;
 }
+.auth-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 28px;
+  font-size: 13px;
+}
+.auth-legal a {
+  color: var(--a-text-2);
+}
 .auth-alt {
   margin-top: 18px;
   font-size: 14px;
@@ -5853,12 +5863,11 @@ body:has(.app) {
 .hero-chip-stamp {
   top: 47%;
   right: -26%;
-  transform: rotate(2deg);
 }
+/* Not tilted: rotated text is resampled and looks blurry on most screens. */
 .hero-chip-wifi {
   top: 5%;
   left: -26%;
-  transform: rotate(-3deg);
 }
 .hero-chip-icon {
   flex: none;
@@ -6541,4 +6550,72 @@ body:has(.app) {
 }
 .mood.bad {
   background: var(--a-warm);
+}
+
+/* "What guests said this week": the AI summary above the latest feedback. */
+.feedback-summary {
+  margin-bottom: 16px;
+}
+.feedback-summary h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.feedback-summary h2 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--a-accent, #2f6b4f);
+}
+.feedback-summary-headline {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 4px 0 14px;
+}
+.feedback-summary-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.feedback-summary-cols h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.feedback-summary-cols h3 svg {
+  width: 15px;
+  height: 15px;
+}
+.feedback-summary-cols ul {
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--a-text-2);
+}
+.feedback-summary-tip {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--a-surface-2, rgba(127, 127, 127, 0.08));
+  font-size: 14px;
+}
+.feedback-summary-tip svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+.app .link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }

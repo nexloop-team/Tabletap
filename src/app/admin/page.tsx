@@ -112,7 +112,7 @@ export default async function AdminOverview() {
       <PageHeader
         eyebrow="Platform admin"
         title="Platform overview"
-        description={`${new Date(now).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · amounts before GST`}
+        description={`${new Date(now).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · amounts before GST`}
       />
 
       <div className="stats">
@@ -300,7 +300,7 @@ export default async function AdminOverview() {
                     <span title={formatDate(venue.createdAt)}>{formatAgo(venue.createdAt)}</span>
                   </td>
                   <td className="cell-actions">
-                    <AdminVenueActions venueId={venue.id} name={venue.name} guestUrl={guestPageUrl(origin, venue.shortCode)} status={venue.status} segment={venue.segment} />
+                    <AdminVenueActions venueId={venue.id} name={venue.name} guestUrl={guestPageUrl(origin, venue.shortCode)} status={venue.status} segment={venue.segment} renewing={venue.paying && !venue.cancelAtPeriodEnd} />
                   </td>
                 </tr>
               ))}

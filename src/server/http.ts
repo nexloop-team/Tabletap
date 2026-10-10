@@ -41,11 +41,35 @@ export function requestOrigin(request: Request): string {
   return forwardedHost ? `${proto}://${forwardedHost}` : url.origin;
 }
 
-function clientKey(request: Request): string {
-  return (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+/**
+ * The visitor's IP address, for rate limits. The left end of X-Forwarded-For
+ * is whatever the client typed, so it's read from the right: each proxy in
+ * front of the app appends the address it saw. TRUSTED_PROXY_COUNT is how
+ * many proxies there are (default 1: the host's load balancer; 2 with
+ * Cloudflare in front of it). CLIENT_IP_HEADER names a header a CDN sets
+ * itself (e.g. cf-connecting-ip), which wins when present.
+ */
+export function clientIp(request: Request): string {
+  const header = process.env.CLIENT_IP_HEADER?.trim().toLowerCase();
+  const fromHeader = header ? request.headers.get(header)?.split(",")[0].trim() : "";
+  if (fromHeader) return fromHeader;
+  const hops = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((hop) => hop.trim())
+    .filter(Boolean);
+  const proxies = Math.max(1, Math.floor(Number(process.env.TRUSTED_PROXY_COUNT) || 1));
+  return hops[Math.max(0, hops.length - proxies)] || "local";
 }
 
-const buckets = new Map<string, number[]>();
+const buckets = new Map<string, { hits: number[]; windowMs: number }>();
+let checks = 0;
+
+/** Forgets keys whose window has passed, so changing addresses can't grow memory without end. */
+function sweep(now: number) {
+  for (const [key, bucket] of buckets) {
+    if (now - (bucket.hits[bucket.hits.length - 1] ?? 0) >= bucket.windowMs) buckets.delete(key);
+  }
+}
 
 /**
  * Fixed-window-ish limiter kept in process memory: enough to stop a script
@@ -53,16 +77,17 @@ const buckets = new Map<string, number[]>();
  * needs a shared store (Redis) instead.
  */
 export function rateLimit(request: Request, route: string, limit: number, windowMs = 60_000) {
-  rateLimitKey(`${route}:${clientKey(request)}`, limit, windowMs);
+  rateLimitKey(`${route}:${clientIp(request)}`, limit, windowMs);
 }
 
 /** The same limiter on any key, e.g. per account email for login attempts. */
 export function rateLimitKey(key: string, limit: number, windowMs = 60_000) {
   const now = Date.now();
-  const hits = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (++checks % 1000 === 0 || buckets.size > 50_000) sweep(now);
+  const hits = (buckets.get(key)?.hits ?? []).filter((t) => now - t < windowMs);
   if (hits.length >= limit) throw new ServiceError(429, "Too many requests, please try again shortly");
   hits.push(now);
-  buckets.set(key, hits);
+  buckets.set(key, { hits, windowMs });
 }
 
 /**

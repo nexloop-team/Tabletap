@@ -1295,11 +1295,6 @@
 .copy-btn:disabled {
   opacity: 0.4;
 }
-.wifi-settings-btn {
-  width: 100%;
-  margin-bottom: 12px;
-}
-
 /* Feedback: photo and send side by side */
 .feedback-actions {
   display: flex;
@@ -2385,15 +2380,27 @@ svg.tile-glyph {
   text-align: center;
   font-size: 15px;
 }
-.rc-different a {
+.rc-different a,
+.rc-different .link-btn {
   color: var(--text-secondary);
   text-decoration: underline;
+}
+.rc-different .link-btn {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
 .rc-foot {
   margin: 0;
   text-align: center;
   font-size: 13px;
   color: var(--text-tertiary);
+}
+.rc-foot a {
+  color: inherit;
 }
 
 /* ───────────────────────── Paused page ("Back soon") ───────────────────────── */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_VENUES } from "@/server/seed";
-import { accessBadge, accessState, formatInr, parseDbDate, PRICE_WITH_GST_INR, trialDaysLeft, type SubscriptionState } from "./plans";
+import { accessBadge, accessState, CHARGES_GST, formatInr, parseDbDate, PRICE_INR, PRICE_TOTAL_INR, trialDaysLeft, type SubscriptionState } from "./plans";
 import { sourceSlug } from "./qr-source";
 import { safeNext } from "./safe-next";
 import { createVenueRequest, initialVenueConfig, slugify, venueConfigPatch, venueConfigSchema } from "./venue/schema";
@@ -32,8 +32,8 @@ describe("plans", () => {
     expect(accessBadge(sub({})).label).toBe("Unpaid");
   });
 
-  it("prices in rupees with GST on top", () => {
-    expect(PRICE_WITH_GST_INR).toBe(1178.82);
+  it("prices in rupees, with GST on top only once we charge it", () => {
+    expect(PRICE_TOTAL_INR).toBe(CHARGES_GST ? 1178.82 : PRICE_INR);
     expect(formatInr(999)).toBe("₹999");
     expect(formatInr(1178.82)).toBe("₹1,178.82");
   });

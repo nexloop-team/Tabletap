@@ -8,7 +8,7 @@ The working plan for Tabletap: what's done, what's next, why things were decided
 - New idea? Put it in [Ideas parking lot](#ideas-parking-lot) first and move it into a section once you decide to do it.
 - Changing a big decision (market, price, hosting)? Add it to the [Decisions](#decisions) table with the reason.
 
-_Last updated: 2026-10-08_
+_Last updated: 2026-10-09_
 
 ---
 
@@ -17,15 +17,16 @@ _Last updated: 2026-10-08_
 **Built**
 - Guest page: menu, Wi-Fi, loyalty card, feedback, Google review link, Sudoku. Three demo venues.
 - Self-serve owner side: signup/login, email verification, password reset, 4-step onboarding, dashboard (overview, guest page editor, menu editor, loyalty, guests, feedback, QR codes and print sheet, billing, settings), account deletion.
-- One yearly plan per venue (₹999 + GST), 7-day free trial, Razorpay billing (dev mode without keys); unpaid venues go offline.
-- Admin panel (`/admin`) for suspending venues and comping Pro.
+- One yearly plan per venue (₹999; no GST until GST-registered), 7-day free trial, Razorpay billing (dev mode without keys); unpaid venues go offline.
+- Admin panel (`/admin`) for suspending venues, giving free access and revenue.
+- India: PostgreSQL (Supabase), prices in ₹, venue time zones (IST by default), English-only guest pages, and the legal pages Razorpay and Indian law ask for (terms, DPDP privacy policy, refunds, delivery, contact).
 
 - Staff stamping at the till, refer-a-friend, automatic guest emails, weekly owner digest.
 - AI menu import and "What's this dish?" explanations; announcement banner; specials and badges on the menu.
 
 **Not done yet**
-- The code is **not committed to git** yet.
 - Not deployed.
+- Business details for the legal pages, and a lawyer's review of them.
 - No paying customers.
 
 ---
@@ -58,16 +59,23 @@ These are must-haves. Without them the product is not ready to demo or sell.
 - [ ] **Email:** create a Resend account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 - [ ] **Payments:**
   - [x] Razorpay Subscriptions (India, rupees).
-  - [ ] Create the yearly plan (₹1,178.82 = ₹999 + 18% GST) and API keys.
+  - [ ] Create the yearly plan (₹999; ₹1,178.82 once GST is charged) and API keys.
   - [ ] Add the webhook at `/api/billing/webhook` for `subscription.*` events.
-  - [ ] Add your GSTIN in Razorpay so it issues GST invoices.
+  - [ ] Activate Razorpay as a partnership firm: firm PAN, partnership deed, firm bank account, Udyam certificate (instead of GST) plus one more business proof. Ask Razorpay whether a notarised (unregistered) deed is accepted.
+  - [ ] Once turnover nears ₹20 lakh a year: register for GST, set `GSTIN`, switch `CHARGES_GST` on, update the Razorpay plan.
   - [ ] Test the whole flow in test mode first.
 - [ ] **Backups** of `/data`, using Railway volume snapshots or Litestream. Test restoring once.
 - [ ] **Monitoring:** Sentry for errors, plus an uptime check (e.g. UptimeRobot).
-- [ ] **Legal:**
-  - [ ] Get a lawyer to review `/terms` and `/privacy`.
-  - [ ] Register for data protection in your country (e.g. the ICO in the UK).
-  - [ ] Register the business.
+- [ ] **Legal (India):**
+  - [x] Terms, privacy policy (DPDP Act 2023), cancellation & refunds, delivery policy and contact page.
+  - [ ] Name a Grievance Officer on the contact and privacy pages (left out for now; Indian e-commerce and data rules expect one).
+  - [x] Guests can delete their own card; owners can delete a guest on request.
+  - [x] Business details set: Tabletap, a partnership firm, Nashik office (`.env.local`).
+  - [ ] Sign the partnership deed, get the firm's PAN, a current account and a Udyam certificate; consider registering the firm with the Registrar of Firms (an unregistered firm can't sue a customer for unpaid dues, Indian Partnership Act s.69).
+  - [ ] Give Tabletap its own support address (`NEXT_PUBLIC_SUPPORT_EMAIL`) once the domain exists.
+  - [ ] Register for GST before charging it, and set `GSTIN`.
+  - [ ] Confirm the refund windows in `src/app/refunds/page.tsx`.
+  - [ ] Get a lawyer to review all five pages (especially guests under 18, see Decisions).
 - [x] Set the price: ₹999 + GST a year per venue (`src/lib/plans.ts`).
 
 ---
@@ -136,8 +144,7 @@ Do these when there's a reason, not before.
 
 | Trigger | Change |
 |---|---|
-| About 1,000 venues, need for more than one server, or wanting Vercel | Move SQLite to Postgres (e.g. Neon); the repositories in `src/server/repositories` are the only code that touches SQL |
-| Moving to Vercel or several servers | Uploads to Cloudflare R2 or Vercel Blob; rate limiting to Redis (Upstash) |
+| More than one server, or wanting Vercel | Rate limiting to Redis (Upstash); jobs from `POST /api/cron/run` with `DISABLE_JOBS=1` (Postgres and S3-compatible storage are already in place) |
 | Emails over 3,000/month or 100/day | Resend Pro ($20/month) |
 | Cafés asking for staff accounts | Roles in `venue_members` (the table already has a `role` column) |
 
@@ -165,6 +172,10 @@ Do these when there's a reason, not before.
 | 2026-10-02 | UK first at £19/month, then US at $29, India at ₹999 + GST only with WhatsApp | The UK pays about 2.5 times more per café and the product already fits it |
 | 2026-10-07 | Owner layout: presets plus per-card controls, no page builder | Keeps every guest page fast and readable on any colour; café owners want a few good choices, not a blank canvas |
 | 2026-10-07 | Hide/rename/reorder cards and the new menu look on every plan; layout presets, header styles and button shapes Pro only | Basic control shouldn't be paywalled; layouts are a visible reason to upgrade |
+| 2026-10-08 | One plan, ₹999 + GST a year, 7-day trial; Razorpay; unpaid venues go offline (replaces the UK/Free-Pro rows above) | Selling in India first |
+| 2026-10-09 | Guest pages in English only (Spanish removed) | India first; half the Spanish strings were missing |
+| 2026-10-09 | A returning member is emailed their card, not shown it | Anyone can type an email, and the card's QR code is what staff redeem rewards from |
+| 2026-10-09 | Indian venues ask guests to confirm 18+ before agreeing to offers | Under the DPDP Act everyone under 18 is a child; a lawyer should confirm whether joining a card needs the same |
 
 ---
 
@@ -173,6 +184,7 @@ Do these when there's a reason, not before.
 Ideas not yet decided. Move them into a section above when you commit to them.
 
 - Tap-to-stamp NFC stickers at the till
+- Track real Google reviews: a daily rating and review-count snapshot (Places API), or full reviews with replies (Business Profile API). Skipped for now (2026-10-10); the overview counts taps on the review button.
 - "Order at table" / pay at table
 - Table-specific QR codes that call staff ("Request the bill")
 - Integration with POS systems (Square, Toast, Petpooja) to stamp automatically on payment
@@ -189,6 +201,40 @@ Newest first. One line per change: what changed and why.
 ### YYYY-MM-DD
 - Added / Changed / Fixed: what, and why
 ```
+
+### 2026-10-09 (later): audit fixes and India launch prep
+- Fixed (security): a member could be given a stamp a day with just their email; feedback stamps now need the one-time receipt from that feedback, join stamps are decided by the server, and owners can switch the feedback stamp off (Loyalty → Staff devices).
+- Fixed (security): typing someone's email showed their card (and the QR code staff redeem rewards from); returning members are emailed it instead. Birthdays can't be overwritten by a later form.
+- Fixed (security): the Wi-Fi password was in the page even behind the email gate; it's now fetched after the email is given.
+- Fixed: emails, announcements and the Monday summary ran on London time; each venue now uses its own time zone (IST by default).
+- Fixed: scan numbers could be inflated by anyone; the analytics endpoint now checks the venue, limits event size and caps each address per venue.
+- Fixed (security): rate limits trusted the client's own X-Forwarded-For; they now read the proxy's entry (`TRUSTED_PROXY_COUNT`, `CLIENT_IP_HEADER`) and forget old entries.
+- Fixed: the mailer reported success before Resend answered, so failed emails were never retried; outbox rows now record sent/failed and keep no working private links.
+- Added: daily clean-up of expired sessions, links, pairings, 90-day-old email copies and 400-day-old analytics.
+- Fixed: Razorpay webhooks are applied from the subscription's live state, so late or out-of-order events can't flip a venue on or off.
+- Fixed: feedback photos capped per venue per day; feedback refused when the owner hid the card; staff invites need a confirmed email and are capped per day.
+- Changed: changing a page address keeps old printed QR codes working, and no one else can claim an old or deleted venue's address.
+- Fixed: two tills (or a double tap) could redeem one reward twice or stamp past the cooldown; cards are locked while they change. Joins with the same email at once no longer fail; the AI quota can't be overspent.
+- Added: `DATABASE_SSL_CA` / `DATABASE_SSL=verify` to check the database's certificate.
+- Changed: marketing opt-in links open a Confirm button instead of confirming on open (email scanners open links).
+- Changed: login limits are per account and address, so nobody can lock an owner out by guessing their password.
+- Added: security headers (no framing by other sites, HSTS, nosniff, referrer policy).
+- Added: legal pages for India (terms, DPDP privacy policy, cancellation & refunds, delivery, contact), linked from the home page, sign-up and sign-in.
+- Added: guests can delete their own card and details from their card page; owners can delete a guest from the guest list.
+- Added: the server lists missing production settings at startup; `.env.example` and the README cover every variable.
+- Changed: India defaults: new venues start in ₹, Indian number and date formats, 18+ for offers at Indian venues.
+- Removed: Spanish. Guest pages are English only.
+- Removed: the guest page's "Open Wi-Fi settings" button (a web page can't open them reliably); the Wi-Fi card shows the network and a one-tap password copy.
+- Added: "What guests said this week" on the overview: an AI summary of the last 7 days of feedback (headline, what guests liked, what needs attention, one suggestion). Needs 3+ notes, is saved and only rewritten when new feedback arrives, and is never emailed. The privacy policy now says feedback text is summarised with AI.
+- Added: an "NFC links" button next to Print on Table cards: downloads a spreadsheet (CSV) with each table's NFC link beside its QR link, with tag-writing steps under "How do I write the NFC tags?". Tags are sold and set up separately. The overview's "Where scans came from" counts a table's QR scans and NFC taps together as one total per table.
+- Fixed: the home page's two floating cards looked blurry (tilted text); they're straight now.
+- Added (admin): "Cancel renewal" and "Delete venue" (type the venue's name) on every venue in the admin console. Deleting stops Razorpay billing; both are logged. Demo venues can't be deleted.
+- Changed: the three demo venues stay for the home page, but the admin console's venue list, counts and revenue leave them out, so it shows only real venues.
+- Changed: admins with no venue of their own land in the admin console, not the setup wizard; the console's sidebar no longer shows Help & contact. New venues default to ₹.
+- Changed: Tabletap is its own business, a partnership firm (notarised deed), separate from NexLoop the way Blinkit is its own company within Eternal. The legal pages, Contact page and payments name "Tabletap, a partnership firm"; NexLoop appears nowhere.
+- Changed: no GST on the price (₹999 a year) while the business isn't GST-registered; one switch (`CHARGES_GST`) brings "+ 18% GST" back everywhere.
+- Added: an About page (Razorpay looks for one next to the policies).
+- Changed: the Wi-Fi email gate is an owner option (Loyalty → Guest details → "Email for Wi-Fi", off by default; no longer needs marketing consent on). It only asks for an email: no loyalty join and no free stamp for Wi-Fi any more. The free stamp for feedback stays.
 
 ### 2026-10-09
 - Added: Bento tile colours from the logo, the page colour, or picked, with a second colour (Auto gives brighter shades of the main one, so green stays green). Shades are nudged until text passes AA.

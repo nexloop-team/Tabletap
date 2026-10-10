@@ -43,9 +43,11 @@ export async function signup(input: z.output<typeof signupRequest>, origin: stri
   return user;
 }
 
-export async function login(input: z.output<typeof loginRequest>): Promise<User> {
-  // Per account as well as per address, so a botnet can't grind one password.
-  rateLimitKey(`login:${input.email}`, 10, 15 * 60_000);
+export async function login(input: z.output<typeof loginRequest>, ip: string): Promise<User> {
+  // Per account and address, so one person can't lock an owner out by
+  // guessing; and a looser cap per account, so a botnet can't grind one password.
+  rateLimitKey(`login:${input.email}:${ip}`, 10, 15 * 60_000);
+  rateLimitKey(`login:${input.email}`, 100, 60 * 60_000);
   const found = await findUserCredentials(input.email);
   const ok = await verifyPassword(input.password, found?.passwordHash ?? (await dummyPasswordHash()));
   if (!found || !ok) throw new ServiceError(401, "That email and password don't match");

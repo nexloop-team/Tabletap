@@ -205,6 +205,9 @@ export const DEMO_VENUES: PublicVenue[] = [
   },
 ];
 
+/** The demos' ids: they're for trying the product, so the admin console and its numbers leave them out. */
+export const DEMO_VENUE_IDS = DEMO_VENUES.map((venue) => venue.id);
+
 export async function seedDemoVenues(db: Db) {
   // Demo venues have no owner, so they're refreshed from this file on every start:
   // new demo content shows up without resetting the database.

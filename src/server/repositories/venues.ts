@@ -1,11 +1,13 @@
 import "server-only";
 import { TRIAL_DAYS } from "@/lib/plans";
 import { liveAnnouncement } from "@/lib/venue/features";
+import { venueTimeZone } from "@/lib/venue/region";
 import { localDate } from "../jobs/time";
 import type { VenueConfig } from "@/lib/venue/schema";
 import { resolveSettings, type VenueSettings } from "@/lib/venue/settings";
 import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
+import { DEMO_VENUE_IDS } from "../seed";
 import { storage, storageKey } from "../storage";
 import { startTrial, venueHasAccess } from "./subscriptions";
 
@@ -41,15 +43,27 @@ function toVenue(row: VenueRow): PublicVenue {
 }
 
 /**
+ * The venue an id, a short code or one of its earlier short codes names:
+ * after a change of page address, QR codes already printed still lead to
+ * the same venue (and never to anyone else's).
+ */
+async function findVenueRow(idOrCode: string): Promise<VenueRow | undefined> {
+  const db = await getDb();
+  const row = (await db.get("SELECT * FROM venues WHERE id = ? OR short_code = ? LIMIT 1", idOrCode, idOrCode)) as VenueRow | undefined;
+  if (row) return row;
+  return (await db.get("SELECT v.* FROM retired_codes r JOIN venues v ON v.id = r.venue_id WHERE r.code = ?", idOrCode)) as VenueRow | undefined;
+}
+
+/**
  * Accepts the canonical id or the short code printed in QR codes. This is the
  * guest-facing lookup: suspended venues and venues without a paid
  * subscription or running trial don't resolve, so their pages go offline.
  */
 export async function findVenue(idOrCode: string): Promise<PublicVenue | null> {
-  const row = (await (await getDb()).get("SELECT * FROM venues WHERE (id = ? OR short_code = ?) AND status = 'active' LIMIT 1", idOrCode, idOrCode)) as VenueRow | undefined;
-  if (!row || !await venueHasAccess(row.id)) return null;
+  const row = await findVenueRow(idOrCode);
+  if (!row || row.status !== "active" || !await venueHasAccess(row.id)) return null;
   const venue = toVenue(row);
-  return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date())) };
+  return { ...venue, announcement: liveAnnouncement(venue.announcement, localDate(new Date(), venueTimeZone(venue.currencyCode))) };
 }
 
 /**
@@ -58,7 +72,7 @@ export async function findVenue(idOrCode: string): Promise<PublicVenue | null> {
  * when the code doesn't belong to any venue.
  */
 export async function findPausedVenue(idOrCode: string): Promise<{ name: string; branding: PublicVenue["branding"] } | null> {
-  const row = (await (await getDb()).get("SELECT * FROM venues WHERE id = ? OR short_code = ? LIMIT 1", idOrCode, idOrCode)) as VenueRow | undefined;
+  const row = await findVenueRow(idOrCode);
   if (!row || (row.status === "active" && await venueHasAccess(row.id))) return null;
   const venue = toVenue(row);
   return { name: venue.name, branding: venue.branding };
@@ -135,8 +149,11 @@ export async function removeStaffMember(venueId: string, userId: string): Promis
   });
 }
 
+/** In use as a venue's id or code, or retired by another (or a deleted) venue. A venue may take back its own old code. */
 export async function shortCodeTaken(code: string, exceptVenueId = ""): Promise<boolean> {
-  return !!(await (await getDb()).get("SELECT 1 FROM venues WHERE (short_code = ? OR id = ?) AND id != ?", code, code, exceptVenueId));
+  const db = await getDb();
+  if (await db.get("SELECT 1 FROM venues WHERE (short_code = ? OR id = ?) AND id != ?", code, code, exceptVenueId)) return true;
+  return !!(await db.get("SELECT 1 FROM retired_codes WHERE code = ? AND (venue_id IS NULL OR venue_id != ?)", code, exceptVenueId));
 }
 
 export async function createVenue(input: { id: string; shortCode: string; ownerId: string; config: VenueConfig }) {
@@ -163,8 +180,14 @@ export async function restorePreviousConfig(venueId: string): Promise<boolean> {
   return Number(result.changes) > 0;
 }
 
+/** Changes the page address; the old one keeps leading here (see findVenueRow). */
 export async function updateShortCode(venueId: string, shortCode: string) {
-  (await (await getDb()).run("UPDATE venues SET short_code = ?, updated_at = now() WHERE id = ?", shortCode, venueId));
+  await transaction(async (db) => {
+    (await db.run(
+      "INSERT INTO retired_codes (code, venue_id) SELECT short_code, id FROM venues WHERE id = ? ON CONFLICT (code) DO UPDATE SET venue_id = excluded.venue_id, retired_at = now()", venueId));
+    (await db.run("DELETE FROM retired_codes WHERE code = ? AND venue_id = ?", shortCode, venueId));
+    (await db.run("UPDATE venues SET short_code = ?, updated_at = now() WHERE id = ?", shortCode, venueId));
+  });
 }
 
 /** Owner-only settings (stamp policy, automations), with defaults filled in. */
@@ -189,6 +212,8 @@ export async function deleteVenue(venueId: string) {
     for (const table of ["visits", "stamp_events", "loyalty_cards", "customers", "feedback", "events", "ai_usage", "venue_members", "subscriptions"]) {
       (await db.run(`DELETE FROM ${table} WHERE venue_id = ?`, venueId));
     }
+    // Its page addresses stay reserved, so printed QR codes can never lead to another venue.
+    (await db.run("INSERT INTO retired_codes (code, venue_id) SELECT short_code, NULL FROM venues WHERE id = ? ON CONFLICT (code) DO UPDATE SET venue_id = NULL", venueId));
     (await db.run("DELETE FROM venues WHERE id = ?", venueId));
   });
   for (const photo of photos) {
@@ -238,7 +263,8 @@ export async function listVenuesForAdmin(limit = 500): Promise<AdminVenueRow[]> 
               (SELECT MAX(e.created_at) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened'
                  AND COALESCE((e.params->>'source'), '') != 'preview') AS last_scan_at
        FROM venues v LEFT JOIN subscriptions s ON s.venue_id = v.id
-       ORDER BY v.created_at DESC LIMIT ?`, limit)) as {
+       WHERE NOT (v.id = ANY(?))
+       ORDER BY v.created_at DESC LIMIT ?`, DEMO_VENUE_IDS, limit)) as {
     id: string;
     short_code: string;
     name: string;

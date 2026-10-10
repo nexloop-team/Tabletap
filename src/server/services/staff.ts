@@ -10,7 +10,7 @@ import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
 import { ServiceError } from "../http";
 import { newToken } from "../ids";
-import { findCardById, setCardStamps, type LoyaltyCardRow } from "../repositories/loyalty-cards";
+import { findCardById, lockCard, setCardStamps, type LoyaltyCardRow } from "../repositories/loyalty-cards";
 import { lastStaffStampAt, lastUndoableEvent, markUndone, recordStampEvent } from "../repositories/stamps";
 import { findVenue, getVenueSettings } from "../repositories/venues";
 import { onStaffStamp } from "./retention";
@@ -115,8 +115,10 @@ async function stampVenue(device: StaffDevice): Promise<PublicVenue> {
   return venue;
 }
 
-async function requireCard(device: StaffDevice, cardId: string): Promise<LoyaltyCardRow> {
-  const card = await findCardById(await getDb(), cardId);
+/** Inside a transaction the card is locked until it ends, so two tills can't spend one balance twice. */
+async function requireCard(device: StaffDevice, cardId: string, lock = false): Promise<LoyaltyCardRow> {
+  const db = await getDb();
+  const card = lock ? await lockCard(db, cardId) : await findCardById(db, cardId);
   if (!card || card.venue_id !== device.venueId) throw new ServiceError(404, "We couldn't find that card at this venue");
   return card;
 }
@@ -168,12 +170,13 @@ export async function stampCard(device: StaffDevice, cardId: string, count: numb
   const venue = await stampVenue(device);
   const goal = stampGoal(programTiers(venue.loyaltyProgram));
   const requested = Math.min(Math.max(1, Math.floor(count)), MAX_STAMPS_PER_ACTION);
-  if (!force) {
-    const minutesAgo = await cooldownMinutesLeft(device.venueId, cardId);
-    if (minutesAgo !== null) throw new ServiceError(409, `This card was stamped ${minutesAgo === 0 ? "just now" : `${minutesAgo} min ago`}. Add another anyway?`);
-  }
   const { before, after } = await transaction(async (db) => {
-    const card = await requireCard(device, cardId);
+    // Locked first, so a double tap waits here and then sees the cooldown.
+    const card = await requireCard(device, cardId, true);
+    if (!force) {
+      const minutesAgo = await cooldownMinutesLeft(device.venueId, cardId);
+      if (minutesAgo !== null) throw new ServiceError(409, `This card was stamped ${minutesAgo === 0 ? "just now" : `${minutesAgo} min ago`}. Add another anyway?`);
+    }
     const next = Math.min(card.stamps + requested, goal);
     if (next === card.stamps) throw new ServiceError(400, "This card is full. Redeem the reward first.");
     await setCardStamps(db, card.id, next);
@@ -190,7 +193,7 @@ export async function redeemReward(device: StaffDevice, cardId: string, tierInde
   const tier = programTiers(venue.loyaltyProgram)[tierIndex];
   if (!tier) throw new ServiceError(400, "That reward doesn't exist any more. Refresh and try again.");
   await transaction(async (db) => {
-    const card = await requireCard(device, cardId);
+    const card = await requireCard(device, cardId, true);
     if (card.stamps < tier.stampsRequired) throw new ServiceError(400, `Not enough stamps for ${tier.rewardName} yet`);
     await setCardStamps(db, card.id, card.stamps - tier.stampsRequired);
     await recordStampEvent(db, { venueId: device.venueId, cardId: card.id, kind: "redeem", delta: -tier.stampsRequired, rewardName: tier.rewardName, deviceId: device.id });
@@ -204,7 +207,7 @@ export async function undoLast(device: StaffDevice, cardId: string): Promise<Sta
   const venue = await stampVenue(device);
   const goal = stampGoal(programTiers(venue.loyaltyProgram));
   await transaction(async (db) => {
-    const card = await requireCard(device, cardId);
+    const card = await requireCard(device, cardId, true);
     const event = await lastUndoableEvent(db, card.id, UNDO_MINUTES);
     if (!event) throw new ServiceError(400, `Nothing to undo. Only the last ${UNDO_MINUTES} minutes can be undone.`);
     const next = Math.min(Math.max(card.stamps - event.delta, 0), Math.max(goal, card.stamps));

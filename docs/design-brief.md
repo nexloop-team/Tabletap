@@ -130,18 +130,18 @@ Each card has a tinted icon circle (44px), a 15px label and a chevron. Tapping a
 
 #### Footer
 
-A row of social icons in single-colour glyphs: Google, Facebook, Instagram, TripAdvisor, YouTube. There's no language switch; guests get Spanish when their phone is set to it.
+A row of social icons in single-colour glyphs: Google, Facebook, Instagram, TripAdvisor, YouTube.
 
 #### States
 
 - **Loading:** a skeleton.
 - **Page unavailable:** a sad-face icon and the text "This page isn't available". This shows when the code is wrong, the venue is suspended, or **the subscription has lapsed**.
 - **Forms:** errors, success, "Check your inbox to confirm", and buttons disabled while busy.
-- **Returning member:** sees their card straight away.
+- **Returning member:** sees their card straight away on a phone that knows it; otherwise it's emailed to them again.
 
 #### Copy
 
-English and Spanish. Spanish strings run longer.
+English only (Indian formats for dates and prices).
 
 ### 4.2 Hosted menu: `/menu?i=<code>`
 

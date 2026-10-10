@@ -13,6 +13,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+/** Same rules as src/server/db.ts databaseSsl. */
+function sslFor(url) {
+  if (process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url)) return undefined;
+  const ca = process.env.DATABASE_SSL_CA?.trim();
+  if (ca) return { rejectUnauthorized: true, ca: ca.includes("BEGIN CERTIFICATE") ? ca.replaceAll("\\n", "\n") : fs.readFileSync(ca, "utf8") };
+  return { rejectUnauthorized: process.env.DATABASE_SSL === "verify" };
+}
+
+
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const source = process.argv[2] || path.join(DATA_DIR, "app.db");
 if (!fs.existsSync(source)) {
@@ -62,7 +71,7 @@ async function connect() {
     const url = process.env.DATABASE_URL;
     const client = new pg.Client({
       connectionString: url,
-      ssl: process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: false },
+      ssl: sslFor(url),
     });
     await client.connect();
     return {

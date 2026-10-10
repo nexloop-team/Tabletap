@@ -7,7 +7,8 @@ describe("venue region", () => {
     expect(venueUtcOffsetMinutes("AED")).toBe(240);
     expect(venueUtcOffsetMinutes("GBP", new Date("2026-01-15T12:00:00Z"))).toBe(0);
     expect(venueUtcOffsetMinutes("GBP", new Date("2026-07-15T12:00:00Z"))).toBe(60);
-    expect(venueUtcOffsetMinutes("XXX")).toBe(0);
+    // A currency without a zone of its own counts days in India, where we sell first.
+    expect(venueUtcOffsetMinutes("XXX")).toBe(330);
   });
 
   it("prices Indian menus in whole rupees", () => {

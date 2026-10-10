@@ -90,14 +90,19 @@ export async function requireApiUser(): Promise<User> {
   return user;
 }
 
-/** Super admins are named by email in ADMIN_EMAILS, so nobody inside the app can grant or take it away. */
-export function isSuperAdmin(user: User | null): boolean {
-  if (!user || !user.emailVerified) return false;
+/** This account's email is in ADMIN_EMAILS, confirmed or not (to tell an unconfirmed admin what's missing). */
+export function isListedSuperAdmin(user: User | null): boolean {
+  if (!user) return false;
   const admins = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
   return admins.includes(user.email);
+}
+
+/** Super admins are named by email in ADMIN_EMAILS, so nobody inside the app can grant or take it away. */
+export function isSuperAdmin(user: User | null): boolean {
+  return !!user && user.emailVerified && isListedSuperAdmin(user);
 }
 
 /** May use the operator console: a super admin, or someone a super admin made an admin. */

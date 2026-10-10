@@ -4,21 +4,26 @@ import type { z } from "zod";
 import type { EnrollResponse, StampResponse, enrollRequest, stampRequest } from "@/lib/api/contracts";
 import { isValidBirthday } from "@/lib/validation";
 import { birthdayAskOn, hasLoyaltyProgram, isRewardsOnly } from "@/lib/venue/features";
+import { programTiers, stampGoal } from "@/lib/venue/loyalty";
 import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
 import { ServiceError } from "../http";
 import { findCustomerByEmail, setBirthday, upsertCustomer } from "../repositories/customers";
-import { addFeedbackStamp, createCard, findCardByCustomer, hoursSince, markPassEmailed, setCardStamps, type LoyaltyCardRow } from "../repositories/loyalty-cards";
+import { claimFeedbackStamp } from "../repositories/feedback";
+import { addFeedbackStamp, createCard, findCardByCustomer, hoursSince, lockCard, markPassEmailed, setCardStamps, type LoyaltyCardRow } from "../repositories/loyalty-cards";
 import { attachReferral, findReferrerCard } from "../repositories/retention";
 import { recordStampEvent } from "../repositories/stamps";
 import { friendJoinBonus } from "./retention";
-import { findVenue } from "../repositories/venues";
+import { findVenue, getVenueSettings } from "../repositories/venues";
 import { deliver, recordConsent } from "./consent";
 import { sendMail } from "./mailer";
 import { issueWalletPass } from "./wallet";
 
-/** A returning member is re-sent their card at most this often. */
-const PASS_RESEND_COOLDOWN_HOURS = 24 * 7;
+/**
+ * A returning member is emailed their card link again (never shown it on the
+ * page, since anyone can type an email), at most this often.
+ */
+const PASS_RESEND_COOLDOWN_HOURS = 1;
 /** One feedback stamp per member per day. */
 const FEEDBACK_STAMP_COOLDOWN_HOURS = 24;
 
@@ -47,7 +52,6 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
 
   // The CRM doors each have their own switch; the home card is always open.
   if (input.door === "feedback" && !venue.crm.feedbackCapture) throw new ServiceError(403, "Joining is not available here");
-  if (input.door === "wifi_gate" && !venue.crm.wifiCapture) throw new ServiceError(403, "Joining is not available here");
 
   const isRewardsJoin = input.captureSource === "rewards";
   // On a rewards join the button press is the consent; the age line gates it.
@@ -56,6 +60,8 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
     : input.marketingConsent === undefined
       ? null
       : { marketingConsent: input.marketingConsent, ageAttested: !!input.ageAttested };
+
+  const feedbackStampOn = (await getVenueSettings(venue.id)).stampPolicy.feedbackStamp;
 
   const result = await transaction(async (db) => {
     const { customer } = await upsertCustomer(db, {
@@ -69,8 +75,12 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
     let card = await findCardByCustomer(db, customer.id);
     const wasExisting = !!card;
     if (!card) {
-      // Stamps are never granted on a rewards-only programme, whatever arrives.
-      const stamps = rewardsOnly || isRewardsJoin ? 0 : (input.initialStamps ?? 0);
+      // The join stamp is the server's call: only a receipt for feedback just
+      // posted earns it. Never on rewards-only.
+      let stamps = 0;
+      if (!rewardsOnly && !isRewardsJoin && input.initialStamps === 1 && input.captureSource === "feedback" && feedbackStampOn && input.feedbackReceipt) {
+        stamps = (await claimFeedbackStamp(db, venue.id, input.feedbackReceipt.feedbackId, input.feedbackReceipt.token)) ? 1 : 0;
+      }
       card = await createCard(db, venue.id, customer.id, stamps);
       if (input.captureSource === "feedback" && stamps > 0) await addFeedbackStampCooldownOnly(db, card.id);
       // Joined through a member's invite: link the cards (the inviter is
@@ -100,10 +110,10 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
   if (passEmailed) await markPassEmailed(await getDb(), card.id);
   await deliver(consent.mail);
 
-  // A returning member who types their email again gets their card back on
-  // the spot (owner's decision, 2026-10-04): at a café till, staff already
-  // find members by name or email, so the email is the identity here too.
-  // Wallet passes are still only minted on first join.
+  // A returning member is sent their card again by email rather than shown
+  // it here: an email address is no proof of who's typing it, and the card's
+  // QR code is what staff scan to hand out a reward. The till can still find
+  // them by name or email. Wallet passes are only minted on first join.
   const pass = wasExisting
     ? { passBase64: null, googleWalletUrl: null }
     : issueWalletPass({ cardId: card.id, venueName: venue.name, holderName: customer.first_name ?? customer.name, stamps: card.stamps });
@@ -115,7 +125,7 @@ export async function enroll(input: z.output<typeof enrollRequest>, origin: stri
     passEmailed,
     passBase64: pass.passBase64,
     googleWalletUrl: pass.googleWalletUrl,
-    cardUrl: cardUrl(origin, card),
+    cardUrl: wasExisting ? null : cardUrl(origin, card),
     confirmationPending: consent.confirmationPending,
   };
 }
@@ -126,20 +136,24 @@ async function addFeedbackStampCooldownOnly(db: Db, cardId: string) {
 }
 
 /**
- * Stamps an existing member for leaving feedback. Every refusal (not a
- * member, cooldown) answers the same `stamped: false`, so the endpoint cannot
- * be used to test whether an address is a member.
+ * Stamps an existing member for the feedback they just posted: it needs that
+ * feedback's one-time receipt, and gives at most one stamp a day. Every
+ * refusal (not a member, cooldown, used receipt) answers the same
+ * `stamped: false` without the balance, so the endpoint cannot be used to
+ * test whether an address is a member.
  */
 export async function stampForFeedback(input: z.output<typeof stampRequest>): Promise<StampResponse> {
   const venue = await requireVenue(input.venueId);
   if (!hasLoyaltyProgram(venue)) throw new ServiceError(400, "This venue does not have a stamp card");
+  const refused = { stamped: false, currentStamps: 0 };
+  if (!(await getVenueSettings(venue.id)).stampPolicy.feedbackStamp) return refused;
+  const goal = stampGoal(programTiers(venue.loyaltyProgram));
   return await transaction(async (db) => {
     const customer = await findCustomerByEmail(db, venue.id, input.email);
-    const card = customer ? await findCardByCustomer(db, customer.id) : null;
-    if (!card) return { stamped: false, currentStamps: 0 };
-    if (hoursSince(card.last_feedback_stamp_at) < FEEDBACK_STAMP_COOLDOWN_HOURS) {
-      return { stamped: false, currentStamps: card.stamps };
-    }
-    return { stamped: true, currentStamps: await addFeedbackStamp(db, card.id) };
+    const found = customer ? await findCardByCustomer(db, customer.id) : null;
+    const card = found ? await lockCard(db, found.id) : null;
+    if (!card || hoursSince(card.last_feedback_stamp_at) < FEEDBACK_STAMP_COOLDOWN_HOURS) return refused;
+    if (!(await claimFeedbackStamp(db, venue.id, input.feedbackReceipt.feedbackId, input.feedbackReceipt.token))) return refused;
+    return { stamped: true, currentStamps: await addFeedbackStamp(db, card.id, goal) };
   });
 }

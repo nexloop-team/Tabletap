@@ -6,7 +6,7 @@ const DAY = 86_400_000;
 export function formatDate(value: string | null | undefined): string {
   const time = parseDbDate(value);
   if (time === null) return "–";
-  return new Date(time).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return new Date(time).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /** Midnight UTC of the day containing `time`. */

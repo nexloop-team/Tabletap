@@ -5,6 +5,7 @@ import { AppShell } from "@/components/dashboard/Shell";
 import { BRAND } from "@/config/brand";
 import { platformCounts } from "@/server/admin";
 import { requireAdminPage } from "@/server/dashboard";
+import { listVenuesForUser } from "@/server/repositories/venues";
 import "@/styles/app.css";
 
 export const metadata: Metadata = { title: { default: "Admin", template: `%s · Admin · ${BRAND.name}` }, robots: { index: false, follow: false } };
@@ -13,9 +14,10 @@ export const metadata: Metadata = { title: { default: "Admin", template: `%s · 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await requireAdminPage();
   const totals = await platformCounts();
+  const ownsVenues = (await listVenuesForUser(user.id)).length > 0;
   return (
     <div className={`app ${uiFont.variable}`}>
-      <AppShell mode="admin" venues={[]} user={{ name: user.name, email: user.email, isAdmin: true }} counts={{ "/admin/venues": totals.venues, "/admin/accounts": totals.accounts }}>
+      <AppShell mode="admin" venues={[]} user={{ name: user.name, email: user.email, isAdmin: true }} counts={{ "/admin/venues": totals.venues, "/admin/accounts": totals.accounts }} ownsVenues={ownsVenues}>
         {children}
       </AppShell>
     </div>

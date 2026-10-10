@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Printer } from "lucide-react";
+import { Download, Nfc, Printer } from "lucide-react";
 import { useMemo, useState } from "react";
 import { sourceSlug } from "@/lib/qr-source";
 import { PRINT_FORMATS, PrintSheets, parseTables, sheetCount, type PrintFormat, type PrintVenue } from "./PrintSheets";
@@ -83,6 +83,11 @@ export function QrDesigner({ venueId, guestUrl, printVenue }: { venueId: string;
             <button type="button" className="btn btn-primary" onClick={() => window.print()} disabled={format !== "wifi" && labels.length === 0}>
               <Printer aria-hidden /> Print {sheets} sheet{sheets === 1 ? "" : "s"}
             </button>
+            {format !== "wifi" && (
+              <button type="button" className="btn" onClick={() => downloadNfcLinks(printVenue.name, guestUrl, labels)} disabled={labels.length === 0}>
+                <Nfc aria-hidden /> NFC links
+              </button>
+            )}
             <span className="hint">A4, scale 100%</span>
           </div>
           <HelpTip question="How do I print them the right size?">
@@ -91,6 +96,26 @@ export function QrDesigner({ venueId, guestUrl, printVenue }: { venueId: string;
               scan easily. Thick card (250gsm or more) stands up best in table holders.
             </p>
           </HelpTip>
+          {format !== "wifi" && (
+            <HelpTip question="How do I write the NFC tags?">
+              <ol>
+                <li>
+                  Tap <strong>NFC links</strong> to download every table&apos;s link (a spreadsheet: each table&apos;s NFC link beside its QR link).
+                </li>
+                <li>
+                  In the free <strong>NFC Tools</strong> app: <strong>Write → Add a record → URL</strong>, paste the table&apos;s NFC link, tap{" "}
+                  <strong>Write</strong> and hold the phone on an NTAG213/215 tag.
+                </li>
+                <li>Test it with another phone, then lock the tag (<strong>Other → Lock tag</strong>) so nobody can rewrite it.</li>
+              </ol>
+              <p>Taps count towards the same table as its QR code. Keep the QR code on the table too.</p>
+              {isTemporaryAddress(guestUrl) && (
+                <p>
+                  <strong>Write tags only from your live site:</strong> these links use a temporary address ({new URL(guestUrl).host}).
+                </p>
+              )}
+            </HelpTip>
+          )}
         </Card>
       </div>
       <section className="qr-sheet-preview" aria-label="Print preview">
@@ -109,4 +134,43 @@ export function PrintButton() {
       <Printer aria-hidden /> Print
     </button>
   );
+}
+
+/** A link an NFC tag can carry: the spot's page, marked so taps show apart from scans in the stats ("table-4-nfc", or "nfc" unnamed). */
+export function nfcTagLink(guestUrl: string, label: string): string {
+  const spot = sourceSlug(label);
+  return `${guestUrl}&s=${spot ? `${spot}-nfc` : "nfc"}`;
+}
+
+/** Addresses a printed tag must never carry: they stop working once the app moves to its real domain. */
+function isTemporaryAddress(url: string): boolean {
+  return /^https?:\/\/(localhost|127\.|192\.168\.|10\.|[^/]*ngrok)/i.test(url);
+}
+
+/** One CSV cell, quoted when it holds a comma, quote or line break. */
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/**
+ * Downloads every table's links as a spreadsheet (CSV): the NFC link to write
+ * onto its tag next to the QR link printed on its card, so each table's tag
+ * and card match.
+ */
+export function nfcLinksCsv(guestUrl: string, labels: string[]): string {
+  const rows = [["Table", "NFC link (write onto the tag)", "QR link (on the printed card)"]];
+  for (const label of labels) rows.push([label, nfcTagLink(guestUrl, label), `${guestUrl}&s=${sourceSlug(label)}`]);
+  return `${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
+}
+
+function downloadNfcLinks(venueName: string, guestUrl: string, labels: string[]) {
+  const blob = new Blob([nfcLinksCsv(guestUrl, labels)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sourceSlug(venueName) || "venue"}-nfc-links.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

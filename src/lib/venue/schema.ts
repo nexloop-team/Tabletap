@@ -38,7 +38,7 @@ export const MENU_BADGES = ["popular", "new", "spicy", "chef"] as const;
 /** The Indian veg / non-veg mark (see lib/venue/region). */
 export const FOOD_TYPES = ["veg", "nonveg", "egg"] as const;
 export const VENUE_TYPES = ["cafe", "restaurant", "bakery", "pub", "bar", "hotel", "other"] as const;
-export const CURRENCIES = ["GBP", "EUR", "USD", "INR", "AUD", "CAD", "NZD", "AED", "SGD", "ZAR"] as const;
+export const CURRENCIES = ["INR", "GBP", "EUR", "USD", "AUD", "CAD", "NZD", "AED", "SGD", "ZAR"] as const;
 export const LINK_LABEL_TOKENS = ["view_menu", "view_price_list", "our_services", "book_now", "visit_website", "order_online"] as const;
 
 export const menuItemSchema = z.object({

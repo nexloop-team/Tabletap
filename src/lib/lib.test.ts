@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lexiconSentiment } from "@/server/services/sentiment";
 import { formatSince } from "./format";
-import { createTranslator, detectLocale } from "./i18n";
+import { createTranslator } from "./i18n";
 import { linkLabel } from "./landing-copy";
 import { computeTheme, isLightColor, themeCss } from "./theme";
 import { isPlausibleEmail, isValidBirthday, maskEmail } from "./validation";
@@ -47,20 +47,13 @@ describe("validation", () => {
 });
 
 describe("i18n", () => {
-  it("matches exact tag, then primary subtag, then English", () => {
-    expect(detectLocale("es-MX,es;q=0.9")).toBe("es");
-    expect(detectLocale("fr-FR")).toBe("en");
-  });
-
-  it("falls back to English for keys a locale hasn't translated", () => {
-    const { t, tf } = createTranslator("es");
-    expect(t("thank_you")).toBe("Gracias");
-    expect(t("sudoku_title")).toBe("Sudoku");
-    expect(tf("collect_stamps_single", { stamps: 8, reward: "café" })).toBe("Acumula 8 sellos para ganar café");
+  it("fills placeholders", () => {
+    const { tf } = createTranslator();
+    expect(tf("collect_stamps_single", { stamps: 8, reward: "coffee" })).toContain("8");
   });
 
   it("labels links from custom text, then known tokens, then the fallback", () => {
-    const { t } = createTranslator("en");
+    const { t } = createTranslator();
     expect(linkLabel("book_now", " Reserve ", t, "feature_menu")).toBe("Reserve");
     expect(linkLabel("book_now", null, t, "feature_menu")).toBe("Book Now");
     expect(linkLabel("toString", null, t, "feature_menu")).toBe("Menu");
@@ -84,5 +77,27 @@ describe("formatSince", () => {
     expect(formatSince("2026-10-08 09:30:00", now)).toBe("2 h");
     expect(formatSince("2026-10-07 09:00:00", now)).toBe("Yesterday");
     expect(formatSince(null, now)).toBe("–");
+  });
+});
+
+describe("NFC tag links", () => {
+  it("open the table's page, marked so taps show apart from QR scans", async () => {
+    const { nfcTagLink } = await import("@/components/dashboard/QrDesigner");
+    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "Table 4")).toBe("https://tabletap.in/s?i=chai-corner&s=table-4-nfc");
+    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "Patio")).toBe("https://tabletap.in/s?i=chai-corner&s=patio-nfc");
+    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "")).toBe("https://tabletap.in/s?i=chai-corner&s=nfc");
+  });
+});
+
+describe("NFC links download", () => {
+  it("lists each table's NFC link beside its QR link, one row per table", async () => {
+    const { nfcLinksCsv } = await import("@/components/dashboard/QrDesigner");
+    const csv = nfcLinksCsv("https://tabletap.in/s?i=chai", ["Table 1", "Patio, back"]);
+    expect(csv.split("\r\n")).toEqual([
+      "Table,NFC link (write onto the tag),QR link (on the printed card)",
+      "Table 1,https://tabletap.in/s?i=chai&s=table-1-nfc,https://tabletap.in/s?i=chai&s=table-1",
+      '"Patio, back",https://tabletap.in/s?i=chai&s=patio-back-nfc,https://tabletap.in/s?i=chai&s=patio-back',
+      "",
+    ]);
   });
 });

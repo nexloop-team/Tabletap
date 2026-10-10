@@ -69,8 +69,14 @@ export const adminVenueRequest = z.object({
   freeAccess: z.boolean().optional(),
   /** Push the trial end out by this many days (from today if it already ended). */
   extendTrialDays: z.number().int().min(1).max(90).optional(),
+  /** Stop the paid subscription renewing; the venue stays live until the paid year ends. */
+  cancelRenewal: z.literal(true).optional(),
 });
 export type AdminVenueRequest = z.input<typeof adminVenueRequest>;
+
+/** Deleting a venue from the admin console: its name, typed to confirm. */
+export const adminDeleteVenueRequest = z.object({ confirmName: z.string().max(200) });
+export type AdminDeleteVenueRequest = z.input<typeof adminDeleteVenueRequest>;
 
 export const adminEditModeRequest = z.object({ on: z.boolean() });
 export type AdminEditModeRequest = z.input<typeof adminEditModeRequest>;

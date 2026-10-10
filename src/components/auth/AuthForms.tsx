@@ -116,7 +116,8 @@ export function SignupForm({ next, staffVenue }: { next?: string; staffVenue?: s
       <ErrorNotice error={error} />
       <Submit pending={pending}>{staffVenue ? "Join and open the till" : "Create my account"}</Submit>
       <p className="hint" style={{ marginTop: 12, textAlign: "center" }}>
-        By signing up you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.
+        By signing up you agree to our <Link href="/terms">Terms</Link>, <Link href="/privacy">Privacy policy</Link> and{" "}
+        <Link href="/refunds">Refund policy</Link>.
       </p>
     </form>
   );

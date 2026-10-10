@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CalendarPlus, ExternalLink, Gift, KeyRound, LayoutDashboard, Loader2, Lock, LockOpen, Mail, MoreHorizontal, RotateCcw, Shield, ShieldOff, Trash2, XCircle, type LucideIcon } from "lucide-react";
+import { Ban, CalendarPlus, CreditCard, ExternalLink, Gift, KeyRound, LayoutDashboard, Loader2, Lock, LockOpen, Mail, MoreHorizontal, RotateCcw, Shield, ShieldOff, Trash2, XCircle, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ReactNode, type ToggleEvent } from "react";
@@ -111,10 +111,27 @@ function RowMenu({ label, lead, entries }: { label: string; lead?: ReactNode; en
   );
 }
 
-/** Row actions for a venue: open it, plus subscription and status changes. */
-export function AdminVenueActions({ venueId, name, guestUrl, status, segment }: { venueId: string; name: string; guestUrl: string; status: "active" | "suspended"; segment: VenueSegment }) {
+/** Row actions for a venue: open it, subscription and status changes, and deleting it for the owner. */
+export function AdminVenueActions({
+  venueId,
+  name,
+  guestUrl,
+  status,
+  segment,
+  renewing = false,
+}: {
+  venueId: string;
+  name: string;
+  guestUrl: string;
+  status: "active" | "suspended";
+  segment: VenueSegment;
+  /** Pays through a subscription that will renew, so renewal can be cancelled. */
+  renewing?: boolean;
+}) {
   const update = (body: AdminVenueRequest) => () => dashboardApi.adminUpdateVenue(venueId, body);
   const onTrial = segment === "trial" || segment === "unpaid";
+  const typed = useRef("");
+  const confirmId = useId();
   return (
     <RowMenu
       label={`More actions for ${name}`}
@@ -174,6 +191,50 @@ export function AdminVenueActions({ venueId, name, guestUrl, status, segment }: 
               run: update({ status: "active" }),
               question: { title: `Restore ${name}?`, body: "Its guest page comes back online straight away.", confirmLabel: "Restore venue" },
             },
+        renewing && {
+          kind: "action",
+          label: "Cancel renewal",
+          icon: CreditCard,
+          danger: true,
+          run: update({ cancelRenewal: true }),
+          question: {
+            title: `Cancel ${name}'s renewal?`,
+            body: "It won't be charged again. The guest page stays live until the end of the year they paid for, then goes offline.",
+            confirmLabel: "Cancel renewal",
+            cancelLabel: "Keep renewing",
+            danger: true,
+          },
+          done: "Renewal cancelled.",
+        },
+        { kind: "separator" },
+        {
+          kind: "action",
+          label: "Delete venue",
+          icon: Trash2,
+          danger: true,
+          run: () => dashboardApi.adminDeleteVenue(venueId, { confirmName: typed.current }),
+          question: () => {
+            typed.current = "";
+            return {
+              title: `Delete ${name}?`,
+              body: (
+                <>
+                  <p>
+                    This deletes the guest page, menus, guests, feedback and photos for good, and stops its Razorpay subscription. Printed QR codes stop
+                    working. It can&apos;t be undone.
+                  </p>
+                  <label className="field-label" htmlFor={confirmId} style={{ display: "block", marginTop: 10 }}>
+                    Type the venue&apos;s name to confirm
+                  </label>
+                  <input id={confirmId} className="input" autoComplete="off" onChange={(event) => (typed.current = event.target.value)} />
+                </>
+              ),
+              confirmLabel: "Delete venue",
+              danger: true,
+            };
+          },
+          done: "Venue deleted.",
+        },
       ]}
     />
   );

@@ -3,7 +3,7 @@ import { Check, ExternalLink, Lock } from "lucide-react";
 import { BrandMark } from "@/components/icons";
 import { CancelSubscriptionButton, SubscribeButton } from "@/components/dashboard/BillingActions";
 import { BRAND } from "@/config/brand";
-import { accessBadge, BILLING_PERIOD, formatInr, GST_RATE, parseDbDate, PLAN_FEATURES, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS, trialDaysLeft } from "@/lib/plans";
+import { accessBadge, BILLING_PERIOD, CHARGES_GST, formatInr, gstNote, parseDbDate, PLAN_FEATURES, PRICE_INR, PRICE_TOTAL_INR, TRIAL_DAYS, trialDaysLeft } from "@/lib/plans";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { billingMode } from "@/server/services/billing";
 import { guestPageUrl } from "@/server/services/qr";
@@ -95,7 +95,7 @@ function statusFor(input: {
   return {
     tone: "ok",
     title: periodEnd ? `Renews on ${formatDate(periodEnd)}` : "You’re subscribed",
-    body: `Razorpay will charge ${formatInr(PRICE_WITH_GST_INR)} including GST on that day. Your page stays live the whole time.`,
+    body: `Razorpay will charge ${formatInr(PRICE_TOTAL_INR)}${CHARGES_GST ? " including GST" : ""} on that day. Your page stays live the whole time.`,
   };
 }
 
@@ -201,9 +201,16 @@ export default async function BillingPage({ params, searchParams }: PageProps<"/
               </p>
             </details>
             <details>
-              <summary>Do I get a GST invoice?</summary>
+              <summary>{CHARGES_GST ? "Do I get a GST invoice?" : "Do I get a receipt?"}</summary>
               <p>
-                Yes. Razorpay emails a receipt for every payment with the 18% GST shown. Need your GSTIN on the invoice? Email <a href={`mailto:${BRAND.supportEmail}`}>{BRAND.supportEmail}</a> and we’ll add it.
+                {CHARGES_GST ? (
+                  <>
+                    Yes. Razorpay emails a receipt for every payment with the 18% GST shown. Need your GSTIN on the invoice? Email{" "}
+                    <a href={`mailto:${BRAND.supportEmail}`}>{BRAND.supportEmail}</a> and we’ll add it.
+                  </>
+                ) : (
+                  <>Yes. Razorpay emails a receipt for every payment. No GST is charged, so there&apos;s no GST to claim back.</>
+                )}
               </p>
             </details>
             <details>
@@ -225,7 +232,7 @@ export default async function BillingPage({ params, searchParams }: PageProps<"/
             <span> / {BILLING_PERIOD} per venue</span>
           </div>
           <p className="plan-gst">
-            + {GST_RATE * 100}% GST, so {formatInr(PRICE_WITH_GST_INR)} in total
+            {gstNote()}
           </p>
           <ul>
             {planPoints.map((feature) => (

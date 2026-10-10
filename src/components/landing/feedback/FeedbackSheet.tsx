@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { api } from "@/lib/api/client";
+import type { FeedbackResponse } from "@/lib/api/contracts";
 import { Field } from "../forms";
 import { useLanding } from "../LandingContext";
 import { FeedbackThankYou } from "./FeedbackThankYou";
@@ -12,7 +13,7 @@ const MIN_SENDING_MS = 800;
 
 export const FEEDBACK_TEXTAREA_ID = "feedback-text";
 
-type Phase = { kind: "form" } | { kind: "sending" } | { kind: "thanks"; text: string; score: number };
+type Phase = { kind: "form" } | { kind: "sending" } | { kind: "thanks"; text: string; score: number; receipt: FeedbackResponse["stampReceipt"] };
 
 export function FeedbackSheet() {
   const { venue, t, track, source } = useLanding();
@@ -40,7 +41,7 @@ export function FeedbackSheet() {
         feedback_length: trimmed.length,
         has_image: !!photo,
       });
-      setPhase({ kind: "thanks", text: trimmed, score });
+      setPhase({ kind: "thanks", text: trimmed, score, receipt: result.stampReceipt });
     } catch {
       // Unlike a fire-and-forget post, a failure is shown and the text is kept for a retry.
       setError(t("something_wrong"));
@@ -51,7 +52,7 @@ export function FeedbackSheet() {
   if (phase.kind === "thanks") {
     return (
       <div className="sheet-inner fade-in">
-        <FeedbackThankYou text={phase.text} score={phase.score} />
+        <FeedbackThankYou text={phase.text} score={phase.score} receipt={phase.receipt} />
       </div>
     );
   }

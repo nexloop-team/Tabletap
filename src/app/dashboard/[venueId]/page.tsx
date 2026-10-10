@@ -1,4 +1,5 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleHelp, ExternalLink, Inbox, PartyPopper, Printer, Star } from "lucide-react";
+import { FeedbackSummaryCard } from "@/components/dashboard/FeedbackSummaryCard";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleHelp, ExternalLink, PartyPopper, Printer, Star } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -58,20 +59,20 @@ function hourLabel(hour: number): string {
 /** "3 Oct" for a stored timestamp. */
 function shortDate(value: string): string {
   const date = parseDbDate(value);
-  return date ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+  return date ? new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "";
 }
 
 /** Is the venue in its first week, and "Since Tuesday" for its stat tiles. */
 function venueAge(createdAt: string, now = Date.now()) {
   const created = parseDbDate(createdAt) ?? now;
-  return { firstWeek: now - created < 7 * DAY, sinceDay: `Since ${new Date(created).toLocaleDateString("en-GB", { weekday: "long" })}` };
+  return { firstWeek: now - created < 7 * DAY, sinceDay: `Since ${new Date(created).toLocaleDateString("en-IN", { weekday: "long" })}` };
 }
 
-/** "One says Saturday service felt slow." — the start of the newest unread note. */
-function snippet(text: string | null): string | null {
-  if (!text) return null;
-  const first = text.trim().split(/(?<=[.!?])\s/)[0];
-  return first.length > 90 ? `${first.slice(0, 88).trimEnd()}…` : first;
+/** "table-4" → "Table 4"; the code with no spot name is the main one. */
+function spotName(source: string): string {
+  if (source === "unknown") return "Main code";
+  const words = source.replace(/[-_]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export default async function VenueOverview({ params, searchParams }: PageProps<"/dashboard/[venueId]">) {
@@ -117,7 +118,8 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
   const setupHidden = hidden.has("setup") || done === checklist.length;
   const settingUp = !setupHidden && (done <= 3 || (firstWeek && done < checklist.length));
   const nextStep = setupHidden ? null : next;
-  const showNext = !settingUp && (unread.count > 0 || !!nextStep);
+  // Unread feedback already shows in "Latest feedback", so this box is only for the next setup step.
+  const showNext = !settingUp && !!nextStep;
 
   const engagement = await venueEngagement(venue.id, days, offset);
   const latestFeedback = (await listFeedback(venue.id, { limit: 3 })).rows;
@@ -239,60 +241,6 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               ))}
           </ul>
         </section>
-      ) : showNext ? (
-        <section className="card next-card">
-          <div className="card-head">
-            <h2>What to do next</h2>
-            {nextStep && (
-              <span className="next-setup">
-                Setup {done} of {checklist.length} done
-                <span className="progress small" aria-hidden>
-                  <span style={{ width: `${(done / checklist.length) * 100}%` }} />
-                </span>
-                <DismissButton cookie={hideCookie} part="setup" label="Hide the setup guide" />
-              </span>
-            )}
-          </div>
-          <div className="next-grid">
-            {unread.count > 0 && (
-              <div className="next-tile">
-                <span className="next-icon warm" aria-hidden>
-                  <Inbox />
-                </span>
-                <div>
-                  <strong>
-                    {unread.count} new feedback message{unread.count === 1 ? "" : "s"}
-                  </strong>
-                  {snippet(unread.latest) && <p>{unread.count === 1 ? `“${snippet(unread.latest)}”` : `One says: “${snippet(unread.latest)}”`} Worth a look.</p>}
-                  <Link className="btn btn-primary btn-sm" href={`${base}/feedback`}>
-                    Read feedback
-                  </Link>
-                </div>
-              </div>
-            )}
-            {nextStep && (
-              <div className="next-tile">
-                <span className="next-icon" aria-hidden>
-                  <Star />
-                </span>
-                <div>
-                  <strong>{nextStep.label}</strong>
-                  <p>{nextStep.why}</p>
-                  <span className="inline">
-                    <Link className="btn btn-sm" href={nextStep.href}>
-                      {nextStep.cta}
-                    </Link>
-                    {nextStep.help && (
-                      <Link className="link-quiet inline" href={nextStep.help}>
-                        <CircleHelp aria-hidden /> How do I find it?
-                      </Link>
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
       ) : null}
 
       <div className="stats">
@@ -324,7 +272,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               <h2>Scans per day</h2>
               {stats.scans > 0 && (
                 <p>
-                  {stats.scans.toLocaleString("en-GB")} visits{busiest ? ` · busiest on ${busiest}` : ""}
+                  {stats.scans.toLocaleString("en-IN")} visits{busiest ? ` · busiest on ${busiest}` : ""}
                 </p>
               )}
             </div>
@@ -427,7 +375,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
           <div className="card-head">
             <div>
               <h2>Where scans came from</h2>
-              <p>One QR code per table</p>
+              <p>Visits per table</p>
             </div>
           </div>
           {sources.length > 0 ? (
@@ -435,8 +383,8 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
               {topSources.map((source) => (
                 <li key={source.source}>
                   <span className="source-row">
-                    <span>{source.source === "unknown" ? "Main QR code" : source.source}</span>
-                    <span className="muted num">{source.scans.toLocaleString("en-GB")}</span>
+                    <span>{spotName(source.source)}</span>
+                    <span className="muted num">{source.scans.toLocaleString("en-IN")}</span>
                   </span>
                   <span className="meter">
                     <span style={{ width: `${(source.scans / maxSource) * 100}%` }} />
@@ -447,7 +395,7 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
                 <li>
                   <span className="source-row">
                     <span>Other tables ({others.length})</span>
-                    <span className="muted num">{otherScans.toLocaleString("en-GB")}</span>
+                    <span className="muted num">{otherScans.toLocaleString("en-IN")}</span>
                   </span>
                   <span className="meter muted-meter">
                     <span style={{ width: `${(otherScans / maxSource) * 100}%` }} />
@@ -464,6 +412,8 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
           </Link>
         </section>
       </div>
+
+      <FeedbackSummaryCard venueId={venue.id} feedbackHref={`${base}/feedback`} />
 
       <section className="card overview-feedback">
         <div className="card-head">
@@ -491,6 +441,47 @@ export default async function VenueOverview({ params, searchParams }: PageProps<
           <p className="muted">No feedback yet. Guests can leave a note from your page; only you see it.</p>
         )}
       </section>
+
+      {/* Last on the page: what to act on once you've seen the numbers. */}
+      {!settingUp && showNext && (
+        <section className="card next-card">
+          <div className="card-head">
+            <h2>What to do next</h2>
+            {nextStep && (
+              <span className="next-setup">
+                Setup {done} of {checklist.length} done
+                <span className="progress small" aria-hidden>
+                  <span style={{ width: `${(done / checklist.length) * 100}%` }} />
+                </span>
+                <DismissButton cookie={hideCookie} part="setup" label="Hide the setup guide" />
+              </span>
+            )}
+          </div>
+          <div className="next-grid">
+            {nextStep && (
+              <div className="next-tile">
+                <span className="next-icon" aria-hidden>
+                  <Star />
+                </span>
+                <div>
+                  <strong>{nextStep.label}</strong>
+                  <p>{nextStep.why}</p>
+                  <span className="inline">
+                    <Link className="btn btn-sm" href={nextStep.href}>
+                      {nextStep.cta}
+                    </Link>
+                    {nextStep.help && (
+                      <Link className="link-quiet inline" href={nextStep.help}>
+                        <CircleHelp aria-hidden /> How do I find it?
+                      </Link>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </>
   );
 }

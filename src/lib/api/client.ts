@@ -10,6 +10,8 @@ import type {
   RecordVisitRequest,
   StampRequest,
   StampResponse,
+  WifiPasswordRequest,
+  WifiPasswordResponse,
 } from "./contracts";
 import type { PublicVenue } from "../venue/types";
 
@@ -54,6 +56,7 @@ export const api = {
   stampForFeedback: (body: StampRequest) => post<StampResponse>("/api/loyalty/stamp", body, 15_000),
   submitFeedback: (body: FeedbackRequest) => post<FeedbackResponse>("/api/feedback", body, 30_000),
   captureGuest: (body: CaptureGuestRequest) => post<CaptureGuestResponse>("/api/guests/capture", body, 15_000),
+  wifiPassword: (body: WifiPasswordRequest) => post<WifiPasswordResponse>("/api/guests/wifi", body, 15_000),
   recordVisit: (body: RecordVisitRequest) => post<{ ok: true }>("/api/guests/visit", body, 10_000),
   setBirthday: (body: BirthdayRequest) => post<{ ok: true }>("/api/guests/birthday", body, 15_000),
 };

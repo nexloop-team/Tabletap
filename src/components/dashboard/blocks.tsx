@@ -18,11 +18,11 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: Re
   );
 }
 
-const compact = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
+const compact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 });
 
 /** 1,284 stays as is; 12,900 → 12.9K. */
 export function formatCount(value: number): string {
-  return value < 10_000 ? value.toLocaleString("en-GB") : compact.format(value);
+  return value < 10_000 ? value.toLocaleString("en-IN") : compact.format(value);
 }
 
 /** KPI tile: label, headline value and an optional supporting line ("up" tints it as good news). */
@@ -51,11 +51,11 @@ export function Stat({ label, value, sub, icon: Icon, href, tone }: { label: str
 }
 
 function shortDay(day: string): string {
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 function weekday(day: string): string {
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" });
 }
 
 /**
@@ -67,20 +67,20 @@ function weekday(day: string): string {
 export function DailyBars({ data, label, unit, today = false }: { data: { day: string; value: number }[]; label: string; unit: [singular: string, plural: string]; /** Colour the last bar (today) apart from the rest. */ today?: boolean }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  const noun = (n: number) => `${n.toLocaleString("en-GB")} ${n === 1 ? unit[0] : unit[1]}`;
+  const noun = (n: number) => `${n.toLocaleString("en-IN")} ${n === 1 ? unit[0] : unit[1]}`;
   const labelled = data.length <= 14;
   return (
     <figure className={`chart${labelled ? " labelled" : ""}`}>
       {!labelled && (
         <div className="chart-scale" aria-hidden>
-          <span>{max.toLocaleString("en-GB")}</span>
+          <span>{max.toLocaleString("en-IN")}</span>
           <span>0</span>
         </div>
       )}
       <div className="chart-plot" aria-hidden>
         {data.map((d, i) => (
           <div key={d.day} className={`chart-col${today && i === data.length - 1 ? " today" : ""}`} data-tip={labelled ? undefined : `${i === data.length - 1 && today ? "Today" : shortDay(d.day)} · ${noun(d.value)}`}>
-            {labelled && <span className="chart-value num">{d.value.toLocaleString("en-GB")}</span>}
+            {labelled && <span className="chart-value num">{d.value.toLocaleString("en-IN")}</span>}
             <div className="chart-bar" style={{ height: `${(d.value / max) * 100}%` }} data-zero={d.value === 0 || undefined} />
           </div>
         ))}

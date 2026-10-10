@@ -61,9 +61,19 @@ export function hasGoogleReview(venue: PublicVenue): boolean {
   return !!venue.branding.showGoogleReviewButton && !!sanitiseExternalUrl(venue.socialLinks.google);
 }
 
-/** Email is required before the Wi-Fi password is shown. */
+/** The owner switched on "Email for Wi-Fi": guests give an email before the password shows. */
 export function wifiGateActive(venue: PublicVenue): boolean {
-  return venue.crm.enabled && venue.crm.wifiCapture && venue.crm.consentAsk;
+  return venue.crm.enabled && venue.crm.wifiCapture && hasWifi(venue);
+}
+
+/**
+ * The venue as it may be sent to a guest's browser. Behind the email gate the
+ * Wi-Fi password stays on the server until the guest has given an email
+ * (see /api/guests/wifi).
+ */
+export function guestSafeVenue(venue: PublicVenue): PublicVenue {
+  if (!wifiGateActive(venue) || !venue.wifi) return venue;
+  return { ...venue, wifi: { ...venue.wifi, password: null } };
 }
 
 export function consentAskOn(venue: PublicVenue): boolean {
@@ -74,8 +84,14 @@ export function birthdayAskOn(venue: PublicVenue): boolean {
   return venue.crm.enabled && venue.crm.birthdayAsk;
 }
 
-/** Pubs and bars must attest 18+, everyone else 13+. */
+/**
+ * The age a guest confirms before saying yes to offers. In India everyone
+ * under 18 is a child under the DPDP Act (their data needs a parent's
+ * consent), so Indian venues always ask for 18+. Elsewhere pubs and bars ask
+ * 18+, everyone else 13+.
+ */
 export function consentAgeThreshold(venue: PublicVenue): 13 | 18 {
+  if (venue.currencyCode === "INR") return 18;
   const type = (venue.venueType ?? "").trim().toLowerCase();
   return type === "pub" || type === "bar" ? 18 : 13;
 }

@@ -25,6 +25,7 @@ export interface VenueStats {
   stampsGiven: number;
   rewardsRedeemed: number;
   daily: { day: string; scans: number }[];
+  /** Visits per spot (table), QR scans and NFC taps together. */
   sources: { source: string; scans: number }[];
 }
 
@@ -75,10 +76,14 @@ export async function venueStats(venueId: string, days = 30, utcOffsetMinutes = 
     daily.push({ day, scans: byDay.get(day) ?? 0 });
   }
 
+  // A table's QR ("table-4") and NFC tag ("table-4-nfc") count as one spot; an unnamed NFC tag ("nfc") belongs to the main code.
   const sources = (await db.all(
-      `SELECT COALESCE((params->>'source'), 'unknown') AS source, COUNT(DISTINCT (params->>'session_id')) AS scans FROM events
-       WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}
-       GROUP BY source ORDER BY scans DESC LIMIT 8`, venueId, since)) as { source: string; scans: number }[];
+      `SELECT base AS source, COUNT(DISTINCT session_id) AS scans FROM (
+         SELECT CASE WHEN src = 'nfc' THEN 'unknown' WHEN src LIKE '%-nfc' THEN left(src, length(src) - 4) ELSE src END AS base, session_id
+           FROM (SELECT COALESCE((params->>'source'), 'unknown') AS src, (params->>'session_id') AS session_id FROM events
+                  WHERE venue_id = ? AND name = 'landing_opened' AND created_at >= now() + CAST(? AS INTERVAL) AND ${NOT_PREVIEW}) AS opened
+       ) AS spots
+       GROUP BY base ORDER BY scans DESC LIMIT 8`, venueId, since)) as { source: string; scans: number }[];
 
   return {
     days,

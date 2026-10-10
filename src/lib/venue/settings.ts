@@ -9,6 +9,8 @@ export const venueSettingsSchema = z.object({
   stampPolicy: z.object({
     /** Minimum minutes between stamp visits for one card; staff can override. */
     cooldownMinutes: z.number().int().min(0).max(24 * 60),
+    /** One free stamp a day for a member who leaves feedback. */
+    feedbackStamp: z.boolean(),
   }),
   automations: z.object({
     /** Service email when a stamp unlocks a reward. */
@@ -21,7 +23,7 @@ export const venueSettingsSchema = z.object({
 export type VenueSettings = z.output<typeof venueSettingsSchema>;
 
 export const DEFAULT_SETTINGS: VenueSettings = {
-  stampPolicy: { cooldownMinutes: 30 },
+  stampPolicy: { cooldownMinutes: 30, feedbackStamp: true },
   automations: {
     rewardReady: true,
     birthday: { enabled: false, offer: "A free coffee on us this week" },
@@ -45,5 +47,22 @@ export function resolveSettings(raw: unknown): VenueSettings {
   return result.success ? result.data : DEFAULT_SETTINGS;
 }
 
-export const venueSettingsPatch = venueSettingsSchema.partial();
+/** A patch names whole sections, and within a section only the fields it changes. */
+export const venueSettingsPatch = z.object({
+  stampPolicy: venueSettingsSchema.shape.stampPolicy.partial().optional(),
+  automations: venueSettingsSchema.shape.automations.partial().optional(),
+});
+
+/** The saved settings with a patch applied field by field inside each section. */
+export function applySettingsPatch(current: VenueSettings, patch: z.output<typeof venueSettingsPatch>): unknown {
+  return {
+    stampPolicy: { ...current.stampPolicy, ...stripUndefined(patch.stampPolicy) },
+    automations: { ...current.automations, ...stripUndefined(patch.automations) },
+  };
+}
+
+function stripUndefined<T extends object>(value: T | undefined): Partial<T> {
+  return Object.fromEntries(Object.entries(value ?? {}).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
 export type VenueSettingsPatch = z.input<typeof venueSettingsPatch>;

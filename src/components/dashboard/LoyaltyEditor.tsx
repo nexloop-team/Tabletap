@@ -229,13 +229,13 @@ export function LoyaltyEditor({
                 description={`Join forms get an opt-in for offers by email, confirmed by a link (double opt-in). Guests confirm they're ${adultsOnly ? "18" : "13"}+.`}
                 checked={crm.consentAsk}
                 disabled={!crm.enabled}
-                onChange={(on) => setCrm({ consentAsk: on, wifiCapture: on ? crm.wifiCapture : false })}
+                onChange={(on) => setCrm({ consentAsk: on })}
               />
               <SwitchRow
                 title="Email for Wi-Fi"
-                description="Guests enter their email to see the Wi-Fi password. Needs marketing consent on."
+                description="Guests type their email to see the Wi-Fi password, and appear in your guest list. Off: everyone sees the password. No stamp is given for it."
                 checked={crm.wifiCapture}
-                disabled={!crm.enabled || !crm.consentAsk}
+                disabled={!crm.enabled}
                 onChange={(on) => setCrm({ wifiCapture: on })}
               />
               {mode !== "off" && (

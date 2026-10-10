@@ -110,8 +110,8 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                     <td>
                       <SegmentBadge venue={venue} />
                     </td>
-                    <td className="num">{venue.guests.toLocaleString("en-GB")}</td>
-                    <td className="num">{venue.scans7d.toLocaleString("en-GB")}</td>
+                    <td className="num">{venue.guests.toLocaleString("en-IN")}</td>
+                    <td className="num">{venue.scans7d.toLocaleString("en-IN")}</td>
                     <td className="nowrap">{venue.lastScanAt ? <span title={formatDate(venue.lastScanAt)}>{formatAgo(venue.lastScanAt)}</span> : <span className="muted">Never</span>}</td>
                     <td className="nowrap">
                       <span title={formatDate(venue.createdAt)}>{formatAgo(venue.createdAt)}</span>
@@ -123,6 +123,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
                         guestUrl={guestPageUrl(origin, venue.shortCode)}
                         status={venue.status}
                         segment={venue.segment}
+                        renewing={venue.paying && !venue.cancelAtPeriodEnd}
                       />
                     </td>
                   </tr>
@@ -132,7 +133,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/admi
           </div>
         )}
         <div className="card-foot">
-          Showing {rows.length.toLocaleString("en-GB")} of {all.length.toLocaleString("en-GB")} venues
+          Showing {rows.length.toLocaleString("en-IN")} of {all.length.toLocaleString("en-IN")} venues
           {all.length >= VENUE_LIMIT && ` (the ${VENUE_LIMIT} newest)`}
         </div>
       </section>

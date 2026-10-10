@@ -2,9 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api/client";
-import { cardCredentialsFromUrl, type CardCredentials } from "@/lib/browser";
+import type { FeedbackResponse } from "@/lib/api/contracts";
+import { cardCredentialsFromUrl, deviceMemory, parseCardCredentials, type CardCredentials } from "@/lib/browser";
 import { enrolEmailCopy } from "@/lib/landing-copy";
-import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
+import { isPlausibleEmail, maskEmail, normaliseEmail } from "@/lib/validation";
 import { Field, SuccessPanel, WalletActions } from "../forms";
 import { useLanding } from "../LandingContext";
 import { MyCard } from "../loyalty/MyCard";
@@ -20,7 +21,7 @@ type Outcome =
  * A new member is enrolled with the stamp; an existing member is stamped
  * instead (the join endpoint never adds stamps to an existing card).
  */
-export function FreeStampJoin() {
+export function FreeStampJoin({ receipt }: { receipt: NonNullable<FeedbackResponse["stampReceipt"]> }) {
   const { venue, t, tf, track, setLoyaltyDone } = useLanding();
   const join = useStampJoin();
   const [name, setName] = useState("");
@@ -38,7 +39,7 @@ export function FreeStampJoin() {
     track("loyalty_signup_started", { from_context: "feedback_thankyou" });
     setBusy(true);
     setError(null);
-    const result = await join({ name, email, initialStamps: 1, captureSource: "feedback" });
+    const result = await join({ name, email, initialStamps: 1, captureSource: "feedback", feedbackReceipt: receipt });
     if (!result.ok) {
       setBusy(false);
       setError(t(result.error));
@@ -60,13 +61,14 @@ export function FreeStampJoin() {
     }
     track("loyalty_signup_already_enrolled", { from_context: "feedback_thankyou" });
     try {
-      const stamp = await api.stampForFeedback({ venueId: venue.id, email: normaliseEmail(email) });
+      const stamp = await api.stampForFeedback({ venueId: venue.id, email: normaliseEmail(email), feedbackReceipt: receipt });
       if (stamp.stamped) {
         track("loyalty_stamp_from_feedback", { current_stamps: stamp.currentStamps });
         setLoyaltyDone();
       }
-      // Already a member: show their card right here, with today's stamp on it.
-      setOutcome({ kind: stamp.stamped ? "stamped" : "not_stamped", card: cardCredentialsFromUrl(response.cardUrl) });
+      // Already a member: show their card here if this phone knows it; otherwise it's on its way by email.
+      const card = cardCredentialsFromUrl(response.cardUrl) ?? parseCardCredentials(deviceMemory.cardRaw(venue.id));
+      setOutcome({ kind: stamp.stamped ? "stamped" : "not_stamped", card });
     } catch {
       setBusy(false);
       setError(t("something_wrong"));
@@ -83,13 +85,13 @@ export function FreeStampJoin() {
         )}
         {outcome.kind === "stamped" && (
           <SuccessPanel icon="heart" title={t("stamp_added")}>
-            {outcome.card ? <MyCard credentials={outcome.card} /> : <p>{t("wallet_updates_automatically")}</p>}
+            {outcome.card ? <MyCard credentials={outcome.card} /> : <p>{tf("pass_sent_to", { email: maskEmail(normaliseEmail(email)) })}</p>}
           </SuccessPanel>
         )}
         {outcome.kind === "not_stamped" && (
           <SuccessPanel icon="heart">
             <p>{t("no_stamp_this_time")}</p>
-            {outcome.card && <MyCard credentials={outcome.card} />}
+            {outcome.card ? <MyCard credentials={outcome.card} /> : <p>{tf("pass_sent_to", { email: maskEmail(normaliseEmail(email)) })}</p>}
           </SuccessPanel>
         )}
       </>

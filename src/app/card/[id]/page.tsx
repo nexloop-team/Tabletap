@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Check, Gift } from "lucide-react";
-import { CardLive, DifferentCard } from "@/components/card/CardLive";
+import { CardLive, DeleteMyCard, DifferentCard } from "@/components/card/CardLive";
 import { LandingError } from "@/components/landing/LandingError";
 import { PausedPage } from "@/components/landing/PausedPage";
 import { InviteFriend } from "@/components/card/InviteFriend";
 import { FilledHeart } from "@/components/icons";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { initials } from "@/lib/format";
-import { createTranslator, type Locale } from "@/lib/i18n";
+import { createTranslator, type Locale, LOCALE } from "@/lib/i18n";
 import { computeTheme } from "@/lib/theme";
 import { hasLoyaltyProgram, safeImageUrl } from "@/lib/venue/features";
 import { programTiers, stampGoal } from "@/lib/venue/loyalty";
@@ -15,7 +15,7 @@ import { findCardForViewer } from "@/server/repositories/loyalty-cards";
 import { ensureReferralCode } from "@/server/repositories/retention";
 import { recentEvents, type StampEvent } from "@/server/repositories/stamps";
 import { findPausedVenue, findVenue } from "@/server/repositories/venues";
-import { firstParam, requestLocale, serverOrigin } from "@/server/request";
+import { firstParam, serverOrigin } from "@/server/request";
 import { qrSvg } from "@/server/services/qr";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
@@ -57,7 +57,7 @@ function historyLine(event: StampEvent, t: ReturnType<typeof createTranslator>["
 export default async function CardPage({ params, searchParams }: PageProps<"/card/[id]">) {
   const { id } = await params;
   const token = firstParam((await searchParams).t);
-  const locale = await requestLocale();
+  const locale = LOCALE;
   const { t, tf } = createTranslator(locale);
 
   const card = token ? await findCardForViewer(id, token) : null;
@@ -205,8 +205,15 @@ export default async function CardPage({ params, searchParams }: PageProps<"/car
         )}
 
         <DifferentCard venueId={venue.id} shortCode={venue.shortCode} label={holder ? tf("rc_not_you", { name: holder }) : t("rc_different_card")} />
+        <DeleteMyCard
+          venueId={venue.id}
+          shortCode={venue.shortCode}
+          cardId={card.id}
+          token={token}
+          labels={{ action: t("rc_delete"), confirm: tf("rc_delete_confirm", { business: venue.name }), done: t("rc_deleted"), failed: t("something_wrong") }}
+        />
         <p className="rc-foot">
-          © {new Date().getFullYear()} {venue.name}
+          © {new Date().getFullYear()} {venue.name} · <a href="/privacy">{t("rc_privacy")}</a>
         </p>
       </main>
     </>

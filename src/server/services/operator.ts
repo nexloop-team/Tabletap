@@ -7,7 +7,10 @@ import { EDIT_GRANT_MINUTES, endEditGrant, logAdminAction, startEditGrant } from
 import { extendTrial, getSubscription, updateSubscription } from "../repositories/subscriptions";
 import { findUserById, setAdminRole, setUserBlocked, type User } from "../repositories/users";
 import { getVenueRecord, setVenueStatus } from "../repositories/venues";
+import { DEMO_VENUE_IDS } from "../seed";
 import { removeAccount, sendPasswordResetEmail, sendVerificationEmail } from "./accounts";
+import { cancelSubscription } from "./billing";
+import { removeVenue } from "./venue-admin";
 
 /**
  * Everything an operator can change from the admin console. Each change is
@@ -39,6 +42,24 @@ export async function updateVenueAsAdmin(admin: User, venueId: string, input: z.
     await setVenueStatus(venueId, input.status);
     await logAdminAction(admin, input.status === "suspended" ? "Suspended venue" : "Restored venue", target);
   }
+  if (input.cancelRenewal) {
+    // The owner's own Cancel: renewal stops (with Razorpay too), the paid year runs out.
+    await cancelSubscription(venue);
+    await logAdminAction(admin, "Cancelled subscription renewal", target);
+  }
+}
+
+/**
+ * Deletes a venue for its owner: the page, menus, guests, feedback and
+ * photos, and stops its Razorpay billing. The operator types the venue's
+ * name to confirm. The demos can't be deleted (they come back on start).
+ */
+export async function deleteVenueAsAdmin(admin: User, venueId: string, confirmName: string) {
+  const venue = await getVenueRecord(venueId);
+  if (!venue) throw new ServiceError(404, "Venue not found");
+  if (DEMO_VENUE_IDS.includes(venueId)) throw new ServiceError(400, "Demo venues can't be deleted");
+  await removeVenue(venue, confirmName);
+  await logAdminAction(admin, "Deleted venue", { type: "venue", id: venueId, label: venue.config.name }, `page address ${venue.shortCode}`);
 }
 
 /** "Edit for owner": lets this admin save changes to the venue for a while. Switching it on is logged, and so is every save. */

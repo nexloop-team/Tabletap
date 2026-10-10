@@ -133,16 +133,19 @@ describe("staff stamping", () => {
 });
 
 describe("weekly digest", () => {
-  it("is due from 08:00 on Monday (London time) and keyed by that Monday", async () => {
-    // 2026-10-05 is a Monday; London is on BST (UTC+1).
-    expect(digestWeek(new Date("2026-10-05T06:30:00Z"))).toBeNull();
-    expect(digestWeek(new Date("2026-10-05T07:05:00Z"))).toBe("2026-10-05");
+  it("is due from 08:00 on Monday in the venue's time zone and keyed by that Monday", async () => {
+    // 2026-10-05 is a Monday. India is UTC+5:30 (the default); London is on BST (UTC+1).
+    expect(digestWeek(new Date("2026-10-05T02:00:00Z"))).toBeNull();
+    expect(digestWeek(new Date("2026-10-05T02:35:00Z"))).toBe("2026-10-05");
     expect(digestWeek(new Date("2026-10-10T22:00:00Z"))).toBe("2026-10-05");
-    // Sunday evening still belongs to the previous week…
-    expect(digestWeek(new Date("2026-10-04T20:00:00Z"))).toBe("2026-09-28");
-    // …and 23:30 UTC on Sunday is already 00:30 Monday in London: not due yet.
-    expect(localDate(new Date("2026-10-04T23:30:00Z"))).toBe("2026-10-05");
-    expect(digestWeek(new Date("2026-10-04T23:30:00Z"))).toBeNull();
+    // Sunday evening (IST) still belongs to the previous week…
+    expect(digestWeek(new Date("2026-10-04T14:00:00Z"))).toBe("2026-09-28");
+    // …and 19:00 UTC on Sunday is already 00:30 Monday in India: not due yet.
+    expect(localDate(new Date("2026-10-04T19:00:00Z"))).toBe("2026-10-05");
+    expect(digestWeek(new Date("2026-10-04T19:00:00Z"))).toBeNull();
+    // A UK venue's week turns over on London time.
+    expect(digestWeek(new Date("2026-10-05T06:30:00Z"), "Europe/London")).toBeNull();
+    expect(digestWeek(new Date("2026-10-05T07:05:00Z"), "Europe/London")).toBe("2026-10-05");
   });
 
   it("sends once per owner, venue and week, and only to verified owners", async () => {

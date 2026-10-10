@@ -139,9 +139,9 @@ export interface WifiDetails {
 /** Customer-platform switches, already resolved server-side. */
 export interface CrmSettings {
   enabled: boolean;
-  /** Show the marketing-consent line on join forms and the Wi-Fi gate. */
+  /** Show the marketing-consent line on join forms (and the Wi-Fi gate, when it's on). */
   consentAsk: boolean;
-  /** Ask for an email before revealing the Wi-Fi password. */
+  /** The owner's option: ask for an email before showing the Wi-Fi password. No stamp is given for it. */
   wifiCapture: boolean;
   /** Offer the rewards-only join on the feedback thank-you. */
   feedbackCapture: boolean;

@@ -1,3 +1,4 @@
+import { LOCALE } from "@/lib/i18n";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LandingError } from "@/components/landing/LandingError";
@@ -7,7 +8,7 @@ import { MenuView } from "@/components/menu/MenuView";
 import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
-import { firstParam, loadPausedVenue, loadVenue, queryString, requestLocale, sourceParam, venueParam } from "@/server/request";
+import { firstParam, loadPausedVenue, loadVenue, queryString, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
 
@@ -21,7 +22,7 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
   const params = await searchParams;
   const code = venueParam(params);
   const source = sourceParam(params);
-  const locale = await requestLocale();
+  const locale = LOCALE;
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
   const venue = await loadVenue(code);

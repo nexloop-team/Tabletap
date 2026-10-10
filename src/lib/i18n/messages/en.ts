@@ -1,7 +1,5 @@
 /**
- * English source strings. Every other locale is typed against this object, so
- * a missing key is a compile error there and falls back to English at runtime.
- * Placeholders use {name} and are filled by `tf`.
+ * Guest-facing strings. Placeholders use {name} and are filled by `tf`.
  */
 export const en = {
   loading: "Loading...",
@@ -61,7 +59,6 @@ export const en = {
   rewards_joined: "You're in - here's your rewards card.",
   rewards_email_required: "We need an email address to send your rewards.",
   rewards_thankyou_prompt: "Start earning rewards from {business} - we'll add them to your digital card.",
-  rewards_wifi_offer: "Get online and start earning rewards",
   pass_on_its_way: "Your card is on its way to {email}.",
   pass_already_sent: "You're already a member - we've sent your card to {email}.",
 
@@ -86,15 +83,10 @@ export const en = {
   not_provided: "Not provided",
   copy_ssid: "Copy SSID",
   copy_password: "Copy Password",
-  open_wifi_settings: "Open Wi-Fi settings",
   wifi_open_hint: "This is an open network. Open your Wi-Fi settings and pick it from the list.",
   wifi_password_hint: "Copy the password, then open your Wi-Fi settings and paste it when asked.",
-  mac_wifi: "Open System Settings > Wi-Fi and choose this network.",
-  windows_wifi: "Open Settings > Network & Internet > Wi-Fi and choose this network.",
-  device_wifi: "Open your device's Wi-Fi settings and choose this network.",
   wifi_gate_sub: "Pop your email in and the Wi-Fi details appear straight away.",
-  wifi_gate_offer: "Join the Wi-Fi and get a free stamp on your card",
-  wifi_gate_only: "Just the Wi-Fi, thanks",
+  wifi_gate_submit: "Show the Wi-Fi details",
   wifi_gate_email_required: "We need an email address to get you online.",
 
   // Feedback
@@ -221,6 +213,9 @@ export const en = {
   card_invite_share: "Share invite link",
 
   // Consent confirmation
+  consent_confirm_title: "Get offers from {business}?",
+  consent_confirm_body: "Tap below to confirm. Every email has an unsubscribe link if you change your mind.",
+  consent_confirm_button: "Yes, send me offers",
   consent_confirmed_title: "You're subscribed",
   consent_confirmed_body: "Thanks for confirming. Every email has an unsubscribe link if you change your mind.",
   consent_invalid_title: "This link can't be used",
@@ -242,6 +237,10 @@ export const en = {
   rc_ev_bonus: "+{count} bonus",
   rc_not_you: "Not {name}? Use a different card",
   rc_different_card: "Use a different card",
+  rc_delete: "Delete my card and details",
+  rc_delete_confirm: "Delete your card, stamps and details at {business}? This can't be undone.",
+  rc_deleted: "Done. Your card and details have been deleted.",
+  rc_privacy: "Privacy policy",
   tile_menu_sub: "Food and drinks",
   tile_wifi_copy: "Tap to copy",
   tile_wifi_connect: "Tap to connect",

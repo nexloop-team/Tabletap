@@ -7,6 +7,7 @@ import { sendMail } from "../services/mailer";
 import { claimJob, releaseJob } from "./claims";
 import { digestWeek } from "./time";
 import { parseDbDate } from "@/lib/plans";
+import { venueTimeZone } from "@/lib/venue/region";
 
 /**
  * The Monday-morning email: last week's scans, guests, stamps and feedback
@@ -52,10 +53,11 @@ export async function buildDigest(recipient: DigestRecipient, now = new Date()):
 }
 
 export async function runWeeklyDigest(now: Date): Promise<number> {
-  const week = digestWeek(now);
-  if (!week) return 0;
   let sent = 0;
   for (const recipient of await digestRecipients()) {
+    // Monday 08:00 where the venue is.
+    const week = digestWeek(now, venueTimeZone(recipient.currencyCode));
+    if (!week) continue;
     const key = `${week}:${recipient.venueId}:${recipient.userId}`;
     if (!await claimJob("digest", key)) continue;
     const { subject, text } = await buildDigest(recipient, now);

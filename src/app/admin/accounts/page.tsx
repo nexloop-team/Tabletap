@@ -136,7 +136,7 @@ export default async function AdminAccountsPage({ searchParams }: PageProps<"/ad
           </div>
         )}
         <div className="card-foot">
-          Showing {rows.length.toLocaleString("en-GB")} of {all.length.toLocaleString("en-GB")} accounts
+          Showing {rows.length.toLocaleString("en-IN")} of {all.length.toLocaleString("en-IN")} accounts
           {all.length >= USER_LIMIT && ` (the ${USER_LIMIT} newest)`}
         </div>
       </section>

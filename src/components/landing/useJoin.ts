@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { api } from "@/lib/api/client";
-import type { EnrollResponse } from "@/lib/api/contracts";
+import type { EnrollResponse, FeedbackResponse } from "@/lib/api/contracts";
 import type { MessageKey } from "@/lib/i18n";
 import { cardCredentialsFromUrl, deviceMemory } from "@/lib/browser";
 import { storedReferral } from "@/lib/referral";
@@ -36,13 +36,15 @@ export interface StampJoinInput {
   name: string;
   email: string;
   initialStamps?: 0 | 1;
-  captureSource: "landing" | "feedback" | "wifi";
+  captureSource: "landing" | "feedback";
+  /** The feedback just posted, which is what earns a feedback join its stamp. */
+  feedbackReceipt?: FeedbackResponse["stampReceipt"];
   /** Only sent when the consent box was actually shown. */
   consent?: boolean;
   birthday?: { month: number; day: number } | null;
 }
 
-/** Stamp-card enrolment, shared by the loyalty sheet, the feedback thank-you and the Wi-Fi offer. */
+/** Stamp-card enrolment, shared by the loyalty sheet and the feedback thank-you. */
 export function useStampJoin() {
   const { venue } = useLanding();
   const recordJoin = useRecordJoin();
@@ -56,6 +58,7 @@ export function useStampJoin() {
           name: input.name.trim() || undefined,
           firstName: input.name.trim().split(/\s+/)[0] || undefined,
           initialStamps: input.initialStamps,
+          feedbackReceipt: input.feedbackReceipt ?? undefined,
           captureSource: input.captureSource,
           marketingConsent: input.consent,
           ageAttested: input.consent,
@@ -77,7 +80,7 @@ export interface RewardsJoinInput {
   email: string;
   firstName: string;
   ageAttested: boolean;
-  door: "home" | "feedback" | "wifi_gate";
+  door: "home" | "feedback";
   birthday?: { month: number; day: number } | null;
 }
 

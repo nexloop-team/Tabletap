@@ -1,3 +1,5 @@
+import { LOCALE } from "@/lib/i18n";
+import { guestSafeVenue } from "@/lib/venue/features";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FEEDBACK_VARIANT_COOKIE, LandingApp, type FeedbackVariant } from "@/components/landing/LandingApp";
@@ -6,7 +8,7 @@ import { PausedPage } from "@/components/landing/PausedPage";
 import { EmbedStyle } from "@/components/EmbedStyle";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
-import { firstParam, loadPausedVenue, loadVenue, requestLocale, sourceParam, venueParam } from "@/server/request";
+import { firstParam, loadPausedVenue, loadVenue, sourceParam, venueParam } from "@/server/request";
 import "@/styles/landing.css";
 // The member card (stamp grid, staff code) shows inline on this page.
 import "@/styles/pages.css";
@@ -35,7 +37,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
   const params = await searchParams;
   const code = venueParam(params);
   const source = sourceParam(params);
-  const locale = await requestLocale();
+  const locale = LOCALE;
 
   if (!code) return <LandingError locale={locale} message="id_missing" source={source} />;
   const venue = await loadVenue(code);
@@ -55,7 +57,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
     <>
       <ThemeStyle branding={venue.branding} />
       <EmbedStyle embed={firstParam(params.embed)} />
-      <LandingApp venue={venue} locale={locale} source={source} feedbackVariant={variant} persistVariant={!forced && !stored} />
+      <LandingApp venue={guestSafeVenue(venue)} locale={locale} source={source} feedbackVariant={variant} persistVariant={!forced && !stored} />
     </>
   );
 }

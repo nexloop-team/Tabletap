@@ -1,5 +1,6 @@
 "use client";
 
+import type { FeedbackResponse } from "@/lib/api/contracts";
 import { useEffect, useState } from "react";
 import { hasLoyaltyProgram, isRewardsOnly } from "@/lib/venue/features";
 import { useSheet } from "../FeatureCard";
@@ -47,7 +48,7 @@ function ReviewNudge({ feedbackText, context }: { feedbackText: string; context:
  * ("review gating"), and venues caught doing it can lose their reviews.
  * Sentiment only reaches the owner's dashboard and weekly digest.
  */
-export function FeedbackThankYou({ text, score }: { text: string; score: number }) {
+export function FeedbackThankYou({ text, score, receipt }: { text: string; score: number; receipt: FeedbackResponse["stampReceipt"] }) {
   const { venue, t, tf, track, loyaltyDone, membership } = useLanding();
   const { close } = useSheet();
   const review = useGoogleReview();
@@ -56,7 +57,8 @@ export function FeedbackThankYou({ text, score }: { text: string; score: number 
   const showGoogle = !!review.url;
   // Decided once, when the thank-you appears: joining below must not swap the branch out from under the guest.
   const [branch] = useState(() => {
-    if (hasLoyaltyProgram(venue) && !loyaltyDone) return "loyalty";
+    // The free-stamp ask only when this feedback earned one (the owner can switch it off).
+    if (hasLoyaltyProgram(venue) && !loyaltyDone && receipt) return "loyalty";
     if (isRewardsOnly(venue) && venue.crm.feedbackCapture && !membership) return "rewards";
     if (showGoogle) return "google";
     if (positive && hasSocialLinks(venue.socialLinks)) return "social";
@@ -78,7 +80,7 @@ export function FeedbackThankYou({ text, score }: { text: string; score: number 
         {branch === "loyalty" && (
           <>
             <div className="review-prompt">
-              <FreeStampJoin />
+              <FreeStampJoin receipt={receipt!} />
             </div>
             {showGoogle && <ReviewNudge feedbackText={text} context="loyalty" />}
           </>

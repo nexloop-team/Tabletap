@@ -2,7 +2,7 @@ import { ArrowRight, BookOpen, Check, Heart, MessageCircle, Palette, Printer, St
 import Link from "next/link";
 import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
-import { BILLING_PERIOD, formatInr, GST_RATE, PLAN_FEATURES, PRICE_INR, PRICE_WITH_GST_INR, TRIAL_DAYS } from "@/lib/plans";
+import { BILLING_PERIOD, formatInr, gstNote, PLAN_FEATURES, PRICE_INR, priceSentence, TRIAL_DAYS } from "@/lib/plans";
 import { isLightColor } from "@/lib/theme";
 import { currentUser } from "@/server/auth/session";
 import { uiFont } from "@/app/fonts";
@@ -47,7 +47,7 @@ const FAQS = [
     q: "What happens after the 7-day trial?",
     a: "Subscribe to keep your page live. If you don't, it pauses and guests see a friendly “back soon” page. Your menu, guests and stamp cards stay safe, and everything comes back the moment you subscribe.",
   },
-  { q: "How do I pay?", a: "Through Razorpay, with UPI, a card or netbanking. It's ₹1,178.82 a year including 18% GST, for each venue." },
+  { q: "How do I pay?", a: `Through Razorpay, with UPI, a card or netbanking. It's ${priceSentence()}, for each venue.` },
   {
     q: "I run two cafés. Do I need two plans?",
     a: "Each venue has its own page, QR codes and stamp card, and its own ₹999 yearly subscription. You manage them all from one login.",
@@ -207,7 +207,7 @@ export default async function Home() {
                     <span> / {BILLING_PERIOD}</span>
                   </div>
                   <p className="price-gst">
-                    + {GST_RATE * 100}% GST ({formatInr(PRICE_WITH_GST_INR)} in total)
+                    {gstNote()}
                   </p>
                 </div>
                 <ul>
@@ -282,8 +282,12 @@ export default async function Home() {
             © {new Date().getFullYear()} {BRAND.name} · Made for independent hospitality
           </span>
           <nav aria-label="Footer">
+            <Link href="/about">About</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/privacy">Privacy</Link>
+            <Link href="/refunds">Refunds</Link>
+            <Link href="/shipping">Delivery</Link>
+            <Link href="/contact">Contact</Link>
             <Link href="/login">Sign in</Link>
           </nav>
         </div>

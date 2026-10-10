@@ -19,16 +19,23 @@ import { completePairing, createPairing, currentStaffDevice } from "./staff";
 const INVITE_DAYS = 7;
 const digest = (token: string) => createHash("sha256").update(token).digest("base64url");
 
+/** Invites one venue can send in a day: plenty for a café, too few to spam with. */
+const MAX_INVITES_PER_DAY = 20;
+
 export async function createStaffInvite(venue: VenueRecord, inviter: User, rawEmail: string, origin: string): Promise<{ url: string }> {
+  // These emails go out from our domain to any address, so the sender must have proved theirs.
+  if (!inviter.emailVerified) throw new ServiceError(403, "Confirm your own email address first (check your inbox), then invite staff.");
   const email = normaliseEmail(rawEmail);
   if (!isPlausibleEmail(email)) throw new ServiceError(400, "Enter the staff member's email address");
+  const today = ((await (await getDb()).get("SELECT COUNT(*) AS n FROM staff_invites WHERE venue_id = ? AND created_at >= now() - INTERVAL '1 day'", venue.id)) as { n: number }).n;
+  if (today >= MAX_INVITES_PER_DAY) throw new ServiceError(429, "That's a lot of invites for one day. Try again tomorrow.");
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_DAYS * 86_400_000).toISOString();
   (await (await getDb()).run("INSERT INTO staff_invites (id, venue_id, email, invited_by, expires_at) VALUES (?, ?, ?, ?, ?)", digest(token), venue.id, email, inviter.id, expiresAt));
   const url = `${origin}/staff/join?t=${encodeURIComponent(token)}`;
   await sendMail({
     to: email,
-    subject: `${inviter.name || venue.config.name} invited you to stamp cards at ${venue.config.name}`,
+    subject: `You're invited to the till at ${venue.config.name.slice(0, 60)}`,
     text: [
       `You've been invited to use the till at ${venue.config.name} on ${BRAND.name}.`,
       "",

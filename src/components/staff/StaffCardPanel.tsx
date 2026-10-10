@@ -80,7 +80,7 @@ export function StaffCardPanel({ initial }: { initial: StaffCardView }) {
     );
   }
 
-  const since = new Date(card.memberSince).toLocaleDateString("en-GB", { month: "long" });
+  const since = new Date(card.memberSince).toLocaleDateString("en-IN", { month: "long" });
   const topTier = card.tiers[card.tiers.length - 1];
 
   return (

@@ -260,6 +260,33 @@ const MIGRATIONS: string[] = [
    ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
    ALTER TABLE admin_edit_grants ENABLE ROW LEVEL SECURITY;
    ALTER TABLE schema_version ENABLE ROW LEVEL SECURITY;`,
+  // Feedback stamps need a receipt from a real feedback post; old page codes
+  // keep pointing at their venue (so printed QR codes never reach anyone
+  // else); outbox rows record whether the provider accepted them; indexes
+  // for the daily clean-up.
+  `ALTER TABLE feedback ADD COLUMN stamp_token TEXT;
+   ALTER TABLE feedback ADD COLUMN stamp_claimed_at TIMESTAMPTZ;
+   CREATE TABLE retired_codes (
+     code TEXT PRIMARY KEY,
+     venue_id TEXT REFERENCES venues(id) ON DELETE SET NULL,
+     retired_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   );
+   ALTER TABLE retired_codes ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE outbox ADD COLUMN status TEXT NOT NULL DEFAULT 'logged';
+   CREATE INDEX outbox_created ON outbox(created_at);
+   CREATE INDEX events_created ON events(created_at);
+   CREATE INDEX sessions_expires ON sessions(expires_at);`,
+  // Was: remove the demo venues (reverted the same day; the demos stay). Kept
+  // as a no-op so later migrations keep their numbers.
+  `SELECT 1;`,
+  // The AI summary of a venue's recent feedback, kept until new feedback changes it.
+  `CREATE TABLE feedback_summaries (
+     venue_id TEXT PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+     fingerprint TEXT NOT NULL,
+     summary JSONB NOT NULL,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   );
+   ALTER TABLE feedback_summaries ENABLE ROW LEVEL SECURITY;`,
 ];
 
 /** "2026-10-09 13:05:00.123+00" → "2026-10-09T13:05:00.123Z": ISO in UTC, so Date.parse reads it right anywhere. */
@@ -327,6 +354,20 @@ interface Driver {
   close(): Promise<void>;
 }
 
+/**
+ * TLS for a hosted database. With the provider's CA certificate
+ * (DATABASE_SSL_CA: the PEM text or a file path; Supabase: Project Settings
+ * → Database → SSL certificate) or DATABASE_SSL=verify (a certificate public
+ * CAs sign), the server's identity is checked. Without either the link is
+ * still encrypted but unchecked, and startup warns about it in production.
+ */
+export function databaseSsl(url: string): false | { rejectUnauthorized: boolean; ca?: string } {
+  if (process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url)) return false;
+  const ca = process.env.DATABASE_SSL_CA?.trim();
+  if (ca) return { rejectUnauthorized: true, ca: ca.includes("BEGIN CERTIFICATE") ? ca.replaceAll("\\n", "\n") : fs.readFileSync(ca, "utf8") };
+  return { rejectUnauthorized: process.env.DATABASE_SSL === "verify" };
+}
+
 async function pgDriver(url: string): Promise<Driver> {
   const pg = (await import("pg")).default;
   const types = { getTypeParser: (oid: number, format?: string) => (PARSERS[oid] ? (PARSERS[oid] as (v: string) => unknown) : pg.types.getTypeParser(oid, format as "text")) };
@@ -334,7 +375,7 @@ async function pgDriver(url: string): Promise<Driver> {
     connectionString: url,
     max: Number(process.env.DATABASE_POOL_SIZE || 5),
     // Hosted Postgres (Supabase and most others) needs TLS; set DATABASE_SSL=off for a local server.
-    ssl: process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: false },
+    ssl: databaseSsl(url) || undefined,
     types,
   });
   const onClient = (client: { query: (text: string, values?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }> }): Db =>

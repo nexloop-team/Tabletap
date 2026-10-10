@@ -6,6 +6,7 @@ import { birthdayGuests, claimGuestEmail, ensureUnsubscribeToken, lapsedGuests, 
 import { venueHasAccess } from "../repositories/subscriptions";
 import { getVenueSettings } from "../repositories/venues";
 import { sendMail } from "../services/mailer";
+import { venueTimeZone } from "@/lib/venue/region";
 import { localParts } from "./time";
 
 /**
@@ -43,17 +44,22 @@ async function send(guest: EmailableGuest, kind: string, key: string, subject: s
 }
 
 export async function runGuestAutomations(now: Date): Promise<number> {
-  const local = localParts(now);
-  if (local.hour < SEND_FROM_HOUR || local.hour >= SEND_UNTIL_HOUR) return 0;
-
-  const venues = (await (await getDb()).all("SELECT id, (config::jsonb->>'name') AS name FROM venues WHERE status = 'active'")) as { id: string; name: string }[];
+  const venues = (await (await getDb()).all("SELECT id, (config::jsonb->>'name') AS name, (config::jsonb->>'currencyCode') AS currency FROM venues WHERE status = 'active'")) as {
+    id: string;
+    name: string;
+    currency: string | null;
+  }[];
   let sent = 0;
   for (const venue of venues) {
+    // Daytime where the venue is, never the middle of its guests' night.
+    const zone = venueTimeZone(venue.currency);
+    const local = localParts(now, zone);
+    if (local.hour < SEND_FROM_HOUR || local.hour >= SEND_UNTIL_HOUR) continue;
     if (!await venueHasAccess(venue.id)) continue;
     const { birthday, winBack } = (await getVenueSettings(venue.id)).automations;
 
     if (birthday.enabled) {
-      const target = localParts(new Date(now.getTime() + BIRTHDAY_DAYS_AHEAD * 86_400_000));
+      const target = localParts(new Date(now.getTime() + BIRTHDAY_DAYS_AHEAD * 86_400_000), zone);
       // 29 February birthdays are celebrated on 1 March in other years.
       const leapDayGuests = target.month === 3 && target.day === 1 && !isLeapYear(target.year) ? await birthdayGuests(venue.id, 2, [29]) : [];
       const guests = [...(await birthdayGuests(venue.id, target.month, [target.day])), ...leapDayGuests];

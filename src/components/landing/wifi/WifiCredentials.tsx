@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { copyToClipboard, getPlatform, subscribeNever, type PlatformKey } from "@/lib/browser";
+import { useEffect, useRef, useState } from "react";
+import { copyToClipboard } from "@/lib/browser";
 import type { MessageKey } from "@/lib/i18n";
 import { wifiView } from "@/lib/venue/features";
 import { useLanding } from "../LandingContext";
@@ -33,41 +33,16 @@ function CopyButton({ label, value, event, disabled, primary }: { label: string;
   );
 }
 
-const SETTINGS_HELP: Record<PlatformKey, MessageKey> = {
-  mac: "mac_wifi",
-  windows: "windows_wifi",
-  android: "device_wifi",
-  ios: "device_wifi",
-  unknown: "device_wifi",
-};
-
-export function WifiCredentials() {
-  const { venue, t, track, showDialog } = useLanding();
-  const wifi = wifiView(venue);
-  const platform = useSyncExternalStore<PlatformKey>(subscribeNever, getPlatform, () => "unknown");
-
-  function openSettings() {
-    track("wifi_settings_tapped", { device_platform: platform });
-    if (platform === "android") {
-      // Chrome often drops the settings intent; if we're still visible, explain instead.
-      window.location.href = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end";
-      setTimeout(() => {
-        if (!document.hidden) showDialog({ title: t("feature_wifi"), message: t("device_wifi") });
-      }, 600);
-      return;
-    }
-    if (platform === "ios") {
-      window.location.href = "App-Prefs:root=WIFI";
-      setTimeout(() => {
-        if (!document.hidden) showDialog({ title: t("feature_wifi"), message: t("device_wifi") });
-      }, 600);
-      return;
-    }
-    showDialog({ title: t("feature_wifi"), message: t(SETTINGS_HELP[platform]) });
-  }
-
+/**
+ * Behind the owner's Wi-Fi email gate the page doesn't have the password, so
+ * the sheet fetches it and passes `password` here (undefined while it loads).
+ */
+export function WifiCredentials({ password, gated = false }: { password?: string | null; gated?: boolean }) {
+  const { venue, t } = useLanding();
+  const loading = gated && password === undefined;
+  const wifi = wifiView(gated && venue.wifi ? { ...venue, wifi: { ...venue.wifi, password: password ?? null } } : venue);
   const securityDisplay = wifi.security || t("not_provided");
-  const passwordDisplay = wifi.isOpen ? t("no_password_required") : wifi.password || t("not_provided");
+  const passwordDisplay = wifi.isOpen ? t("no_password_required") : loading ? t("loading") : wifi.password || t("not_provided");
 
   return (
     <>
@@ -88,9 +63,6 @@ export function WifiCredentials() {
         </span>
         {wifi.canCopyPassword && <CopyButton label={t("copy_password")} value={wifi.password} event="wifi_copy_password" primary />}
       </div>
-      <button type="button" className="sheet-btn wifi-settings-btn" onClick={openSettings}>
-        {t("open_wifi_settings")}
-      </button>
       <p className="sheet-footnote">{wifi.isOpen ? t("wifi_open_hint") : t("wifi_password_hint")}</p>
     </>
   );

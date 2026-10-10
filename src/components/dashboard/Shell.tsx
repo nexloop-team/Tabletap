@@ -189,6 +189,7 @@ export function AppShell({
   user,
   counts,
   lastVenueId,
+  ownsVenues = false,
   children,
 }: {
   mode: "venue" | "admin";
@@ -198,6 +199,8 @@ export function AppShell({
   counts?: Record<string, number>;
   /** The venue the owner last had open, so Account and Help keep its sidebar. */
   lastVenueId?: string | null;
+  /** Admin: this admin also runs a venue of their own, so "My venues" leads somewhere. */
+  ownsVenues?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -292,16 +295,19 @@ export function AppShell({
         <div className="sidebar-foot">
           <ul className="nav-list">
             {mode === "admin" ? (
-              <NavLink item={{ href: "/dashboard", label: "My venues", icon: Store, exact: true }} pathname={pathname} />
+              ownsVenues && <NavLink item={{ href: "/dashboard", label: "My venues", icon: Store, exact: true }} pathname={pathname} />
             ) : (
               user.isAdmin && <NavLink item={{ href: "/admin", label: "Platform admin", icon: Shield }} pathname={pathname} />
             )}
-            <li>
-              <Link className="nav-link" href={`/dashboard/help${venueId ? `?v=${venueId}` : ""}`} aria-current={pathname === "/dashboard/help" ? "page" : undefined}>
-                <LifeBuoy aria-hidden />
-                <span className="nav-label">Help &amp; contact</span>
-              </Link>
-            </li>
+            {/* Help is for venue owners; the operator console has no need of it. */}
+            {mode === "venue" && (
+              <li>
+                <Link className="nav-link" href={`/dashboard/help${venueId ? `?v=${venueId}` : ""}`} aria-current={pathname === "/dashboard/help" ? "page" : undefined}>
+                  <LifeBuoy aria-hidden />
+                  <span className="nav-label">Help &amp; contact</span>
+                </Link>
+              </li>
+            )}
             <NavLink item={{ href: "/dashboard/account", label: "Account", icon: UserRound }} pathname={pathname} />
             <SignOutButton />
           </ul>

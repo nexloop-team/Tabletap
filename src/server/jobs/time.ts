@@ -1,6 +1,8 @@
-/** Calendar maths in the venue owners' time zone (the UK for now). */
+import { DEFAULT_TIME_ZONE } from "@/lib/venue/region";
 
-export const BUSINESS_TZ = "Europe/London";
+/** Calendar maths in a venue's own time zone (see venueTimeZone); India unless told otherwise. */
+
+export const BUSINESS_TZ = DEFAULT_TIME_ZONE;
 
 export interface LocalParts {
   year: number;
@@ -15,7 +17,7 @@ const WEEKDAYS: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 
 
 export function localParts(now: Date, timeZone = BUSINESS_TZ): LocalParts {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-GB", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23", weekday: "short" })
+    new Intl.DateTimeFormat("en-IN", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23", weekday: "short" })
       .formatToParts(now)
       .map((part) => [part.type, part.value]),
   );

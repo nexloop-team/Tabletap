@@ -1,5 +1,6 @@
 import type {
   AdminDeleteUserRequest,
+  AdminDeleteVenueRequest,
   AdminEditModeRequest,
   AdminUserRequest,
   AdminVenueRequest,
@@ -81,6 +82,7 @@ export const dashboardApi = {
   },
 
   adminUpdateVenue: (venueId: string, body: AdminVenueRequest) => send<{ ok: true }>("PATCH", `/api/admin/venues/${venueId}`, body),
+  adminDeleteVenue: (venueId: string, body: AdminDeleteVenueRequest) => send<{ ok: true }>("DELETE", `/api/admin/venues/${venueId}`, body),
   adminEditMode: (venueId: string, body: AdminEditModeRequest) => send<{ ok: true }>("POST", `/api/admin/venues/${venueId}/edit-mode`, body),
   adminUpdateUser: (userId: string, body: AdminUserRequest) => send<{ ok: true }>("PATCH", `/api/admin/users/${userId}`, body),
   adminDeleteUser: (userId: string, body: AdminDeleteUserRequest) => send<{ ok: true }>("DELETE", `/api/admin/users/${userId}`, body),
@@ -103,6 +105,7 @@ export const dashboardApi = {
     return { sections: data.sections, flaggedItemIds: data.flaggedItemIds ?? [] };
   },
 
+  deleteGuest: (venueId: string, customerId: string) => send<{ ok: true }>("DELETE", `/api/dashboard/venues/${venueId}/guests/${encodeURIComponent(customerId)}`),
   updateSettings: (venueId: string, body: VenueSettingsPatch) => send<VenueSettings>("PATCH", `/api/dashboard/venues/${venueId}/settings`, body),
   staffStamp: (body: StaffStampRequest) => send<StaffCardView>("POST", "/api/staff/stamp", body),
   staffRedeem: (body: StaffRedeemRequest) => send<StaffCardView>("POST", "/api/staff/redeem", body),

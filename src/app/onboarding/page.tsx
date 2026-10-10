@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
-import { CURRENCIES } from "@/lib/venue/schema";
-import { requireUser } from "@/server/auth/session";
+import { ResendVerification } from "@/components/dashboard/Shell";
+import { isAdmin, isListedSuperAdmin, requireUser } from "@/server/auth/session";
 import { listVenuesForUser } from "@/server/repositories/venues";
 import { uiFont } from "@/app/fonts";
 import { firstParam } from "@/server/request";
@@ -10,26 +10,33 @@ import "@/styles/app.css";
 
 export const metadata: Metadata = { title: "Set up your venue" };
 
-/** A first guess at the currency from the browser's region; the merchant can change it. */
-const REGION_CURRENCY: Record<string, (typeof CURRENCIES)[number]> = {
-  GB: "GBP", IE: "EUR", FR: "EUR", DE: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", PT: "EUR", BE: "EUR", AT: "EUR",
-  US: "USD", IN: "INR", AU: "AUD", CA: "CAD", NZ: "NZD", AE: "AED", SG: "SGD", ZA: "ZAR",
-};
-
 export default async function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   const user = await requireUser();
-  const verified = firstParam((await searchParams).verified);
+  const params = await searchParams;
+  const verified = firstParam(params.verified);
   const hasVenues = (await listVenuesForUser(user.id)).length > 0;
-  const region = /-([A-Z]{2})\b/.exec((await headers()).get("accept-language") ?? "")?.[1] ?? "";
+  // Admins run the console, not a café: straight there, unless they chose to add a venue (?create=1).
+  if (isAdmin(user) && !hasVenues && !firstParam(params.create)) redirect("/admin");
+  const adminUnconfirmed = isListedSuperAdmin(user) && !user.emailVerified;
   return (
     <div className={`app ${uiFont.variable}`}>
       <OnboardingWizard
-        defaultCurrency={REGION_CURRENCY[region] ?? "GBP"}
-        exitHref={hasVenues ? "/dashboard" : null}
+        // We sell in India: rupees first, whatever language the browser is set to (many Indian phones say en-US).
+        defaultCurrency="INR"
+        exitHref={hasVenues ? "/dashboard" : isAdmin(user) ? "/admin" : null}
         notice={
           <>
             {verified === "1" && <div className="notice notice-ok">Your email is confirmed. Thanks! Now let&apos;s set up your venue.</div>}
             {verified === "0" && <div className="notice notice-error">That confirmation link has expired or was already used.</div>}
+            {adminUnconfirmed && (
+              <div className="notice notice-info">
+                <span>
+                  This email is a super admin. Confirm it (the link is in your inbox, or in the server log during development) to open the admin
+                  console at /admin.
+                </span>
+                <ResendVerification />
+              </div>
+            )}
           </>
         }
       />

@@ -178,9 +178,13 @@ describe("venues on the SaaS side", () => {
   });
 
   it("keeps staff logins out of the dashboard and lets each invite work once", async () => {
-    const alice = await owner("staff-owner@example.com");
+    const unverified = await owner("staff-owner@example.com");
+    const venue = await onboard(unverified, "Till Test");
+    // Invite emails go out from our domain, so only an owner who confirmed their own email can send them.
+    await expect(m.invites.createStaffInvite(venue, unverified, "someone@example.com", "https://tabletap.test")).rejects.toThrow(/confirm your own email/i);
+    await m.users.markEmailVerified(unverified.id);
+    const alice = (await m.users.findUserById(unverified.id))!;
     const bob = await owner("staff-bob@example.com");
-    const venue = await onboard(alice, "Till Test");
     const { url } = await m.invites.createStaffInvite(venue, alice, " Staff-Bob@Example.com ", "https://tabletap.test");
     const token = new URL(url).searchParams.get("t")!;
 

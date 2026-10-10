@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Download, Search, Users } from "lucide-react";
 import Link from "next/link";
+import { GuestDelete } from "@/components/dashboard/GuestDelete";
 import { loadDashboardVenue } from "@/server/dashboard";
 import { listGuests } from "@/server/repositories/insights";
 import { firstParam } from "@/server/request";
@@ -64,6 +65,7 @@ export default async function GuestsPage({ params, searchParams }: PageProps<"/d
                   <th>Birthday</th>
                   <th>Joined via</th>
                   <th>Joined</th>
+                  <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -83,6 +85,9 @@ export default async function GuestsPage({ params, searchParams }: PageProps<"/d
                       <td>{guest.birthday ?? "–"}</td>
                       <td>{SOURCES[guest.captureSource ?? ""] ?? guest.captureSource ?? "–"}</td>
                       <td className="muted">{guest.createdAt.slice(0, 10)}</td>
+                      <td>
+                        <GuestDelete venueId={venue.id} customerId={guest.id} email={guest.email} />
+                      </td>
                     </tr>
                   );
                 })}
@@ -112,7 +117,8 @@ export default async function GuestsPage({ params, searchParams }: PageProps<"/d
         )}
       </section>
       <p className="hint" style={{ marginTop: 12 }}>
-        Only email guests marked <strong>Subscribed</strong> with offers. Others joined for their loyalty card only.
+        Only email guests marked <strong>Subscribed</strong> with offers. Others joined for their loyalty card only. If a guest asks you to delete
+        their data, use the bin on their row; members can also delete their own card from its page.
       </p>
     </>
   );

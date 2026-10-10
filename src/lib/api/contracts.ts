@@ -11,17 +11,24 @@ const firstName = z.string().trim().max(80).optional();
 const locale = z.string().trim().max(35).optional();
 const birthday = z.object({ month: z.number().int().min(1).max(12), day: z.number().int().min(1).max(31) });
 
+/** Proof that feedback was just posted: the one thing that earns a feedback stamp. */
+const feedbackReceipt = z.object({ feedbackId: z.string().trim().min(1).max(64), token: z.string().trim().min(10).max(100) });
+
 /** Where a join happened; also selects which CRM switch governs it. */
-export const joinDoor = z.enum(["home", "feedback", "wifi_gate"]);
+export const joinDoor = z.enum(["home", "feedback"]);
 
 export const enrollRequest = z.object({
   venueId,
   email,
   name: z.string().trim().max(120).optional(),
   firstName,
-  /** Only 0 or 1: the Wi-Fi offer and the feedback join grant one stamp. */
+  /**
+   * Only 0 or 1: joining after feedback grants one stamp. The server decides
+   * whether it's earned (a receipt for that feedback), whatever is asked for.
+   */
   initialStamps: z.number().int().min(0).max(1).optional(),
-  captureSource: z.enum(["landing", "feedback", "wifi", "rewards"]).optional(),
+  feedbackReceipt: feedbackReceipt.optional(),
+  captureSource: z.enum(["landing", "feedback", "rewards"]).optional(),
   /** Rewards-only join: the button press itself is the membership consent. */
   joined: z.boolean().optional(),
   door: joinDoor.optional(),
@@ -44,13 +51,13 @@ export interface EnrollResponse {
   passBase64: string | null;
   /** Google Wallet save link — only when a Google issuer is configured. */
   googleWalletUrl: string | null;
-  /** Web version of the card; always available, and only to new members. */
+  /** Web version of the card, only to new members; a returning member is emailed it instead. */
   cardUrl: string | null;
   /** The server asked for a double-opt-in confirmation. */
   confirmationPending: boolean;
 }
 
-export const stampRequest = z.object({ venueId, email });
+export const stampRequest = z.object({ venueId, email, feedbackReceipt });
 export type StampRequest = z.input<typeof stampRequest>;
 export interface StampResponse {
   stamped: boolean;
@@ -70,21 +77,30 @@ export interface FeedbackResponse {
   id: string;
   /** -1 (negative) to 1 (positive), computed server-side. */
   sentimentScore: number;
+  /** Claims this feedback's stamp (once, within the hour); null when the venue gives none. */
+  stampReceipt: { feedbackId: string; token: string } | null;
 }
 
+/** The Wi-Fi email gate (when the owner has it on): an email, and the consent line's answer if it was shown. */
 export const captureGuestRequest = z.object({
   venueId,
   email,
   firstName,
   marketingConsent: z.boolean(),
   ageAttested: z.boolean(),
-  source: z.enum(["wifi"]),
   locale,
 });
 export type CaptureGuestRequest = z.input<typeof captureGuestRequest>;
 export interface CaptureGuestResponse {
   customerId: string;
   confirmationPending: boolean;
+}
+
+/** A guest past the Wi-Fi email gate (this device knows their guest id) asks for the password. */
+export const wifiPasswordRequest = z.object({ venueId, customerId: z.string().trim().min(1).max(128) });
+export type WifiPasswordRequest = z.input<typeof wifiPasswordRequest>;
+export interface WifiPasswordResponse {
+  password: string | null;
 }
 
 export const recordVisitRequest = z.object({
@@ -101,8 +117,11 @@ export const birthdayRequest = z.union([
 export type BirthdayRequest = z.input<typeof birthdayRequest>;
 
 export const analyticsEvent = z.object({
-  name: z.string().trim().min(1).max(64),
-  params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  name: z.string().trim().regex(/^[a-z][a-z0-9_]{1,63}$/),
+  params: z
+    .record(z.string().max(40), z.union([z.string().max(300), z.number(), z.boolean(), z.null()]))
+    .refine((params) => Object.keys(params).length <= 20, "Too many parameters")
+    .optional(),
 });
 export type AnalyticsEvent = z.input<typeof analyticsEvent>;
 

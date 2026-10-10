@@ -39,7 +39,7 @@ It creates the tables if needed, skips rows that are already there, and with `S3
 5. To see `/admin`, put your email in `ADMIN_EMAILS` and verify it.
 6. Billing runs in **dev mode** without Razorpay keys: "Subscribe" switches the venue on for a year instantly and "Cancel subscription" ends it straight away.
 
-Three demo venues are seeded on first start (free access, no owner):
+Three demo venues are seeded on first start (free access, no owner; hidden from the admin console and its numbers):
 
 | URL | Shows |
 |---|---|
@@ -49,7 +49,7 @@ Three demo venues are seeded on first start (free access, no owner):
 
 ## Subscription
 
-One plan, billed per venue: **₹999 + 18% GST a year** (₹1,178.82 in total), with a **7-day free trial** and no card needed. Every feature is included.
+One plan, billed per venue: **₹999 a year**, with a **7-day free trial** and no card needed. Every feature is included. No GST is charged while the business isn't GST-registered; once it is, set `CHARGES_GST = true` in `src/lib/plans.ts` (prices then show ₹999 + 18% GST, ₹1,178.82 in total) and set `GSTIN`.
 
 When a venue has neither a paid subscription nor trial days left, its guest page (and everything guests reach through it: menu, loyalty card, till stamping) goes offline. The owner can still sign in, edit and subscribe, and the page comes back exactly as it was. A failed renewal keeps the page up while Razorpay retries; it goes offline when Razorpay halts the subscription. Prices and the access rules live in `src/lib/plans.ts`.
 
@@ -59,35 +59,46 @@ When a venue has neither a paid subscription nor trial days left, its guest page
    1. Set `DATABASE_URL` to your Postgres.
       - **Supabase:** Project → Connect → copy the **Session pooler** string (IPv4, port 5432), with your database password filled in.
       - **Self-hosted:** `postgres://user:pass@host:5432/tabletap`, plus `DATABASE_SSL=off` if it has no TLS.
+      - To have the server's certificate checked, set `DATABASE_SSL_CA` to the provider's CA (PEM text or a file path; Supabase: Project Settings → Database → SSL Configuration), or `DATABASE_SSL=verify` for a publicly signed certificate. Without either the link is encrypted but unchecked, and startup warns.
    2. For images, set the `S3_*` variables to a bucket.
       - **Supabase:** Storage → create a private bucket `tabletap` → Storage settings → S3 access keys. Use the endpoint shown there (`https://<project>.supabase.co/storage/v1/s3`) and the project's region.
       - **MinIO, R2 or AWS:** use their endpoint and keys.
    3. Without `S3_*`, images stay on the server's disk under `DATA_DIR`. That needs a persistent volume, so it won't work on serverless hosts.
    4. Check both before starting: `node --env-file=.env.local scripts/check-connections.mjs`.
-   5. Run a single instance, because rate limits are kept in memory.
+   5. Run a single instance, because rate limits are kept in memory. They read the visitor's address from the proxy's end of `X-Forwarded-For`: set `TRUSTED_PROXY_COUNT=2` with Cloudflare in front of the host, or `CLIENT_IP_HEADER` to a header your CDN sets.
    6. Every table has row-level security on with no policies. Supabase's automatic REST API can't read them; the app connects as the tables' owner and isn't affected.
 2. **Set `APP_URL`** to your public origin (e.g. `https://tabletap.app`). It's encoded into every QR code, so it must never change.
 3. **Email:** create a [Resend](https://resend.com) account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 4. **Razorpay:**
-   1. In the Razorpay dashboard, create a yearly plan (Subscriptions → Plans) for ₹1,178.82 (₹999 + 18% GST), and set `RAZORPAY_PLAN_ID`.
+   1. In the Razorpay dashboard, create a yearly plan (Subscriptions → Plans) for ₹999 (₹1,178.82 once GST is charged), and set `RAZORPAY_PLAN_ID`.
    2. Create API keys and set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
    3. Add a webhook at `https://<your-domain>/api/billing/webhook` for the `subscription.*` events (activated, charged, pending, halted, cancelled, completed, paused, resumed), and set `RAZORPAY_WEBHOOK_SECRET`.
    4. Owners subscribe in Razorpay Checkout on the Subscription page; the signed payment response switches the venue on at once, and the webhook keeps renewals and cancellations in step.
    5. Without keys in production, payments are disabled and the Subscription page asks owners to email support.
-   6. Ask your accountant about GST invoices: Razorpay can issue them if you add your GSTIN in its dashboard.
-5. **Set `ADMIN_EMAILS`** to your own address(es).
+   6. Without GST registration, Razorpay can activate a partnership or proprietorship with a Udyam certificate instead of a GSTIN (plus one more business proof, such as a Shop & Establishment licence). Once GST-registered, add the GSTIN in Razorpay so it issues GST invoices.
+5. **Set `ADMIN_EMAILS`** to your own address(es), and `NEXT_PUBLIC_SUPPORT_EMAIL` to the address owners and guests should write to (read at build time, so rebuild after changing it).
 6. **Backups:**
    - **Database:** Supabase backs it up daily on paid plans. Elsewhere, schedule `pg_dump`.
    - **Images:** they're in the bucket, or in `DATA_DIR` if you kept them on disk.
-7. **Get the starter [terms](src/app/terms/page.tsx) and [privacy notice](src/app/privacy/page.tsx) reviewed by a lawyer.**
+7. **Legal pages (India).** Set the business details below; the pages show "[… not set]" until you do, and startup lists what's missing. Then have a lawyer review the pages before launch.
+   - `/terms`, `/privacy` (DPDP Act 2023 notice for guests and owners), `/refunds` (cancellation and refunds), `/shipping` (delivery policy for an online service) and `/contact` (business details and where to send complaints). Razorpay checks all five before activating payments.
+   - The refund windows are a business choice: they're constants at the top of [refunds/page.tsx](src/app/refunds/page.tsx). Change `POLICIES_UPDATED` in [config/legal.ts](src/config/legal.ts) whenever a policy's wording changes.
+   - Only charge GST once you're GST-registered, and set `GSTIN` then.
+8. **Check the log after the first start.** In production the server lists every setting a launch still needs ([env-check.ts](src/server/env-check.ts)).
 
 ## Configuration
 
 | Env var | Purpose |
 |---|---|
 | `APP_URL` | Public origin encoded into QR codes and links (falls back to the request host) |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Support address on the help page, policies and emails (build time) |
+| `LEGAL_ADDRESS`, `LEGAL_JURISDICTION_CITY`, `SUPPORT_PHONE` | Business details on the legal and contact pages (required in production) |
+| `LEGAL_ENTITY_NAME`, `LEGAL_ENTITY_TYPE` | The business that runs Tabletap, e.g. `Tabletap` + `a partnership firm`. Shown in the legal fine print, the Contact page and on payments (required in production) |
+| `LEGAL_REGISTRATION` | Optional: Udyam number, firm registration, or later CIN / LLPIN, printed next to the business name |
+| `SUPPORT_HOURS`, `GSTIN` | Optional: support hours (default Mon–Sat 10–6 IST), GSTIN once registered |
 | `DATABASE_URL` | PostgreSQL connection string (Supabase, Neon, RDS, self-hosted). Without it, an embedded Postgres in `DATA_DIR/pg` is used |
-| `DATABASE_SSL` | `off` for a server without TLS (localhost is detected automatically) |
+| `DATABASE_SSL` | `off` for a server without TLS (localhost is detected automatically); `verify` to check a publicly signed certificate |
+| `DATABASE_SSL_CA` | The database's CA certificate (PEM text or file path), so its identity is checked |
 | `DATABASE_POOL_SIZE` | Connections per server (default 5) |
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Store images and feedback photos in any S3-compatible bucket (Supabase Storage, MinIO, R2, AWS). Without them they're saved under `DATA_DIR` |
 | `DATA_DIR` | Local folder for the embedded database and, without `S3_*`, images and feedback photos (default `./data`) |
@@ -103,8 +114,9 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `ANTHROPIC_MODEL` | Claude model (default `claude-opus-5-5`) |
 | `AI_PROVIDER` | `groq` or `anthropic`, to choose when both keys are set |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile captcha on sign-up and password reset; off without them |
+| `TRUSTED_PROXY_COUNT`, `CLIENT_IP_HEADER` | Where rate limits read the visitor's address (default: the last `X-Forwarded-For` entry) |
 | `CRON_SECRET` | Enables `POST /api/cron/run` for an external scheduler (`Authorization: Bearer …`) |
-| `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails), e.g. when running more than one server |
+| `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails, daily clean-up), e.g. when running more than one server |
 | `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
 | `APPLE_PASS_CERT_PATH`, `GOOGLE_WALLET_ISSUER_ID` | Reserved for Wallet passes (not implemented yet; the web card is used instead) |
@@ -125,7 +137,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `/dashboard/<venue>/qr`, `/qr/print` | QR downloads (PNG/SVG, per-table sources) and printable table cards |
 | `/dashboard/<venue>/billing`, `/settings` | Plan, venue details, page address, delete venue |
 | `/dashboard/account` | Name, password, delete account |
-| `/admin` | Operator view: all accounts and venues, suspend, extend trials, give free access, revenue, account actions (resend emails, reset link, block, delete) and an activity log of every admin change |
+| `/admin` | Operator view: all accounts and venues, suspend, extend trials, give free access, cancel a renewal, delete a venue, revenue, account actions (resend emails, reset link, block, delete) and an activity log of every admin change |
 | `/staff`, `/staff/stamp?c=<card>` | Till screens for paired staff devices: find a member, add stamps, redeem rewards, undo |
 
 **Guests**
@@ -134,9 +146,9 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 |---|---|
 | `/s?i=<code>&s=<source>` | Landing page (server-rendered, venue theme applied before first paint). `cta=box\|anon` forces the feedback-card A/B variant. |
 | `/menu?i=<code>` | Hosted menu: search, section jump bar, allergen filter, dietary tags |
-| `/card/<id>?t=<token>` | Member's web card (linked from the enrolment email) |
-| `/consent?status=` | Result of the double-opt-in link |
-| `/privacy`, `/terms` | Privacy notice and terms of service |
+| `/card/<id>?t=<token>` | Member's web card (linked from the enrolment email), where they can also delete their card and details |
+| `/consent?token=` | The double-opt-in link: a Confirm button (email scanners open links, so confirming takes a tap) |
+| `/privacy`, `/terms`, `/refunds`, `/shipping`, `/contact` | Privacy policy (DPDP), terms, cancellation and refunds, delivery policy, contact |
 | `/unsubscribe?token=` | Stop offer emails from one venue (also one-click from mail apps) |
 | `/media/<venue>/<file>` | Images uploaded by owners |
 
@@ -148,6 +160,11 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 - Every dashboard page and API checks venue ownership on the server. `src/proxy.ts` only does an early redirect to the login page.
 - Uploads are identified by their bytes (JPEG/PNG/WebP/GIF only, so no SVG) and capped at 5 MB. Guests' feedback photos are only served to the venue's owner.
 - Saved configs pass a strict zod schema (`src/lib/venue/schema.ts`): http(s) links only, hex colours only, length limits.
+- Guests can't earn stamps on their own: a feedback stamp needs the one-time receipt from that feedback post, and join stamps are decided by the server. A returning member is emailed their card link, never shown it, since anyone can type an email.
+- Behind the Wi-Fi email gate, the password isn't sent to the page until the guest has given an email.
+- Old page addresses stay tied to their venue (and deleted venues' addresses stay reserved), so a printed QR code can never lead to someone else's page.
+- Pages can only be framed by our own (dashboard preview), with HSTS, nosniff and a strict referrer policy on every response.
+- A daily clean-up deletes expired sessions and links, email copies after 90 days and page analytics after 400 days. Email copies keep no working private links once real email is on.
 
 ## Code map
 

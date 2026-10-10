@@ -1,6 +1,16 @@
 // Checks DATABASE_URL and the S3_* bucket from .env.local, without changing anything lasting.
 //   node --env-file=.env.local scripts/check-connections.mjs
+import fs from "node:fs";
 import { AwsClient } from "aws4fetch";
+
+/** Same rules as src/server/db.ts databaseSsl. */
+function sslFor(url) {
+  if (process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url)) return undefined;
+  const ca = process.env.DATABASE_SSL_CA?.trim();
+  if (ca) return { rejectUnauthorized: true, ca: ca.includes("BEGIN CERTIFICATE") ? ca.replaceAll("\\n", "\n") : fs.readFileSync(ca, "utf8") };
+  return { rejectUnauthorized: process.env.DATABASE_SSL === "verify" };
+}
+
 
 let ok = true;
 
@@ -9,7 +19,7 @@ if (process.env.DATABASE_URL) {
   const url = process.env.DATABASE_URL;
   const client = new pg.Client({
     connectionString: url,
-    ssl: process.env.DATABASE_SSL === "off" || /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: false },
+    ssl: sslFor(url),
     connectionTimeoutMillis: 15000,
   });
   try {

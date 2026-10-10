@@ -43,7 +43,7 @@ export async function recordConsent(
       mail: {
         to: customer.email,
         subject: `Confirm your subscription to ${venue.name}`,
-        text: `Tap to confirm you'd like offers and news from ${venue.name}:\n${origin}/api/consent/confirm?token=${token}\n\nIf this wasn't you, ignore this email and nothing will be sent.`,
+        text: `Tap to confirm you'd like offers and news from ${venue.name}:\n${origin}/consent?token=${token}\n\nIf this wasn't you, ignore this email and nothing will be sent.`,
       },
     };
   }

@@ -1,55 +1,182 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { connection } from "next/server";
+import { LegalPage } from "@/components/legal/LegalPage";
 import { BRAND } from "@/config/brand";
+import { legalDetails, operatedByOther } from "@/config/legal";
 import "@/styles/pages.css";
 
-export const metadata: Metadata = { title: "Privacy notice" };
+export const metadata: Metadata = { title: "Privacy policy" };
 
 /**
- * Plain-language notice linked from every consent line. The venue is the
- * controller of its guests' data and we process it on the venue's behalf;
- * have this reviewed by a lawyer before launch.
+ * The notice under India's Digital Personal Data Protection Act, 2023 (and
+ * the DPDP Rules, 2025), for both audiences: guests using a venue's page
+ * (linked from every consent line and card) and venue owners. Every period
+ * and mechanism it promises exists in the code (see jobs/housekeeping.ts,
+ * guest deletion, consent). Have a lawyer review it before launch.
  */
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  await connection();
+  const legal = legalDetails();
   return (
-    <main className="page-wrapper simple-page prose">
-      <h1>Privacy notice</h1>
+    <LegalPage path="/privacy" title="Privacy policy">
       <p>
-        This page explains what happens to your information when you use a venue&apos;s {BRAND.name} page, the page a QR code on your table
-        opens. The venue you are visiting decides what it collects and why; {BRAND.name} runs the page for them.
+        This policy explains what personal data {BRAND.name} handles, why, how long it&apos;s kept and the rights you have under India&apos;s
+        Digital Personal Data Protection Act, 2023 (&ldquo;DPDP Act&rdquo;). {operatedByOther(legal) ? `${BRAND.name} is operated by ${legal.entityLabel}` : `${BRAND.name} is ${legal.entityType ?? "an Indian business"}`}, {legal.address}
+        (&ldquo;{BRAND.name}&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;).
+      </p>
+      <p>
+        It covers the guest pages that venues&apos; QR codes open, the owners&apos; dashboard and the till.
+      </p>
+      <p>
+        <strong>Two kinds of people use {BRAND.name}:</strong> <a href="#guests">guests</a> who scan a QR code at a café, restaurant or bar,
+        and <a href="#owners">venue owners and their staff</a>, who run those pages.
       </p>
 
-      <h2>What we collect</h2>
+      <h2 id="guests">Part A: Guests at a venue</h2>
+      <p>
+        When you scan a table QR code, the page that opens belongs to that venue. <strong>The venue is the Data Fiduciary</strong>: it decides
+        what to ask you for and why. {BRAND.name} runs the page for the venue as its <strong>Data Processor</strong>, and uses your data only
+        for that venue, never for itself and never for advertising.
+      </p>
+
+      <h3>What is collected, and why</h3>
+      <div className="legal-scroll">
+        <table className="legal-table">
+          <thead>
+            <tr>
+              <th>When you…</th>
+              <th>Data</th>
+              <th>Used to</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Join the loyalty card or members&apos; club</td>
+              <td>Email, the name you type, stamps, rewards, visits</td>
+              <td>Run your card, let staff find and stamp it, email you your card and tell you when a reward is ready</td>
+            </tr>
+            <tr>
+              <td>Give your email for the Wi-Fi (if the venue asks)</td>
+              <td>Email, first name, the visit</td>
+              <td>Show you the Wi-Fi password and count your visits</td>
+            </tr>
+            <tr>
+              <td>Tick &ldquo;Email me offers&rdquo; and confirm by email</td>
+              <td>Your consent, and if you choose, your birthday (day and month, never the year)</td>
+              <td>Send the venue&apos;s offers and news, a birthday treat and a &ldquo;we miss you&rdquo; note</td>
+            </tr>
+            <tr>
+              <td>Leave feedback</td>
+              <td>What you write and any photo you attach</td>
+              <td>
+                Pass your note privately to the venue, and summarise the week&apos;s notes for it with AI. Feedback isn&apos;t linked to your name or
+                email; photos are re-encoded, which removes location data
+              </td>
+            </tr>
+            <tr>
+              <td>Use the page</td>
+              <td>Which buttons are tapped, which table&apos;s QR code was scanned, a random ID for this visit, your network address</td>
+              <td>Show the venue how its page is used, and protect the service from abuse (addresses are held in memory briefly, not stored)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Consent, and taking it back</h3>
       <ul>
+        <li>Joining a card or getting on the Wi-Fi never requires agreeing to offers.</li>
+        <li>You only get offers if you tick the box <em>and</em> confirm from the email we send. Each offer email has a one-tap unsubscribe link.</li>
         <li>
-          <strong>If you join a loyalty programme or give your email for the Wi-Fi:</strong> your email address, the name you type, and your
-          stamps and visits. If you choose to, your birthday (month and day only, never the year).
-        </li>
-        <li>
-          <strong>If you leave feedback:</strong> what you write and any photo you attach. Feedback isn&apos;t linked to your name or email.
-          Photos are re-encoded before upload, which removes location data.
-        </li>
-        <li>
-          <strong>When you use the page:</strong> which buttons are tapped, which QR code you scanned and a random ID for this visit. We
-          don&apos;t use advertising cookies. We store one small value on your device to remember that you&apos;ve joined, and one to keep
-          the page layout consistent.
+          You can delete your card and everything on it yourself, at any time, from the link at the bottom of your card&apos;s page. That
+          withdraws your consent and erases your details at that venue.
         </li>
       </ul>
 
-      <h2>Marketing emails</h2>
+      <h3>Age</h3>
       <p>
-        You&apos;ll only get offers and news if you tick the box <em>and</em> confirm by email. Joining a loyalty programme or getting on
-        the Wi-Fi never requires it. Every marketing email has an unsubscribe link.
+        Under the DPDP Act anyone under 18 is a child, whose data needs a parent&apos;s consent. Guests at Indian venues confirm they&apos;re 18
+        or older before agreeing to offers. If you&apos;re under 18, please don&apos;t join or give your email without your parent or guardian.
       </p>
 
-      <h2>Age</h2>
-      <p>You must be 13 or older to join (18 or older at pubs and bars).</p>
-
-      <h2>How long we keep it, and your rights</h2>
+      <h3>On your phone</h3>
       <p>
-        We keep your details while you&apos;re a member of the venue&apos;s programme and delete them when the venue closes its account or
-        when you ask. You can ask for a copy of your data, a correction or deletion. Ask the venue directly, or reply to any email you
-        received from us.
+        We don&apos;t use advertising or tracking cookies. The page stores a few small values on your phone: which card or guest ID is yours
+        at this venue (so you don&apos;t have to join again), a random visit ID that ends when you close the tab, and whether you&apos;ve
+        answered the birthday question.
       </p>
-    </main>
+
+      <h3>How long it&apos;s kept</h3>
+      <ul>
+        <li>Your details, card and visits: while the venue&apos;s account exists, until you delete your card, or until the venue deletes you on request.</li>
+        <li>Page-use records: 400 days. Copies of emails sent to you: 90 days, with private links removed.</li>
+        <li>When a venue deletes its account, its guests&apos; data is erased. Backups roll over within 30 days.</li>
+      </ul>
+
+      <h2 id="owners">Part B: Venue owners and staff</h2>
+      <p>For your own account, <strong>{BRAND.name} is the Data Fiduciary</strong>.</p>
+      <ul>
+        <li>
+          <strong>Account:</strong> your name, email and password (stored only as a one-way hash), and which venues you run or work at. Used to
+          sign you in, run your venues and send service, security and billing emails, including a weekly summary you can switch off.
+        </li>
+        <li>
+          <strong>Billing:</strong> your subscription status and Razorpay&apos;s customer and subscription IDs. Card, UPI and bank details go to
+          Razorpay directly; we never see or store them.
+        </li>
+        <li>
+          <strong>Security:</strong> sign-in sessions (a cookie, kept 90 days from your last visit), a cookie on paired till devices, network
+          addresses held in memory briefly to stop abuse, and a log of support actions our staff take on accounts.
+        </li>
+        <li>
+          <strong>Retention:</strong> while your account exists. Deleting your account erases it, along with the venues only you own and their
+          guests&apos; data. Razorpay keeps its payment records, and we keep invoices, for as long as tax law requires.
+        </li>
+      </ul>
+
+      <h2>Who else handles data</h2>
+      <p>We use trusted service providers, bound by contract to use the data only for us. Some are outside India, which the DPDP Act allows:</p>
+      <ul>
+        <li>Hosting, database and file storage (our cloud provider)</li>
+        <li>Email delivery (Resend)</li>
+        <li>Payments (Razorpay, for venue subscriptions only)</li>
+        <li>Bot protection on sign-up (Cloudflare Turnstile)</li>
+        <li>AI for owners: reading menu photos, and summarising a week&apos;s feedback notes (the note text only, never who wrote it)</li>
+        {process.env.GOOGLE_NL_API_KEY && <li>Judging the tone of feedback notes (Google Cloud Natural Language; the text only, never who wrote it)</li>}
+      </ul>
+      <p>We don&apos;t sell personal data or share it for advertising. We disclose it to authorities only when the law requires.</p>
+
+      <h2>Security</h2>
+      <p>
+        Data is encrypted in transit, passwords and private links are stored hashed, access is limited to people who need it, and admin actions
+        are logged. If a breach affects your data, we&apos;ll tell you and the Data Protection Board of India as the DPDP Act requires.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>Under the DPDP Act you can:</p>
+      <ul>
+        <li>ask what personal data is held about you and how it&apos;s used, and who it&apos;s been shared with;</li>
+        <li>have it corrected, completed, updated or erased;</li>
+        <li>withdraw consent at any time (as easily as you gave it);</li>
+        <li>nominate someone to act for you if you die or can&apos;t act yourself;</li>
+        <li>have a complaint dealt with by us, and then, if you&apos;re not satisfied, complain to the Data Protection Board of India.</li>
+      </ul>
+      <p>
+        Guests can ask the venue directly, or write to us and we&apos;ll pass it on and help. Owners can change most things in the dashboard or
+        delete their account there. We reply within 30 days.
+      </p>
+
+      <h2 id="complaints">Questions and complaints</h2>
+      <p>
+        Email <a href={`mailto:${legal.supportEmail}`}>{legal.supportEmail}</a>. We acknowledge complaints within 48 hours and resolve them
+        within 30 days. See also <Link href="/contact">Contact us</Link>.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If we change this policy in a way that matters, we&apos;ll update the date above and, for owners, email you first. Guests will see the
+        new version linked from the page.
+      </p>
+    </LegalPage>
   );
 }

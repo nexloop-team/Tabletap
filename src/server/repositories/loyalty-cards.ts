@@ -35,12 +35,21 @@ export async function findCardById(db: Db, cardId: string): Promise<LoyaltyCardR
   return ((await db.get("SELECT * FROM loyalty_cards WHERE id = ?", cardId)) as LoyaltyCardRow | undefined) ?? null;
 }
 
+/**
+ * The card, locked until the surrounding transaction ends, so two tills (or
+ * a double tap) can't both stamp or redeem from the same balance.
+ */
+export async function lockCard(db: Db, cardId: string): Promise<LoyaltyCardRow | null> {
+  return ((await db.get("SELECT * FROM loyalty_cards WHERE id = ? FOR UPDATE", cardId)) as LoyaltyCardRow | undefined) ?? null;
+}
+
 export async function setCardStamps(db: Db, cardId: string, stamps: number) {
   (await db.run("UPDATE loyalty_cards SET stamps = ? WHERE id = ?", stamps, cardId));
 }
 
-export async function addFeedbackStamp(db: Db, cardId: string): Promise<number> {
-  (await db.run("UPDATE loyalty_cards SET stamps = stamps + 1, last_feedback_stamp_at = now() WHERE id = ?", cardId));
+/** One stamp for feedback, never past the top reward (`goal`). Returns the card's stamps. */
+export async function addFeedbackStamp(db: Db, cardId: string, goal: number): Promise<number> {
+  (await db.run("UPDATE loyalty_cards SET stamps = LEAST(stamps + 1, GREATEST(stamps, ?)), last_feedback_stamp_at = now() WHERE id = ?", goal, cardId));
   const card = (await db.get("SELECT venue_id, stamps FROM loyalty_cards WHERE id = ?", cardId)) as { venue_id: string; stamps: number };
   await recordStampEvent(db, { venueId: card.venue_id, cardId, kind: "feedback", delta: 1 });
   return card.stamps;

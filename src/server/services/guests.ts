@@ -1,6 +1,6 @@
 import "server-only";
 import type { z } from "zod";
-import type { CaptureGuestResponse, birthdayRequest, captureGuestRequest, recordVisitRequest } from "@/lib/api/contracts";
+import type { CaptureGuestResponse, WifiPasswordResponse, birthdayRequest, captureGuestRequest, recordVisitRequest, wifiPasswordRequest } from "@/lib/api/contracts";
 import { isValidBirthday } from "@/lib/validation";
 import { birthdayAskOn, wifiGateActive } from "@/lib/venue/features";
 import { getDb, transaction } from "../db";
@@ -9,11 +9,11 @@ import { findCustomerById, recordBirthdaySkip, recordVisit, setBirthday, upsertC
 import { findVenue } from "../repositories/venues";
 import { deliver, recordConsent } from "./consent";
 
-/** The Wi-Fi gate's "just the Wi-Fi" path: a guest record, no loyalty card. */
+/** The Wi-Fi email gate: a guest record (no loyalty card, no stamp), and their consent answer if asked. */
 export async function captureGuest(input: z.output<typeof captureGuestRequest>, origin: string): Promise<CaptureGuestResponse> {
   const venue = await findVenue(input.venueId);
   if (!venue) throw new ServiceError(404, "Venue not found");
-  if (!wifiGateActive(venue)) throw new ServiceError(403, "Guest capture is not enabled for this venue");
+  if (!wifiGateActive(venue)) throw new ServiceError(403, "This venue doesn't ask for an email for its Wi-Fi");
 
   const { customer, consent } = await transaction(async (db) => {
     const { customer } = await upsertCustomer(db, {
@@ -21,7 +21,7 @@ export async function captureGuest(input: z.output<typeof captureGuestRequest>, 
       email: input.email,
       firstName: input.firstName ?? null,
       locale: input.locale ?? null,
-      captureSource: input.source,
+      captureSource: "wifi",
     });
     await recordVisit(db, venue.id, customer.id, "wifi_tap");
     const consent = await recordConsent(db, venue, customer, { marketingConsent: input.marketingConsent, ageAttested: input.ageAttested }, origin);
@@ -29,6 +29,14 @@ export async function captureGuest(input: z.output<typeof captureGuestRequest>, 
   });
   await deliver(consent.mail);
   return { customerId: customer.id, confirmationPending: consent.confirmationPending };
+}
+
+/** The gated Wi-Fi password, for a guest this venue has an email for. */
+export async function wifiPassword(input: z.output<typeof wifiPasswordRequest>): Promise<WifiPasswordResponse> {
+  const venue = await findVenue(input.venueId);
+  if (!venue) throw new ServiceError(404, "Venue not found");
+  if (!await findCustomerById(await getDb(), venue.id, input.customerId)) throw new ServiceError(404, "Unknown guest");
+  return { password: venue.wifi?.password?.trim() || null };
 }
 
 export async function recordGuestVisit(input: z.output<typeof recordVisitRequest>) {

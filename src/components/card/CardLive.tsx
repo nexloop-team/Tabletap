@@ -108,3 +108,40 @@ export function DifferentCard({ venueId, shortCode, label }: { venueId: string; 
     </p>
   );
 }
+
+/**
+ * The member erases their own card and details (DPDP: withdrawing consent is
+ * as easy as giving it). The card's private link is the proof it's theirs.
+ */
+export function DeleteMyCard({ venueId, shortCode, cardId, token, labels }: { venueId: string; shortCode: string; cardId: string; token: string; labels: { action: string; confirm: string; done: string; failed: string } }) {
+  const [state, setState] = useState<"idle" | "busy" | "done" | "failed">("idle");
+
+  async function remove() {
+    if (!window.confirm(labels.confirm)) return;
+    setState("busy");
+    try {
+      const response = await fetch(`/api/cards/${encodeURIComponent(cardId)}?t=${encodeURIComponent(token)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error(String(response.status));
+      deviceMemory.forgetCard(venueId);
+      setState("done");
+    } catch {
+      setState("failed");
+    }
+  }
+
+  if (state === "done") {
+    return (
+      <p className="rc-different" role="status">
+        {labels.done} <Link href={`/s?i=${encodeURIComponent(shortCode)}`}>{shortCode}</Link>
+      </p>
+    );
+  }
+  return (
+    <p className="rc-different">
+      <button type="button" className="link-btn" onClick={remove} disabled={state === "busy"}>
+        {labels.action}
+      </button>
+      {state === "failed" && <span role="alert"> · {labels.failed}</span>}
+    </p>
+  );
+}

@@ -21,10 +21,17 @@ const CURRENCY_ZONES: Record<string, string> = {
   ZAR: "Africa/Johannesburg",
 };
 
+/** Where we sell first; venues whose currency has no zone of its own use it too. */
+export const DEFAULT_TIME_ZONE = "Asia/Kolkata";
+
+/** The venue's time zone, from its currency: its days, its office hours, its "today". */
+export function venueTimeZone(currencyCode: string | null | undefined): string {
+  return (currencyCode && CURRENCY_ZONES[currencyCode]) || DEFAULT_TIME_ZONE;
+}
+
 /** Minutes the venue's clock is ahead of UTC right now (India: 330), so "today" means the venue's today. */
 export function venueUtcOffsetMinutes(currencyCode: string, at = new Date()): number {
-  const zone = CURRENCY_ZONES[currencyCode];
-  if (!zone) return 0;
+  const zone = venueTimeZone(currencyCode);
   const name = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "longOffset" }).formatToParts(at).find((part) => part.type === "timeZoneName")?.value ?? "";
   const match = /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(name);
   if (!match) return 0;

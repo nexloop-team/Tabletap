@@ -1,7 +1,6 @@
 import "server-only";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { cache } from "react";
-import { detectLocale, isSupportedLocale, LANGUAGE_COOKIE, type Locale } from "@/lib/i18n";
 import { findPausedVenue, findVenue } from "./repositories/venues";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
@@ -37,14 +36,6 @@ export async function serverOrigin(): Promise<string> {
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
   return `${proto}://${host}`;
-}
-
-/** Server-rendered text uses the browser's Accept-Language, so the first paint is already localised. */
-/** The guest's chosen language (language switch), else the phone's. */
-export async function requestLocale(): Promise<Locale> {
-  const chosen = (await cookies()).get(LANGUAGE_COOKIE)?.value;
-  if (isSupportedLocale(chosen)) return chosen;
-  return detectLocale((await headers()).get("accept-language"));
 }
 
 /** A paused venue for the "Back soon" page; see findPausedVenue. */

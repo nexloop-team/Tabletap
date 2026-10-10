@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/blocks";
 import { VenueAvatar } from "@/components/dashboard/Shell";
 import { firstParam } from "@/server/request";
-import { requireUser } from "@/server/auth/session";
+import { isAdmin, requireUser } from "@/server/auth/session";
 import { accessBadge } from "@/lib/plans";
 import { getSubscription } from "@/server/repositories/subscriptions";
 import { listStaffVenuesForUser, listVenuesForUser } from "@/server/repositories/venues";
@@ -15,6 +15,8 @@ export default async function DashboardHome({ searchParams }: PageProps<"/dashbo
   const verified = firstParam((await searchParams).verified);
   const venues = await listVenuesForUser(user.id);
   const tills = await listStaffVenuesForUser(user.id);
+  // Admins don't need a venue of their own: no venue means the console, not the setup wizard.
+  if (venues.length === 0 && tills.length === 0 && isAdmin(user)) redirect("/admin");
   if (venues.length === 0 && tills.length === 0) redirect(`/onboarding${verified ? `?verified=${encodeURIComponent(verified)}` : ""}`);
   if (venues.length === 1 && tills.length === 0) redirect(`/dashboard/${venues[0].id}${verified ? `?verified=${verified}` : ""}`);
 

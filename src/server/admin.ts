@@ -1,12 +1,13 @@
 import "server-only";
 import { accessState, parseDbDate, PRICE_INR, trialDaysLeft, type SubscriptionState, type SubscriptionStatus } from "@/lib/plans";
 import { getDb } from "./db";
+import { DEMO_VENUE_IDS } from "./seed";
 import { listUsersForAdmin } from "./repositories/users";
 import { listVenuesForAdmin } from "./repositories/venues";
 
 /**
  * One bucket per venue, so filters and counts in the operator console always
- * add up. "free" is access an admin gave by hand (and the demo venues).
+ * add up. "free" is access an admin gave by hand. The demo venues are left out.
  */
 export type VenueSegment = "paying" | "free" | "trial" | "unpaid" | "suspended";
 
@@ -91,7 +92,7 @@ function arrHistory(paying: AdminVenue[], now: number): { month: string; value: 
   return Array.from({ length: 12 }, (_, i) => {
     const monthEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 10 + i, 1)).getTime() - 1;
     const end = i === 11 ? now : monthEnd;
-    const label = new Date(i === 11 ? now : monthEnd).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+    const label = new Date(i === 11 ? now : monthEnd).toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" });
     return { month: label, value: starts.filter((start) => start <= end).length * PRICE_INR };
   });
 }
@@ -100,7 +101,7 @@ function arrHistory(paying: AdminVenue[], now: number): { month: string; value: 
 export async function platformCounts(): Promise<{ venues: number; accounts: number }> {
   const db = await getDb();
   return {
-    venues: ((await db.get("SELECT COUNT(*) AS n FROM venues")) as { n: number }).n,
+    venues: ((await db.get("SELECT COUNT(*) AS n FROM venues WHERE NOT (id = ANY(?))", DEMO_VENUE_IDS)) as { n: number }).n,
     accounts: ((await db.get("SELECT COUNT(*) AS n FROM users")) as { n: number }).n,
   };
 }

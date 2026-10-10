@@ -12,10 +12,31 @@ export type AccessState = "paid" | "trial" | "unpaid";
 
 export const TRIAL_DAYS = 7;
 
-/** Prices in rupees. GST is charged on top and shown alongside. */
+/** The yearly price in rupees. */
 export const PRICE_INR = 999;
+
+/**
+ * GST is only charged by a GST-registered business: until then the price is
+ * all there is (registration is needed once turnover passes ₹20 lakh a
+ * year for services). After registering, set this to true, set GSTIN, and
+ * change the Razorpay plan to PRICE_TOTAL_INR: every price line follows.
+ */
+export const CHARGES_GST = false;
 export const GST_RATE = 0.18;
-export const PRICE_WITH_GST_INR = Math.round(PRICE_INR * (1 + GST_RATE) * 100) / 100;
+/** What a venue pays a year: the price, plus GST once we charge it. */
+export const PRICE_TOTAL_INR = CHARGES_GST ? Math.round(PRICE_INR * (1 + GST_RATE) * 100) / 100 : PRICE_INR;
+
+/** The line under a price: "+ 18% GST (₹1,178.82 in total)", or that no GST is added. */
+export function gstNote(): string {
+  return CHARGES_GST ? `+ ${GST_RATE * 100}% GST (${formatInr(PRICE_TOTAL_INR)} in total)` : "No GST added";
+}
+
+/** "₹999 a year" or "₹999 + 18% GST a year (₹1,178.82 in total)", for sentences. */
+export function priceSentence(): string {
+  return CHARGES_GST
+    ? `${formatInr(PRICE_INR)} + ${GST_RATE * 100}% GST a ${BILLING_PERIOD} (${formatInr(PRICE_TOTAL_INR)} in total)`
+    : `${formatInr(PRICE_INR)} a ${BILLING_PERIOD}, with no GST added`;
+}
 export const BILLING_PERIOD = "year";
 
 /** ₹999 · ₹1,178.82 (paise only when there are any). */

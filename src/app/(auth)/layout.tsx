@@ -14,6 +14,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           {BRAND.name}
         </Link>
         {children}
+        <nav className="auth-legal" aria-label="Policies">
+          <Link href="/terms">Terms</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/refunds">Refunds</Link>
+          <Link href="/contact">Contact</Link>
+        </nav>
       </div>
     </div>
   );

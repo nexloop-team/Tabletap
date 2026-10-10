@@ -31,7 +31,7 @@ export default async function LoyaltyPage({ params }: PageProps<"/dashboard/[ven
         automations={settings.automations}
         till={
           <>
-            <StaffDevices venueId={venue.id} devices={await listStaffDevices(venue.id)} cooldownMinutes={settings.stampPolicy.cooldownMinutes} enabled={!!program && program.stampsEnabled !== false} />
+            <StaffDevices venueId={venue.id} devices={await listStaffDevices(venue.id)} cooldownMinutes={settings.stampPolicy.cooldownMinutes} feedbackStamp={settings.stampPolicy.feedbackStamp} enabled={!!program && program.stampsEnabled !== false} />
             <StaffMembers venueId={venue.id} members={await listStaffMembers(venue.id)} />
           </>
         }

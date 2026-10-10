@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
 import { deviceMemory } from "@/lib/browser";
-import { birthdayAskOn, isRewardsOnly, wifiGateActive } from "@/lib/venue/features";
+import { birthdayAskOn, wifiGateActive } from "@/lib/venue/features";
 import { useSheet } from "../FeatureCard";
 import { BirthdayFields, birthdayAnswer } from "../forms";
 import { useLanding } from "../LandingContext";
@@ -56,7 +56,6 @@ function BirthdayPrompt({ customerId, onDone }: { customerId: string; onDone: ()
     </div>
   );
 }
-
 export function WifiSheet() {
   const { venue, t, track, knownCustomerId } = useLanding();
   const { isOpen } = useSheet();
@@ -68,6 +67,21 @@ export function WifiSheet() {
 
   // A device the venue already knows skips the gate (and so does a guest who joined elsewhere on the page).
   const gateVisible = gated && !knownCustomerId && !completion;
+  const guestId = completion?.customerId ?? knownCustomerId;
+
+  // Behind the gate the password is fetched once the guest is through it.
+  const [password, setPassword] = useState<{ for: string; value: string | null } | null>(null);
+  useEffect(() => {
+    if (!gated || !isOpen || !guestId || password?.for === guestId) return;
+    let cancelled = false;
+    api
+      .wifiPassword({ venueId: venue.id, customerId: guestId })
+      .then((result) => !cancelled && setPassword({ for: guestId, value: result.password }))
+      .catch(() => !cancelled && setPassword({ for: guestId, value: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [gated, isOpen, guestId, password, venue.id]);
 
   // Open/close is what's measured: a tap, not a page load.
   useEffect(() => {
@@ -80,27 +94,23 @@ export function WifiSheet() {
     track("wifi_sheet_opened");
     if (gateVisible) {
       track("wifi_gate_shown");
-      if (isRewardsOnly(venue)) track("rewards_join_shown", { context: "wifi_gate" });
       return;
     }
-    if (gated && knownCustomerId && !completion && !visitRecorded.current) {
+    // A guest this phone knows counts as a visit (it keeps "we miss you" emails honest).
+    if (knownCustomerId && !completion && !visitRecorded.current) {
       visitRecorded.current = true;
       track("wifi_known_device_connected");
       void api.recordVisit({ venueId: venue.id, customerId: knownCustomerId, type: "wifi_tap" }).catch(() => {});
     }
-  }, [isOpen, gateVisible, gated, knownCustomerId, completion, venue, track]);
+  }, [isOpen, gateVisible, knownCustomerId, completion, venue.id, track]);
 
   function complete(result: GateCompletion) {
     visitRecorded.current = true; // the capture itself recorded this visit
     setCompletion(result);
-    if (result.customerId) {
-      track("wifi_gate_completed", { offer_taken: result.offerTaken, consent_pending: result.confirmationPending });
-      if (result.confirmationPending) track("consent_confirmation_sent", { source: "wifi" });
-    }
+    track("wifi_gate_completed", { consent_pending: result.confirmationPending });
+    if (result.confirmationPending) track("consent_confirmation_sent", { source: "wifi" });
     const state = deviceMemory.birthdayState(venue.id);
-    if (birthdayAskOn(venue) && result.customerId && result.consentAsked && state !== "answered" && state !== "2") {
-      setBirthdayFor(result.customerId);
-    }
+    if (birthdayAskOn(venue) && result.consentAsked && state !== "answered" && state !== "2") setBirthdayFor(result.customerId);
   }
 
   return (
@@ -109,13 +119,12 @@ export function WifiSheet() {
         <WifiGate onComplete={complete} />
       ) : (
         <>
-          {completion && (completion.passLine || completion.confirmationPending) && (
+          {completion?.confirmationPending && (
             <div className="wifi-notice" role="status">
-              {completion.passLine && <p>{completion.passLine}</p>}
-              {completion.confirmationPending && <p>{t("check_inbox_confirm")}</p>}
+              <p>{t("check_inbox_confirm")}</p>
             </div>
           )}
-          <WifiCredentials />
+          <WifiCredentials gated={gated} password={gated ? (password?.for === guestId ? password.value : undefined) : undefined} />
           {birthdayFor && <BirthdayPrompt customerId={birthdayFor} onDone={() => setBirthdayFor(null)} />}
         </>
       )}

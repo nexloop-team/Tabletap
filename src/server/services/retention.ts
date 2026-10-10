@@ -1,6 +1,7 @@
 import "server-only";
 import { BRAND } from "@/config/brand";
 import { programTiers, stampGoal } from "@/lib/venue/loyalty";
+import { venueTimeZone } from "@/lib/venue/region";
 import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
 import { localDate } from "../jobs/time";
@@ -48,7 +49,7 @@ export async function sendRewardReadyEmail(venue: PublicVenue, cardId: string, b
     | { id: string; email: string; first_name: string | null }
     | undefined;
   if (!guest) return false;
-  const key = `${card.id}:${tier.stampsRequired}:${localDate(new Date())}`;
+  const key = `${card.id}:${tier.stampsRequired}:${localDate(new Date(), venueTimeZone(venue.currencyCode))}`;
   if (!await claimGuestEmail(guest.id, "reward_ready", key)) return false;
   const sent = await sendMail({
     to: guest.email,

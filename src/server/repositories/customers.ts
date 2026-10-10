@@ -55,8 +55,10 @@ export async function upsertCustomer(db: Db, input: NewCustomer): Promise<{ cust
     return { customer: (await findCustomerById(db, input.venueId, existing.id))!, created: false };
   }
   const id = newId("cus");
-  (await db.run(
-    "INSERT INTO customers (id, venue_id, email, first_name, name, locale, capture_source) VALUES (?, ?, ?, ?, ?, ?, ?)", id, input.venueId, input.email, input.firstName ?? null, input.name ?? null, input.locale ?? null, input.captureSource));
+  // Two joins with the same email at once: the second finds the first's row instead of failing.
+  const inserted = await db.run(
+    "INSERT INTO customers (id, venue_id, email, first_name, name, locale, capture_source) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (venue_id, email) DO NOTHING", id, input.venueId, input.email, input.firstName ?? null, input.name ?? null, input.locale ?? null, input.captureSource);
+  if (inserted.changes === 0) return { customer: (await findCustomerByEmail(db, input.venueId, input.email))!, created: false };
   return { customer: (await findCustomerById(db, input.venueId, id))!, created: true };
 }
 
@@ -65,8 +67,9 @@ export async function setConsent(db: Db, customerId: string, state: ConsentState
     "UPDATE customers SET marketing_consent = ?, age_attested = ?, consent_token = ?, consent_updated_at = now() WHERE id = ?", state, ageAttested ? 1 : 0, token, customerId));
 }
 
+/** Records a birthday once. Joins aren't signed in, so a later form can't change one already given. */
 export async function setBirthday(db: Db, customerId: string, month: number, day: number) {
-  (await db.run("UPDATE customers SET birthday_month = ?, birthday_day = ? WHERE id = ?", month, day, customerId));
+  (await db.run("UPDATE customers SET birthday_month = ?, birthday_day = ? WHERE id = ? AND birthday_month IS NULL", month, day, customerId));
 }
 
 export async function recordBirthdaySkip(db: Db, customerId: string) {
@@ -75,4 +78,24 @@ export async function recordBirthdaySkip(db: Db, customerId: string) {
 
 export async function recordVisit(db: Db, venueId: string, customerId: string, type: string) {
   (await db.run("INSERT INTO visits (venue_id, customer_id, type) VALUES (?, ?, ?)", venueId, customerId, type));
+}
+
+/**
+ * Erases a guest from one venue: their details, card, stamps, visits and
+ * email history (the right to erasure under India's DPDP Act). Feedback is
+ * anonymous and stays. Returns false when there was no such guest.
+ */
+export async function deleteGuest(db: Db, venueId: string, customerId: string): Promise<boolean> {
+  const guest = await findCustomerById(db, venueId, customerId);
+  if (!guest) return false;
+  const card = (await db.get("SELECT id FROM loyalty_cards WHERE customer_id = ?", customerId)) as { id: string } | undefined;
+  if (card) {
+    (await db.run("UPDATE loyalty_cards SET referred_by_card_id = NULL WHERE referred_by_card_id = ?", card.id));
+    (await db.run("DELETE FROM stamp_events WHERE card_id = ?", card.id));
+    (await db.run("DELETE FROM loyalty_cards WHERE id = ?", card.id));
+  }
+  (await db.run("DELETE FROM visits WHERE customer_id = ?", customerId));
+  (await db.run("DELETE FROM guest_emails WHERE customer_id = ?", customerId));
+  (await db.run("DELETE FROM customers WHERE id = ?", customerId));
+  return true;
 }

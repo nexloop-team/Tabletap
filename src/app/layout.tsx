@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque } from "next/font/google";
 import { BRAND } from "@/config/brand";
-import { isRtl } from "@/lib/i18n";
-import { requestLocale } from "@/server/request";
+import { LOCALE } from "@/lib/i18n";
 import "./globals.css";
 
 /**
@@ -27,10 +26,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const locale = await requestLocale();
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang={locale} dir={isRtl(locale) ? "rtl" : "ltr"} className={wordmark.variable}>
+    <html lang={LOCALE} className={wordmark.variable}>
       <body>{children}</body>
     </html>
   );

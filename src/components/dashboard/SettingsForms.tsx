@@ -75,11 +75,11 @@ export function ShortCodeForm({ venueId, shortCode, origin }: { venueId: string;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!(await ask({ title: "Change your page address?", body: "Every QR code you've already printed stops working. You'll need to print new ones.", confirmLabel: "Change address", danger: true }))) return;
+    if (!(await ask({ title: "Change your page address?", body: "QR codes you've already printed keep working: the old address leads to the new one. New downloads use the new address.", confirmLabel: "Change address" }))) return;
     void action.run(async () => {
       await dashboardApi.updateVenue(venueId, { shortCode: value.trim().toLowerCase() });
       router.refresh();
-      return "Saved. Download and print your new QR codes.";
+      return "Saved. Printed codes still work; new downloads use the new address.";
     });
   }
 
@@ -90,7 +90,7 @@ export function ShortCodeForm({ venueId, shortCode, origin }: { venueId: string;
           <span>{origin.replace(/^https?:\/\//, "")}/s?i=</span>
           <input className="input" aria-label="Venue code" value={value} onChange={(event) => setValue(event.target.value)} maxLength={40} />
         </div>
-        <p className="hint" style={{ marginTop: 6 }}>Lower-case letters, numbers and hyphens. Changing it breaks printed codes.</p>
+        <p className="hint" style={{ marginTop: 6 }}>Lower-case letters, numbers and hyphens. Old printed codes keep working after a change.</p>
         <button className="btn" type="submit" style={{ marginTop: 12 }} disabled={!changed || action.pending}>
           {action.pending && <Loader2 className="spin" aria-hidden />} Change address
         </button>

@@ -1,5 +1,5 @@
 import "server-only";
-import { ServiceError } from "../http";
+import { clientIp, ServiceError } from "../http";
 
 /**
  * Cloudflare Turnstile. Off unless TURNSTILE_SECRET_KEY is set (with
@@ -14,8 +14,8 @@ export async function verifyCaptcha(token: string | undefined, request: Request)
   if (!captchaEnabled()) return;
   if (!token) throw new ServiceError(400, "Please complete the check that you're not a robot");
   const body = new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY!, response: token });
-  const ip = (request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
-  if (ip) body.set("remoteip", ip);
+  const ip = clientIp(request);
+  if (ip !== "local") body.set("remoteip", ip);
   let ok = false;
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body, signal: AbortSignal.timeout(10_000) });

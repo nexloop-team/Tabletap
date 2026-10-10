@@ -6,7 +6,7 @@ import { useState } from "react";
 import { formatSince } from "@/lib/format";
 import { dashboardApi, errorMessage } from "@/lib/api/dashboard-client";
 import { useConfirm } from "./confirm";
-import { Card, CopyButton, Field, HelpTip } from "./ui";
+import { Card, CopyButton, Field, HelpTip, SwitchRow } from "./ui";
 
 const COOLDOWNS = [
   { value: 0, label: "No limit" },
@@ -27,11 +27,13 @@ export function StaffDevices({
   venueId,
   devices,
   cooldownMinutes,
+  feedbackStamp,
   enabled,
 }: {
   venueId: string;
   devices: { id: string; label: string; createdAt: string; lastUsedAt: string | null }[];
   cooldownMinutes: number;
+  feedbackStamp: boolean;
   /** Stamping only works on a live stamp card. */
   enabled: boolean;
 }) {
@@ -42,6 +44,7 @@ export function StaffDevices({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(cooldownMinutes);
+  const [freeStamp, setFreeStamp] = useState(feedbackStamp);
 
   async function addDevice() {
     setBusy(true);
@@ -70,6 +73,16 @@ export function StaffDevices({
     try {
       await dashboardApi.updateSettings(venueId, { stampPolicy: { cooldownMinutes: value } });
     } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function saveFeedbackStamp(value: boolean) {
+    setFreeStamp(value);
+    try {
+      await dashboardApi.updateSettings(venueId, { stampPolicy: { feedbackStamp: value } });
+    } catch (err) {
+      setFreeStamp(!value);
       setError(errorMessage(err));
     }
   }
@@ -147,6 +160,15 @@ export function StaffDevices({
             ))}
           </select>
         </Field>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <SwitchRow
+          title="Free stamp for feedback"
+          description="A member who leaves feedback gets one stamp, at most once a day."
+          checked={freeStamp}
+          onChange={saveFeedbackStamp}
+          disabled={!enabled}
+        />
       </div>
       {error && <p className="field-error" style={{ marginTop: 8 }}>{error}</p>}
     </Card>

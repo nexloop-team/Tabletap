@@ -22,12 +22,14 @@ export interface DigestRecipient {
   userId: string;
   email: string;
   name: string;
+  /** The venue's currency, which sets its time zone. */
+  currencyCode: string | null;
 }
 
 /** Verified owners of active venues older than two days who haven't switched the digest off. */
 export async function digestRecipients(): Promise<DigestRecipient[]> {
   const rows = (await (await getDb()).all(
-      `SELECT m.venue_id, (v.config::jsonb->>'name') AS venue_name, u.id AS user_id, u.email, u.name
+      `SELECT m.venue_id, (v.config::jsonb->>'name') AS venue_name, (v.config::jsonb->>'currencyCode') AS currency, u.id AS user_id, u.email, u.name
          FROM venue_members m
          JOIN users u ON u.id = m.user_id
          JOIN venues v ON v.id = m.venue_id
@@ -35,6 +37,6 @@ export async function digestRecipients(): Promise<DigestRecipient[]> {
         WHERE m.role = 'owner' AND u.email_verified_at IS NOT NULL AND v.status = 'active'
           AND v.created_at <= now() + INTERVAL '-2 days'
           AND COALESCE(p.weekly_digest, 1) = 1`,
-    )) as { venue_id: string; venue_name: string; user_id: string; email: string; name: string }[];
-  return rows.map((row) => ({ venueId: row.venue_id, venueName: row.venue_name, userId: row.user_id, email: row.email, name: row.name }));
+    )) as { venue_id: string; venue_name: string; currency: string | null; user_id: string; email: string; name: string }[];
+  return rows.map((row) => ({ venueId: row.venue_id, venueName: row.venue_name, userId: row.user_id, email: row.email, name: row.name, currencyCode: row.currency }));
 }
