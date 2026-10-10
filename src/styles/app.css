@@ -5715,6 +5715,8 @@ body:has(.app) {
 }
 .hero-chip {
   position: absolute;
+  /* Decoration: taps go through to the demo phone underneath. */
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5738,9 +5740,10 @@ body:has(.app) {
   top: 47%;
   right: -26%;
 }
-/* Not tilted: rotated text is resampled and looks blurry on most screens. */
+/* Not tilted: rotated text is resampled and looks blurry on most screens.
+   Low on the phone, clear of the back button at the top of its screen. */
 .hero-chip-wifi {
-  top: 5%;
+  bottom: 14%;
   left: -26%;
 }
 .hero-chip-icon {

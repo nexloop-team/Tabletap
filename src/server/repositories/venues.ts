@@ -7,7 +7,7 @@ import type { VenueConfig } from "@/lib/venue/schema";
 import { resolveSettings, type VenueSettings } from "@/lib/venue/settings";
 import type { PublicVenue } from "@/lib/venue/types";
 import { getDb, transaction } from "../db";
-import { DEMO_VENUE_IDS } from "../seed";
+import { DEMO_VENUE_IDS, demoVenue } from "../seed";
 import { storage, storageKey } from "../storage";
 import { startTrial, venueHasAccess } from "./subscriptions";
 
@@ -60,6 +60,9 @@ async function findVenueRow(idOrCode: string): Promise<VenueRow | undefined> {
  * subscription or running trial don't resolve, so their pages go offline.
  */
 export async function findVenue(idOrCode: string): Promise<PublicVenue | null> {
+  // The demos are always live and their content lives in code: no database round trip.
+  const demo = demoVenue(idOrCode);
+  if (demo) return { ...demo, announcement: liveAnnouncement(demo.announcement, localDate(new Date(), venueTimeZone(demo.currencyCode))) };
   const row = await findVenueRow(idOrCode);
   if (!row || row.status !== "active" || !await venueHasAccess(row.id)) return null;
   const venue = toVenue(row);

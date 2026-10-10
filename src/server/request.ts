@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { cache } from "react";
 import { isAdmin, currentUser } from "./auth/session";
 import { findPausedVenue, findVenue, venueRole } from "./repositories/venues";
+import { DEMO_VENUE_IDS } from "./seed";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -50,6 +51,8 @@ export const loadVenue = cache(async (idOrCode: string) => (idOrCode ? await fin
  * or an admin), signed in on this phone: their visits aren't guest scans.
  */
 export async function isTeamVisit(venueId: string): Promise<boolean> {
+  // Demos aren't counted anywhere, so there's nobody to leave out (and no lookup to make).
+  if (DEMO_VENUE_IDS.includes(venueId)) return false;
   const user = await currentUser();
   if (!user) return false;
   return isAdmin(user) || (await venueRole(user.id, venueId)) !== null;

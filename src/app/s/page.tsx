@@ -6,9 +6,11 @@ import { FEEDBACK_VARIANT_COOKIE, LandingApp, type FeedbackVariant } from "@/com
 import { LandingError } from "@/components/landing/LandingError";
 import { PausedPage } from "@/components/landing/PausedPage";
 import { EmbedStyle } from "@/components/EmbedStyle";
+import { DemoBar } from "@/components/landing/DemoBar";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
 import { firstParam, isTeamVisit, loadPausedVenue, loadVenue, sourceParam, venueParam } from "@/server/request";
+import { DEMO_VENUE_IDS } from "@/server/seed";
 import "@/styles/landing.css";
 // The member card (stamp grid, staff code) shows inline on this page.
 import "@/styles/pages.css";
@@ -57,6 +59,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/s">) {
     <>
       <ThemeStyle branding={venue.branding} />
       <EmbedStyle embed={firstParam(params.embed)} />
+      {DEMO_VENUE_IDS.includes(venue.id) && !firstParam(params.embed) && <DemoBar />}
       <LandingApp venue={guestSafeVenue(venue)} locale={locale} source={source} feedbackVariant={variant} persistVariant={!forced && !stored} team={await isTeamVisit(venue.id)} />
     </>
   );

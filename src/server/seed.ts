@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import type { Db } from "./db";
 import type { PublicVenue } from "@/lib/venue/types";
 
@@ -208,9 +209,18 @@ export const DEMO_VENUES: PublicVenue[] = [
 /** The demos' ids: they're for trying the product, so the admin console and its numbers leave them out. */
 export const DEMO_VENUE_IDS = DEMO_VENUES.map((venue) => venue.id);
 
+/** A demo venue by id or code, straight from this file (its pages need no database). */
+export function demoVenue(idOrCode: string): PublicVenue | null {
+  return DEMO_VENUES.find((venue) => venue.id === idOrCode || venue.shortCode === idOrCode) ?? null;
+}
+
 export async function seedDemoVenues(db: Db) {
-  // Demo venues have no owner, so they're refreshed from this file on every start:
-  // new demo content shows up without resetting the database.
+  // Demo venues have no owner, so they're refreshed from this file whenever it
+  // changes: new demo content shows up without resetting the database. Once
+  // per version, not on every start (serverless hosts start often).
+  const version = createHash("sha256").update(JSON.stringify(DEMO_VENUES)).digest("base64url").slice(0, 16);
+  const fresh = await db.run("INSERT INTO job_runs (job, key) VALUES ('demo-seed', ?) ON CONFLICT DO NOTHING", version);
+  if (fresh.changes === 0) return;
   for (const venue of DEMO_VENUES) {
     const { id, shortCode, ...config } = venue;
     await db.run("INSERT INTO venues (id, short_code, config) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET config = excluded.config", id, shortCode, JSON.stringify(config));

@@ -6,9 +6,11 @@ import { PausedPage } from "@/components/landing/PausedPage";
 import { menuExternalUrl, sanitiseExternalUrl } from "@/lib/venue/features";
 import { MenuView } from "@/components/menu/MenuView";
 import { EmbedStyle } from "@/components/EmbedStyle";
+import { DemoBar } from "@/components/landing/DemoBar";
 import { ThemeStyle } from "@/components/ThemeStyle";
 import { BRAND } from "@/config/brand";
 import { firstParam, isTeamVisit, loadPausedVenue, loadVenue, queryString, sourceParam, venueParam } from "@/server/request";
+import { DEMO_VENUE_IDS } from "@/server/seed";
 import "@/styles/landing.css";
 import "@/styles/pages.css";
 
@@ -43,6 +45,7 @@ export default async function MenuPage({ searchParams }: PageProps<"/menu">) {
     <>
       <ThemeStyle branding={venue.branding} />
       <EmbedStyle embed={firstParam(params.embed)} />
+      {DEMO_VENUE_IDS.includes(venue.id) && !firstParam(params.embed) && <DemoBar />}
       <MenuView venueId={venue.id} venueName={venue.name} branding={venue.branding} currencyCode={venue.currencyCode} menus={menus} locale={locale} source={source} backHref={`/s${queryString(params)}`} team={await isTeamVisit(venue.id)} />
     </>
   );
