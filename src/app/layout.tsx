@@ -16,6 +16,8 @@ const wordmark = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  // Absolute links for share previews (Vercel supplies its own address when APP_URL isn't set).
+  ...(process.env.APP_URL ? { metadataBase: new URL(process.env.APP_URL) } : {}),
   title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
   description: "QR-code pages for cafés, bars and restaurants: menus, Wi-Fi, loyalty cards and feedback.",
 };

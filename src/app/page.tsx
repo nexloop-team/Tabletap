@@ -1,4 +1,5 @@
 import { ArrowRight, BookOpen, Check, Heart, MessageCircle, Palette, Printer, Star, Users, Wifi } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "@/components/icons";
 import { BRAND } from "@/config/brand";
@@ -8,6 +9,13 @@ import { currentUser } from "@/server/auth/session";
 import { uiFont } from "@/app/fonts";
 import { DEMO_VENUES } from "@/server/seed";
 import "@/styles/app.css";
+
+/** The share preview and install manifest belong to our own site; venues' guest pages carry none of our branding. */
+export const metadata: Metadata = {
+  manifest: "/brand/app.webmanifest",
+  openGraph: { images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: BRAND.name }] },
+  twitter: { card: "summary_large_image", images: ["/brand/og-image.png"] },
+};
 
 const DEMO_NOTES: Record<string, string> = {
   demo: "Stamp card, menu with photos, Sudoku",

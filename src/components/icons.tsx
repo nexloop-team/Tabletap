@@ -92,26 +92,45 @@ export function GoogleG() {
   );
 }
 
-/** Product brand mark for the footer lockup: a steaming cup. */
 /**
- * A bistro table seen side on (which also reads as a T) with the tap as a dot.
- * The tile takes currentColor; the table and dot read --mark-ink / --mark-dot
- * so each surface can recolour them. Below 32px the dot and foot are dropped.
+ * The Tapmore mark (brand kit mark.svg): three QR finder corners in
+ * currentColor (the brand green, or green-on-dark) with a clay dot in the
+ * fourth corner, where the guest taps. Next to the "tapmore" wordmark it is
+ * the kit's horizontal logo. Below 24px it's the kit's pixel-tuned favicon:
+ * a tile in currentColor with the corners in --mark-ink.
  */
 export function BrandMark({ size }: { size?: number }) {
-  if (size !== undefined && size < 32) {
+  if (size !== undefined && size < 24) {
     return (
-      <svg viewBox="0 0 72 72" width={size} height={size} aria-hidden>
-        <rect width="72" height="72" rx="18" fill="currentColor" />
-        <path d="M16 25h40M36 25v24" stroke="var(--mark-ink, #fff)" strokeWidth="9" strokeLinecap="round" fill="none" />
+      <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden>
+        <rect width="32" height="32" rx="7" fill="currentColor" />
+        <g fill="none" stroke="var(--mark-ink, #fff)" strokeWidth="2">
+          <rect x="7" y="7" width="7" height="7" rx="1.5" />
+          <rect x="18" y="7" width="7" height="7" rx="1.5" />
+          <rect x="7" y="18" width="7" height="7" rx="1.5" />
+        </g>
+        <g fill="var(--mark-ink, #fff)">
+          <rect x="9" y="9" width="3" height="3" rx=".5" />
+          <rect x="20" y="9" width="3" height="3" rx=".5" />
+          <rect x="9" y="20" width="3" height="3" rx=".5" />
+        </g>
+        <circle cx="21.5" cy="21.5" r="4.5" fill="var(--mark-dot, #C9682C)" />
       </svg>
     );
   }
   return (
-    <svg viewBox="0 0 72 72" width={size} height={size} aria-hidden>
-      <rect width="72" height="72" rx="20" fill="currentColor" />
-      <path d="M18 25h36M36 25v22M27 49h18" stroke="var(--mark-ink, #fff)" strokeWidth="6" strokeLinecap="round" fill="none" />
-      <circle cx="53" cy="13.5" r="4.5" fill="var(--mark-dot, #F2B48A)" />
+    <svg viewBox="0 0 120 120" width={size} height={size} aria-hidden>
+      <g fill="none" stroke="currentColor" strokeWidth="9">
+        <rect x="8.5" y="8.5" width="41" height="41" rx="11" />
+        <rect x="70.5" y="8.5" width="41" height="41" rx="11" />
+        <rect x="8.5" y="70.5" width="41" height="41" rx="11" />
+      </g>
+      <g fill="currentColor">
+        <rect x="20" y="20" width="18" height="18" rx="5" />
+        <rect x="82" y="20" width="18" height="18" rx="5" />
+        <rect x="20" y="82" width="18" height="18" rx="5" />
+      </g>
+      <circle cx="91" cy="91" r="20" fill="var(--mark-dot, #C9682C)" />
     </svg>
   );
 }

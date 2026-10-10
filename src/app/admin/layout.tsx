@@ -8,7 +8,7 @@ import { requireAdminPage } from "@/server/dashboard";
 import { listVenuesForUser } from "@/server/repositories/venues";
 import "@/styles/app.css";
 
-export const metadata: Metadata = { title: { default: "Admin", template: `%s · Admin · ${BRAND.name}` }, robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: { default: "Admin", template: `%s · Admin · ${BRAND.name}` }, robots: { index: false, follow: false }, manifest: "/brand/app.webmanifest" };
 
 /** Operator console shell. Gated by ADMIN_EMAILS; each page checks again, since layouts don't re-run on client navigation. */
 export default async function AdminLayout({ children }: { children: ReactNode }) {

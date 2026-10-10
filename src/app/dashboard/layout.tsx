@@ -11,7 +11,7 @@ import { getSubscription } from "@/server/repositories/subscriptions";
 import { listVenuesForUser } from "@/server/repositories/venues";
 import "@/styles/app.css";
 
-export const metadata: Metadata = { title: { default: "Dashboard", template: `%s · ${BRAND.name}` }, robots: { index: false } };
+export const metadata: Metadata = { title: { default: "Dashboard", template: `%s · ${BRAND.name}` }, robots: { index: false }, manifest: "/brand/app.webmanifest" };
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();

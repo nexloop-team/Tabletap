@@ -44,7 +44,7 @@
   --a-ease: cubic-bezier(0.2, 0, 0, 1);
   --a-font-display: var(--font-wordmark), var(--font-sans, var(--font-ui)), var(--font-ui);
   --mark-ink: #ffffff;
-  --mark-dot: #f2b48a;
+  --mark-dot: #c9682c; /* clay, on every colour version of the logo */
 
   min-height: 100vh;
   background: var(--a-bg);
@@ -4280,7 +4280,7 @@ body:has(.app) {
   --a-warn: #f7c9a6;
   --a-warn-soft: #3a2414;
   --mark-ink: #0e2418;
-  --mark-dot: #0e2418;
+  --mark-dot: #c9682c;
   color-scheme: dark;
 }
 .till-bar {

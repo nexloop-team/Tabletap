@@ -9,7 +9,7 @@ import { getVenueRecord } from "@/server/repositories/venues";
 import { currentStaffDevice } from "@/server/services/staff";
 import "@/styles/app.css";
 
-export const metadata: Metadata = { title: { default: "Staff", template: `%s · ${BRAND.name} staff` }, robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: { default: "Staff", template: `%s · ${BRAND.name} staff` }, robots: { index: false, follow: false }, manifest: "/brand/till.webmanifest" };
 
 /**
  * Till screens for paired staff devices: big buttons, nothing else. Always
