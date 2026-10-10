@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // The database path is read when db.ts loads, so point it at a scratch
 // directory before any server module is imported.
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-test-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-test-"));
 process.env.DATA_DIR = dataDir;
 
 type Modules = {
@@ -64,9 +64,9 @@ describe("request origin", () => {
 
   it("ignores forged forwarding headers once APP_URL is set", async () => {
     const { requestOrigin } = await import("./http");
-    process.env.APP_URL = "https://tabletap.example/";
+    process.env.APP_URL = "https://tapmore.example/";
     try {
-      expect(requestOrigin(forged)).toBe("https://tabletap.example");
+      expect(requestOrigin(forged)).toBe("https://tapmore.example");
     } finally {
       delete process.env.APP_URL;
     }
@@ -181,11 +181,11 @@ describe("venues on the SaaS side", () => {
     const unverified = await owner("staff-owner@example.com");
     const venue = await onboard(unverified, "Till Test");
     // Invite emails go out from our domain, so only an owner who confirmed their own email can send them.
-    await expect(m.invites.createStaffInvite(venue, unverified, "someone@example.com", "https://tabletap.test")).rejects.toThrow(/confirm your own email/i);
+    await expect(m.invites.createStaffInvite(venue, unverified, "someone@example.com", "https://tapmore.test")).rejects.toThrow(/confirm your own email/i);
     await m.users.markEmailVerified(unverified.id);
     const alice = (await m.users.findUserById(unverified.id))!;
     const bob = await owner("staff-bob@example.com");
-    const { url } = await m.invites.createStaffInvite(venue, alice, " Staff-Bob@Example.com ", "https://tabletap.test");
+    const { url } = await m.invites.createStaffInvite(venue, alice, " Staff-Bob@Example.com ", "https://tapmore.test");
     const token = new URL(url).searchParams.get("t")!;
 
     expect(await m.invites.acceptStaffInvite(token, bob)).toBe(venue.id);
@@ -197,7 +197,7 @@ describe("venues on the SaaS side", () => {
 
     // Used links don't work twice, and an owner invited by mistake stays an owner.
     expect(await m.invites.acceptStaffInvite(token, bob)).toBeNull();
-    const again = new URL((await m.invites.createStaffInvite(venue, alice, alice.email, "https://tabletap.test")).url).searchParams.get("t")!;
+    const again = new URL((await m.invites.createStaffInvite(venue, alice, alice.email, "https://tapmore.test")).url).searchParams.get("t")!;
     await m.invites.acceptStaffInvite(again, alice);
     expect(await m.venues.venueRole(alice.id, venue.id)).toBe("owner");
 
@@ -210,7 +210,7 @@ describe("venues on the SaaS side", () => {
     expect(await revoked("dev-bob")).toBe(true);
     expect(await revoked("dev-counter")).toBe(false);
     expect(await m.venues.removeStaffMember(venue.id, bob.id)).toBe(false);
-    await expect(m.invites.createStaffInvite(venue, alice, "not an email", "https://tabletap.test")).rejects.toThrow(/email/i);
+    await expect(m.invites.createStaffInvite(venue, alice, "not an email", "https://tapmore.test")).rejects.toThrow(/email/i);
   });
 
   it("undoes the last save, and undoing again redoes it", async () => {

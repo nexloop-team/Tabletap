@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stampRequest } from "@/lib/api/contracts";
 
 // db.ts reads DATA_DIR on load, so point it at a scratch directory first.
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-audit-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-audit-"));
 process.env.DATA_DIR = dataDir;
 
 type M = {
@@ -62,7 +62,7 @@ async function stampVenue(extra: NonNullable<Parameters<typeof import("./service
   return extra && Object.keys(extra).length ? await m.admin.updateVenue(venue, { config: extra }) : venue;
 }
 
-const ORIGIN = "https://tabletap.test";
+const ORIGIN = "https://tapmore.test";
 
 describe("feedback stamps", () => {
   it("need a receipt from real feedback, once, and never by email alone", async () => {

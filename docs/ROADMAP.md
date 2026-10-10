@@ -1,6 +1,6 @@
-# Tabletap roadmap
+# Tapmore roadmap
 
-The working plan for Tabletap: what's done, what's next, why things were decided, and a log of every change.
+The working plan for Tapmore: what's done, what's next, why things were decided, and a log of every change.
 
 **How to use this file**
 
@@ -70,9 +70,9 @@ These are must-haves. Without them the product is not ready to demo or sell.
   - [x] Terms, privacy policy (DPDP Act 2023), cancellation & refunds, delivery policy and contact page.
   - [ ] Name a Grievance Officer on the contact and privacy pages (left out for now; Indian e-commerce and data rules expect one).
   - [x] Guests can delete their own card; owners can delete a guest on request.
-  - [x] Business details set: Tabletap, a partnership firm, Nashik office (`.env.local`).
+  - [x] Business details set: Tapmore, a partnership firm, Nashik office (`.env.local`).
   - [ ] Sign the partnership deed, get the firm's PAN, a current account and a Udyam certificate; consider registering the firm with the Registrar of Firms (an unregistered firm can't sue a customer for unpaid dues, Indian Partnership Act s.69).
-  - [ ] Give Tabletap its own support address (`NEXT_PUBLIC_SUPPORT_EMAIL`) once the domain exists.
+  - [ ] Give Tapmore its own support address (`NEXT_PUBLIC_SUPPORT_EMAIL`) once the domain exists.
   - [ ] Register for GST before charging it, and set `GSTIN`.
   - [ ] Confirm the refund windows in `src/app/refunds/page.tsx`.
   - [ ] Get a lawyer to review all five pages (especially guests under 18, see Decisions).
@@ -225,6 +225,7 @@ Newest first. One line per change: what changed and why.
 - Removed: Spanish. Guest pages are English only.
 - Removed: the guest page's "Open Wi-Fi settings" button (a web page can't open them reliably); the Wi-Fi card shows the network and a one-tap password copy.
 - Added: "What guests said this week" on the overview: an AI summary of the last 7 days of feedback (headline, what guests liked, what needs attention, one suggestion). Needs 3+ notes, is saved and only rewritten when new feedback arrives, and is never emailed. The privacy policy now says feedback text is summarised with AI.
+- Changed: the product is renamed **Tapmore** (was Tabletap). The name comes from `BRAND.name` everywhere; internal cookie and storage names (`tt_…`) are unchanged so nobody is signed out and phones keep their saved cards.
 - Fixed (Vercel): "max clients reached in session mode". Each serverless copy now keeps at most 2 database connections and lets idle ones go; no job timer runs on Vercel (Vercel Cron calls `/api/cron/run` daily, `vercel.json`); database updates take a lock so copies starting together don't clash. Use Supabase's Transaction pooler (port 6543) on Vercel.
 - Removed: the `claude design` folder (four exported design mockups, 13 MB); the design lives in the code now.
 - Removed: the unbuilt Apple/Google Wallet placeholder (it never issued a pass); members use the web card.
@@ -235,7 +236,7 @@ Newest first. One line per change: what changed and why.
 - Added (admin): "Cancel renewal" and "Delete venue" (type the venue's name) on every venue in the admin console. Deleting stops Razorpay billing; both are logged. Demo venues can't be deleted.
 - Changed: the three demo venues stay for the home page, but the admin console's venue list, counts and revenue leave them out, so it shows only real venues.
 - Changed: admins with no venue of their own land in the admin console, not the setup wizard; the console's sidebar no longer shows Help & contact. New venues default to ₹.
-- Changed: Tabletap is its own business, a partnership firm (notarised deed), separate from NexLoop the way Blinkit is its own company within Eternal. The legal pages, Contact page and payments name "Tabletap, a partnership firm"; NexLoop appears nowhere.
+- Changed: Tapmore is its own business, a partnership firm (notarised deed), separate from NexLoop the way Blinkit is its own company within Eternal. The legal pages, Contact page and payments name "Tapmore, a partnership firm"; NexLoop appears nowhere.
 - Changed: no GST on the price (₹999 a year) while the business isn't GST-registered; one switch (`CHARGES_GST`) brings "+ 18% GST" back everywhere.
 - Added: an About page (Razorpay looks for one next to the policies).
 - Changed: the Wi-Fi email gate is an owner option (Loyalty → Guest details → "Email for Wi-Fi", off by default; no longer needs marketing consent on). It only asks for an email: no loyalty join and no free stamp for Wi-Fi any more. The free stamp for feedback stays.

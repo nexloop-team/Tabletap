@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { digestWeek, localDate } from "./jobs/time";
 
 // db.ts reads DATA_DIR on load, so point it at a scratch directory first.
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-staff-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-staff-"));
 process.env.DATA_DIR = dataDir;
 
 type M = {

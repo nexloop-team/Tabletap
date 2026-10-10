@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-ai-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-ai-"));
 process.env.DATA_DIR = dataDir;
 
 let ai: typeof import("./services/ai");

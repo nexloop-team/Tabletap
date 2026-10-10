@@ -67,7 +67,7 @@ function statusFor(input: {
     return {
       badge: "Free access",
       tone: "info",
-      title: "Free access from the Tabletap team",
+      title: `Free access from the ${BRAND.name} team`,
       body: "Everything is included and there’s nothing to pay. We’ll let you know before this ever changes.",
     };
   }

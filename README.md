@@ -1,4 +1,4 @@
-# Tabletap — self-serve QR pages for hospitality venues
+# Tapmore — self-serve QR pages for hospitality venues
 
 Venue owners sign up, answer four onboarding questions and get a live guest page with printable QR codes, all without help from us. A guest who scans a table QR code gets the menu, Wi-Fi, a loyalty card that staff stamp at the till, a private feedback box with a Google review invitation for every guest, and a Sudoku to pass the time. Owners manage everything from a dashboard and pay one yearly subscription per venue. Guest-page behaviour is modelled on the analysis in [docs/candour-analysis.md](docs/candour-analysis.md), with our own brand, copy and backend.
 
@@ -50,16 +50,16 @@ When a venue has neither a paid subscription nor trial days left, its guest page
    1. Set `DATABASE_URL` to your Postgres.
       - **Supabase on Vercel (or any serverless host):** Project → Connect → copy the **Transaction pooler** string (port **6543**), with your database password filled in. Vercel runs many copies of the app at once; the Session pooler (port 5432) allows only about 15 connections and runs out ("max clients reached in session mode").
       - **Supabase on a single server** (Railway, a VPS): the **Session pooler** string (IPv4, port 5432) is fine.
-      - **Self-hosted:** `postgres://user:pass@host:5432/tabletap`, plus `DATABASE_SSL=off` if it has no TLS.
+      - **Self-hosted:** `postgres://user:pass@host:5432/tapmore`, plus `DATABASE_SSL=off` if it has no TLS.
       - To have the server's certificate checked, set `DATABASE_SSL_CA` to the provider's CA (PEM text or a file path; Supabase: Project Settings → Database → SSL Configuration), or `DATABASE_SSL=verify` for a publicly signed certificate. Without either the link is encrypted but unchecked, and startup warns.
    2. For images, set the `S3_*` variables to a bucket.
-      - **Supabase:** Storage → create a private bucket `tabletap` → Storage settings → S3 access keys. Use the endpoint shown there (`https://<project>.supabase.co/storage/v1/s3`) and the project's region.
+      - **Supabase:** Storage → create a private bucket `tapmore` → Storage settings → S3 access keys. Use the endpoint shown there (`https://<project>.supabase.co/storage/v1/s3`) and the project's region.
       - **MinIO, R2 or AWS:** use their endpoint and keys.
    3. Without `S3_*`, images stay on the server's disk under `DATA_DIR`. That needs a persistent volume, so it won't work on serverless hosts.
    4. Check both before starting: `node --env-file=.env.local scripts/check-connections.mjs`.
    5. Run a single instance, because rate limits are kept in memory. They read the visitor's address from the proxy's end of `X-Forwarded-For`: set `TRUSTED_PROXY_COUNT=2` with Cloudflare in front of the host, or `CLIENT_IP_HEADER` to a header your CDN sets.
    6. Every table has row-level security on with no policies. Supabase's automatic REST API can't read them; the app connects as the tables' owner and isn't affected.
-2. **Set `APP_URL`** to your public origin (e.g. `https://tabletap.app`). It's encoded into every QR code, so it must never change.
+2. **Set `APP_URL`** to your public origin (e.g. `https://tapmore.app`). It's encoded into every QR code, so it must never change.
 3. **Email:** create a [Resend](https://resend.com) account, verify your sending domain, then set `RESEND_API_KEY` and `MAIL_FROM`.
 4. **Razorpay:**
    1. In the Razorpay dashboard, create a yearly plan (Subscriptions → Plans) for ₹999 (₹1,178.82 once GST is charged), and set `RAZORPAY_PLAN_ID`.
@@ -85,7 +85,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `APP_URL` | Public origin encoded into QR codes and links (falls back to the request host) |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Support address on the help page, policies and emails (build time) |
 | `LEGAL_ADDRESS`, `LEGAL_JURISDICTION_CITY`, `SUPPORT_PHONE` | Business details on the legal and contact pages (required in production) |
-| `LEGAL_ENTITY_NAME`, `LEGAL_ENTITY_TYPE` | The business that runs Tabletap, e.g. `Tabletap` + `a partnership firm`. Shown in the legal fine print, the Contact page and on payments (required in production) |
+| `LEGAL_ENTITY_NAME`, `LEGAL_ENTITY_TYPE` | The business that runs Tapmore, e.g. `Tapmore` + `a partnership firm`. Shown in the legal fine print, the Contact page and on payments (required in production) |
 | `LEGAL_REGISTRATION` | Optional: Udyam number, firm registration, or later CIN / LLPIN, printed next to the business name |
 | `SUPPORT_HOURS`, `GSTIN` | Optional: support hours (default Mon–Sat 10–6 IST), GSTIN once registered |
 | `DATABASE_URL` | PostgreSQL connection string (Supabase, Neon, RDS, self-hosted). Without it, an embedded Postgres in `DATA_DIR/pg` is used |
@@ -96,7 +96,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `DATA_DIR` | Local folder for the embedded database and, without `S3_*`, images and feedback photos (default `./data`) |
 | `ADMIN_EMAILS` | Comma-separated super admins (the email must be verified). They can make other accounts admins from `/admin/accounts` |
 | `RESEND_API_KEY` | Sends email through Resend; without it emails only go to the `outbox` table and log |
-| `MAIL_FROM` | Sender for all emails, e.g. `Tabletap <hello@tabletap.app>` |
+| `MAIL_FROM` | Sender for all emails, e.g. `Tapmore <hello@tapmore.app>` |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID` | Razorpay Subscriptions for the yearly plan |
 | `RAZORPAY_WEBHOOK_SECRET` | Verifies `/api/billing/webhook` |
 | `BILLING_DEV_MODE` | `1` allows dev-mode billing in a production build (for staging only) |
@@ -109,7 +109,7 @@ When a venue has neither a paid subscription nor trial days left, its guest page
 | `TRUSTED_PROXY_COUNT`, `CLIENT_IP_HEADER` | Where rate limits read the visitor's address (default: the last `X-Forwarded-For` entry) |
 | `CRON_SECRET` | Enables `POST /api/cron/run` for an external scheduler (`Authorization: Bearer …`) |
 | `DISABLE_JOBS` | `1` stops the in-process hourly job ticker (weekly digest, guest emails, daily clean-up), e.g. when running more than one server. On Vercel it's always off: `vercel.json` runs the jobs daily at 09:00 UTC through Vercel Cron, which needs `CRON_SECRET` set |
-| `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tabletap") |
+| `NEXT_PUBLIC_BRAND_NAME` | Product name in the footer and titles (default "Tapmore") |
 | `GOOGLE_NL_API_KEY` | Optional: Google Cloud Natural Language for sentiment (a built-in lexicon is used otherwise) |
 
 ## Routes

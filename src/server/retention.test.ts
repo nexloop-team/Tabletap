@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { liveAnnouncement } from "@/lib/venue/features";
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-retention-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-retention-"));
 process.env.DATA_DIR = dataDir;
 delete process.env.ANTHROPIC_API_KEY;
 

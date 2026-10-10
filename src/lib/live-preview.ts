@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
  * a draft only changes what this one preview frame displays.
  */
 
-const DRAFT = "tabletap:draft";
-const READY = "tabletap:preview-ready";
+const DRAFT = "tapmore:draft";
+const READY = "tapmore:preview-ready";
 
 /** Editor side: send the draft to every live preview frame now, and to any frame that loads later. */
 export function useLivePreview(draft: unknown) {

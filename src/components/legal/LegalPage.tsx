@@ -14,7 +14,7 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /**
- * The shared frame of the company pages: Tabletap's name, links between the
+ * The shared frame of the company pages: Tapmore's name, links between the
  * pages, the last-updated date, and one line of fine print naming the
  * company that operates the service, which Indian law asks for.
  */

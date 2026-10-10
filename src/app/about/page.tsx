@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "About us" };
 
 /**
  * Who we are and what we sell, in one page: Razorpay looks for an About page
- * next to the policies before activating payments. It speaks as Tabletap;
+ * next to the policies before activating payments. It speaks as Tapmore;
  * the operating company appears only in the shared fine print.
  */
 export default async function AboutPage() {

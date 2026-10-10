@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // db.ts and storage.ts read DATA_DIR on load, so point it at a scratch directory first.
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tabletap-media-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tapmore-media-"));
 process.env.DATA_DIR = dataDir;
 
 type M = {

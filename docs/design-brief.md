@@ -1,6 +1,6 @@
-# Tabletap: design brief
+# Tapmore: design brief
 
-This brief is for designing Tabletap's UI. It describes the product as it is built today: who uses it, every screen and its states, the design system in the code, real content to design with, and the constraints a design must respect so it can be built.
+This brief is for designing Tapmore's UI. It describes the product as it is built today: who uses it, every screen and its states, the design system in the code, real content to design with, and the constraints a design must respect so it can be built.
 
 Everything listed here exists and works. "Design further" means improving or extending these screens, not starting over. Section 9 lists where help is most wanted.
 
@@ -8,7 +8,7 @@ Everything listed here exists and works. "Design further" means improving or ext
 
 ## 1. The product
 
-Tabletap is self-serve software for independent hospitality venues: cafés first, then pubs, bars, bakeries and small restaurants.
+Tapmore is self-serve software for independent hospitality venues: cafés first, then pubs, bars, bakeries and small restaurants.
 
 1. An owner signs up and answers four short onboarding questions.
 2. They get a **guest page** and **printable QR codes** for their tables.
@@ -25,7 +25,7 @@ Tabletap is self-serve software for independent hospitality venues: cafés first
 
 **Positioning:** "One QR code for everything your guests need at the table." Owners set it up themselves in ten minutes, with no designer, no developer and no waiting on us.
 
-**Name:** Tabletap is the working name. It can be changed with an environment variable, so the design shouldn't depend on the exact word.
+**Name:** Tapmore is the working name. It can be changed with an environment variable, so the design shouldn't depend on the exact word.
 
 ### Pricing (one plan)
 
@@ -45,7 +45,7 @@ There are no plan tiers, "Pro" badges or upgrade prompts anywhere. Don't design 
 
 | User | Situation | What they care about |
 |---|---|---|
-| **Guest** | At a table, on their own phone, often one-handed, having just scanned a code. Could be in a dim pub or a bright café. Has never heard of Tabletap and has no patience. | Getting the Wi-Fi, seeing the menu and allergens, collecting a stamp. It must be fast and obvious, with no sign-up friction. |
+| **Guest** | At a table, on their own phone, often one-handed, having just scanned a code. Could be in a dim pub or a bright café. Has never heard of Tapmore and has no patience. | Getting the Wi-Fi, seeing the menu and allergens, collecting a stamp. It must be fast and obvious, with no sign-up friction. |
 | **Venue owner or manager** | Runs a small independent business and isn't technical. Often on a phone between customers, sometimes on a laptop after closing. | The page looks like *their* place. The menu is easy to update. More regulars, more Google reviews, and hearing about problems privately before they become public reviews. |
 | **Staff at the till** | Using their own phone (with a staff login) or a shared phone or tablet behind the counter, during a rush. | Scanning a card, adding a stamp, redeeming a reward, undoing a mistake, all in seconds. |
 | **Platform admin** | The operator. Super admins are set in config, and they can make other people admins. | Seeing every venue and account, helping owners, and watching revenue and churn. |
@@ -59,7 +59,7 @@ Each surface has its own look on purpose. They don't share one style.
 ### A. Guest page (`/s?i=<venue>`): the most important surface
 
 - **Layout:** mobile-first, one column, max-width 500px, centred on desktop.
-- **Themed per venue:** the owner picks one background colour, and everything else is derived from it (section 5.2). It must look like the venue's own page, not like Tabletap. There is **no Tabletap branding on guest pages**.
+- **Themed per venue:** the owner picks one background colour, and everything else is derived from it (section 5.2). It must look like the venue's own page, not like Tapmore. There is **no Tapmore branding on guest pages**.
 - **Font:** the system font stack (SF Pro on iPhone), so it loads instantly on 4G. The owner can pick a typography preset instead.
 - **Feel:** iOS-native, calm and easy to tap, like an Apple App Clip or a well-made link-in-bio page.
 
@@ -71,7 +71,7 @@ Uses the same venue theme. It's a long, scrollable menu that's pleasant to brows
 
 Covers the marketing site, sign-in, onboarding, the owner dashboard and the admin console.
 
-- **Brand:** Tabletap's own. Warm paper neutrals with one brand colour, **deep green `#24573F`**, and a **warm clay `#C9682C`** accent for highlights and "needs attention".
+- **Brand:** Tapmore's own. Warm paper neutrals with one brand colour, **deep green `#24573F`**, and a **warm clay `#C9682C`** accent for highlights and "needs attention".
 - **Light and dark mode** follow the device setting.
 - **Feel:** modern, trustworthy B2B software (Linear, Stripe or Square Dashboard territory), but warm and simple enough for a café owner.
 
@@ -331,8 +331,8 @@ An inbox of guest feedback with a sentiment label (Positive, Negative or Mixed),
   - **Subscribed** (Active): "Renews on 8 October 2027", with a quiet "Cancel subscription" button.
   - **Free trial:** "Trial · 5 days left", plus "Your trial ends on … Your page goes offline then unless you subscribe."
   - **Not subscribed** (Unpaid).
-  - **Free access from the Tabletap team.**
-- **Plan card:** "Tabletap, ₹999 / year, + 18% GST, so ₹1,178.82 in total", the feature list, and **Subscribe / Subscribe now**. The button opens Razorpay Checkout.
+  - **Free access from the Tapmore team.**
+- **Plan card:** "Tapmore, ₹999 / year, + 18% GST, so ₹1,178.82 in total", the feature list, and **Subscribe / Subscribe now**. The button opens Razorpay Checkout.
 - **Notices:**
   - "You're subscribed. Thank you!"
   - Dev-mode warning.
@@ -504,7 +504,7 @@ The owner sets **one background colour**, and the code computes the rest:
 
 ### 5.3 Brand
 
-- **Wordmark:** "tabletap" in lower case, Bricolage Grotesque.
+- **Wordmark:** "tapmore" in lower case, Bricolage Grotesque.
 - **Mark:** a rounded square containing a table/"T" shape, with a small clay dot (the "tap").
 - **Favicon and app icon:** the same mark.
 
@@ -518,7 +518,7 @@ The owner sets **one background colour**, and the code computes the rest:
 | **The Copper Kettle**, "Est. 1887 · Real ales & roasts" (`/s?i=demo-crm`) | Dark green `#1F2A24`, Classic typography | A pub: Wi-Fi email gate, 18+ marketing consent, birthday ask. Beer-Battered Haddock, Steak & Ale Pie. |
 | **Bloom Bakery**, "Sourdough, pastries & flowers" (`/s?i=demo-rewards`) | Warm cream `#F6E7D8`, Modern typography | Rewards-only members club, "Order online" external link, custom link cards. |
 
-**Currency:** each venue has its own (the demos use £). Tabletap's own subscription is priced in ₹.
+**Currency:** each venue has its own (the demos use £). Tapmore's own subscription is priced in ₹.
 
 ---
 

@@ -23,7 +23,7 @@ const FEATURES = [
   { icon: Star, tint: "amber", title: "More Google reviews", text: "Every guest gets a friendly invite to review you, the way Google allows." },
   { icon: Users, tint: "purple", title: "Know your regulars", text: "See who visits and how often. Export your guest list whenever you need it." },
   { icon: Printer, tint: "teal", title: "Print and you're done", text: "Table cards print at home. See which tables scan the most." },
-  { icon: Palette, tint: "clay", title: "Looks like your place", text: "Your colour, your logo, your fonts. No Tabletap logo on your page." },
+  { icon: Palette, tint: "clay", title: "Looks like your place", text: `Your colour, your logo, your fonts. No ${BRAND.name} logo on your page.` },
 ];
 
 const STEPS = [

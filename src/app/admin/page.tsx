@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/config/brand";
 import { AlertTriangle, ArrowRight, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { AdminExtendTrial, AdminVenueActions } from "@/components/dashboard/AdminActions";
@@ -289,7 +290,7 @@ export default async function AdminOverview() {
                       </span>
                     </Link>
                   </td>
-                  <td className="truncate">{venue.ownerEmail ?? <span className="muted">Tabletap team</span>}</td>
+                  <td className="truncate">{venue.ownerEmail ?? <span className="muted">{BRAND.name} team</span>}</td>
                   <td>
                     <SegmentBadge venue={venue} />
                   </td>

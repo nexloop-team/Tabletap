@@ -1,7 +1,7 @@
 import { BRAND } from "./brand";
 
 /**
- * The business behind Tabletap, as the legal pages and the Contact page
+ * The business behind Tapmore, as the legal pages and the Contact page
  * print it. Indian law expects these on the site: the Consumer Protection
  * (E-Commerce) Rules 2020 (legal name, address, contact details) and the
  * DPDP Act 2023, and Razorpay checks them before activating payments. (A
@@ -13,15 +13,15 @@ import { BRAND } from "./brand";
  */
 interface LegalDetails {
   /**
-   * The business that runs Tabletap, as its own business (not under any other
-   * company): a partnership firm, a proprietor "trading as Tabletap", or
+   * The business that runs Tapmore, as its own business (not under any other
+   * company): a partnership firm, a proprietor "trading as Tapmore", or
    * later a company. Shown only in the legal fine print, the Contact page
    * and on payments.
    */
   entityName: string;
   /** What kind of business it is, in words: "a partnership firm", "a sole proprietorship". */
   entityType: string | null;
-  /** Name and kind together, for sentences: "Tabletap, a partnership firm". */
+  /** Name and kind together, for sentences: "Tapmore, a partnership firm". */
   entityLabel: string;
   /** Its registration, printed as given when set: "Udyam UDYAM-MH-00-0000000", a firm registration number, or later a CIN / LLPIN. */
   registration: string | null;
@@ -64,9 +64,9 @@ export function legalDetails(): LegalDetails {
 }
 
 /**
- * True when another business runs Tabletap (a proprietor "trading as
- * Tabletap", or a parent company), so the pages say "operated by …"; false
- * when the business is Tabletap itself (a firm or company named Tabletap).
+ * True when another business runs Tapmore (a proprietor "trading as
+ * Tapmore", or a parent company), so the pages say "operated by …"; false
+ * when the business is Tapmore itself (a firm or company named Tapmore).
  */
 export function operatedByOther(legal: LegalDetails): boolean {
   return !legal.entityName.toLowerCase().startsWith(BRAND.name.toLowerCase());

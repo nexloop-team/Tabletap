@@ -83,20 +83,20 @@ describe("formatSince", () => {
 describe("NFC tag links", () => {
   it("open the table's page, marked so taps show apart from QR scans", async () => {
     const { nfcTagLink } = await import("@/components/dashboard/QrDesigner");
-    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "Table 4")).toBe("https://tabletap.in/s?i=chai-corner&s=table-4-nfc");
-    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "Patio")).toBe("https://tabletap.in/s?i=chai-corner&s=patio-nfc");
-    expect(nfcTagLink("https://tabletap.in/s?i=chai-corner", "")).toBe("https://tabletap.in/s?i=chai-corner&s=nfc");
+    expect(nfcTagLink("https://tapmore.in/s?i=chai-corner", "Table 4")).toBe("https://tapmore.in/s?i=chai-corner&s=table-4-nfc");
+    expect(nfcTagLink("https://tapmore.in/s?i=chai-corner", "Patio")).toBe("https://tapmore.in/s?i=chai-corner&s=patio-nfc");
+    expect(nfcTagLink("https://tapmore.in/s?i=chai-corner", "")).toBe("https://tapmore.in/s?i=chai-corner&s=nfc");
   });
 });
 
 describe("NFC links download", () => {
   it("lists each table's NFC link beside its QR link, one row per table", async () => {
     const { nfcLinksCsv } = await import("@/components/dashboard/QrDesigner");
-    const csv = nfcLinksCsv("https://tabletap.in/s?i=chai", ["Table 1", "Patio, back"]);
+    const csv = nfcLinksCsv("https://tapmore.in/s?i=chai", ["Table 1", "Patio, back"]);
     expect(csv.split("\r\n")).toEqual([
       "Table,NFC link (write onto the tag),QR link (on the printed card)",
-      "Table 1,https://tabletap.in/s?i=chai&s=table-1-nfc,https://tabletap.in/s?i=chai&s=table-1",
-      '"Patio, back",https://tabletap.in/s?i=chai&s=patio-back-nfc,https://tabletap.in/s?i=chai&s=patio-back',
+      "Table 1,https://tapmore.in/s?i=chai&s=table-1-nfc,https://tapmore.in/s?i=chai&s=table-1",
+      '"Patio, back",https://tapmore.in/s?i=chai&s=patio-back-nfc,https://tapmore.in/s?i=chai&s=patio-back',
       "",
     ]);
   });
