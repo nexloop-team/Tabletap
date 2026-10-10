@@ -1,7 +1,8 @@
 import "server-only";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { findPausedVenue, findVenue } from "./repositories/venues";
+import { isAdmin, currentUser } from "./auth/session";
+import { findPausedVenue, findVenue, venueRole } from "./repositories/venues";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -43,3 +44,13 @@ export const loadPausedVenue = cache(async (idOrCode: string) => (idOrCode ? awa
 
 /** One lookup per request, shared by generateMetadata and the page. */
 export const loadVenue = cache(async (idOrCode: string) => (idOrCode ? await findVenue(idOrCode) : null));
+
+/**
+ * The page is being looked at by the venue's own people (its owner, staff,
+ * or an admin), signed in on this phone: their visits aren't guest scans.
+ */
+export async function isTeamVisit(venueId: string): Promise<boolean> {
+  const user = await currentUser();
+  if (!user) return false;
+  return isAdmin(user) || (await venueRole(user.id, venueId)) !== null;
+}

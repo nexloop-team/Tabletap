@@ -64,11 +64,12 @@ export async function recentEvents(cardId: string, limit = 5): Promise<StampEven
 }
 
 /** Stamps given by staff and rewards handed out over the last `days` days. */
-export async function stampActivity(venueId: string, days: number): Promise<{ stampsGiven: number; rewardsRedeemed: number }> {
+/** Stamps given and rewards redeemed since `since` (an ISO timestamp, the start of the stats window). */
+export async function stampActivity(venueId: string, since: string): Promise<{ stampsGiven: number; rewardsRedeemed: number }> {
   const row = (await (await getDb()).get(
       `SELECT COALESCE(SUM(CASE WHEN kind = 'stamp' THEN delta END), 0) AS stamps,
               COUNT(CASE WHEN kind = 'redeem' THEN 1 END) AS redeemed
          FROM stamp_events
-        WHERE venue_id = ? AND undone_at IS NULL AND created_at >= now() + CAST(? AS INTERVAL)`, venueId, `-${days} days`)) as { stamps: number; redeemed: number };
+        WHERE venue_id = ? AND undone_at IS NULL AND created_at >= CAST(? AS TIMESTAMPTZ)`, venueId, since)) as { stamps: number; redeemed: number };
   return { stampsGiven: row.stamps, rewardsRedeemed: row.redeemed };
 }

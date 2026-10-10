@@ -7,7 +7,7 @@ import { sendMail } from "../services/mailer";
 import { claimJob, releaseJob } from "./claims";
 import { digestWeek } from "./time";
 import { parseDbDate } from "@/lib/plans";
-import { venueTimeZone } from "@/lib/venue/region";
+import { venueTimeZone, venueUtcOffsetMinutes } from "@/lib/venue/region";
 
 /**
  * The Monday-morning email: last week's scans, guests, stamps and feedback
@@ -19,7 +19,7 @@ function plural(n: number, word: string): string {
 }
 
 export async function buildDigest(recipient: DigestRecipient, now = new Date()): Promise<{ subject: string; text: string }> {
-  const stats = await venueStats(recipient.venueId, 7);
+  const stats = await venueStats(recipient.venueId, 7, venueUtcOffsetMinutes(recipient.currencyCode ?? "INR", now));
   const weekAgo = now.getTime() - 7 * 86_400_000;
   const notes = (await listFeedback(recipient.venueId, { limit: 10 })).rows.filter((row) => (parseDbDate(row.createdAt) ?? 0) >= weekAgo).slice(0, 3);
   const origin = appOrigin();

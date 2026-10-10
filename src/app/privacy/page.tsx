@@ -102,7 +102,7 @@ export default async function PrivacyPage() {
       <h3>On your phone</h3>
       <p>
         We don&apos;t use advertising or tracking cookies. The page stores a few small values on your phone: which card or guest ID is yours
-        at this venue (so you don&apos;t have to join again), a random visit ID that ends when you close the tab, and whether you&apos;ve
+        at this venue (so you don&apos;t have to join again), a random visit ID that resets after 30 minutes without use, and whether you&apos;ve
         answered the birthday question.
       </p>
 

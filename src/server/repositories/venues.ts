@@ -258,10 +258,10 @@ export async function listVenuesForAdmin(limit = 500): Promise<AdminVenueRow[]> 
               (SELECT u.email FROM venue_members m JOIN users u ON u.id = m.user_id WHERE m.venue_id = v.id AND m.role = 'owner' LIMIT 1) AS owner_email,
               s.plan, s.status AS sub_status, s.trial_ends_at, s.current_period_end, s.provider, s.cancel_at_period_end, s.updated_at AS sub_updated_at,
               (SELECT COUNT(*) FROM customers c WHERE c.venue_id = v.id) AS guests,
-              (SELECT COUNT(*) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= now() + INTERVAL '-7 days'
-                 AND COALESCE((e.params->>'source'), '') != 'preview') AS scans_7d,
+              (SELECT COUNT(DISTINCT (e.params->>'session_id')) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened' AND e.created_at >= now() + INTERVAL '-7 days'
+                 AND COALESCE((e.params->>'source'), '') != 'preview' AND COALESCE((e.params->>'team'), '') != '1') AS scans_7d,
               (SELECT MAX(e.created_at) FROM events e WHERE e.venue_id = v.id AND e.name = 'landing_opened'
-                 AND COALESCE((e.params->>'source'), '') != 'preview') AS last_scan_at
+                 AND COALESCE((e.params->>'source'), '') != 'preview' AND COALESCE((e.params->>'team'), '') != '1') AS last_scan_at
        FROM venues v LEFT JOIN subscriptions s ON s.venue_id = v.id
        WHERE NOT (v.id = ANY(?))
        ORDER BY v.created_at DESC LIMIT ?`, DEMO_VENUE_IDS, limit)) as {

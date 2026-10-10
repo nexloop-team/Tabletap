@@ -280,6 +280,29 @@ describe("scan sources", () => {
   });
 });
 
+describe("scan counting", () => {
+  it("counts guests only, once per visit, in the venue's own days, the same in the admin console", async () => {
+    const { venueStats, windowStart } = await import("./repositories/insights");
+    const venue = await stampVenue();
+    const db = await m.db.getDb();
+    const open = (params: Record<string, unknown>) =>
+      db.run("INSERT INTO events (name, params, venue_id) VALUES ('landing_opened', ?, ?)", JSON.stringify(params), venue.id);
+    await open({ session_id: "guest-1", source: "table-1" });
+    await open({ session_id: "guest-1", source: "table-1" }); // a refresh: same visit
+    await open({ session_id: "guest-2", source: "table-2" });
+    await open({ session_id: "owner", source: "table-1", team: 1 }); // the owner testing their own code
+    await open({ session_id: "editor", source: "preview" });
+    const stats = await venueStats(venue.id, 7, 330);
+    expect(stats.scans).toBe(2);
+    expect(stats.daily.reduce((sum, day) => sum + day.scans, 0)).toBe(2);
+    const listed = (await m.venues.listVenuesForAdmin()).find((row) => row.id === venue.id)!;
+    expect(listed.scans7d).toBe(2);
+
+    // "Last 7 days" in India starts at local midnight six days ago: 11 Oct 01:30 IST → 5 Oct 00:00 IST (4 Oct 18:30 UTC).
+    expect(windowStart(7, 330, Date.parse("2026-10-10T20:00:00Z"))).toBe("2026-10-04T18:30:00.000Z");
+  });
+});
+
 describe("small pieces", () => {
   it("blanks private links in stored email copies", () => {
     expect(m.mailer.redactLinks("Reset: https://x.app/reset-password?token=abc123\nCard: https://x.app/card/crd_1?t=zzz&s=1")).toBe(

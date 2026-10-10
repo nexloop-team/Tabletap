@@ -76,6 +76,8 @@ interface MenuViewProps {
   locale: Locale;
   source: string;
   backHref: string;
+  /** Opened by the venue's own team (signed in): not counted as a guest visit. */
+  team?: boolean;
 }
 
 /** What the menu editor sends its preview frame: the unsaved menus, opened on the one being edited. */
@@ -84,12 +86,12 @@ interface MenuDraft {
   menuId: string | null;
 }
 
-export function MenuView({ venueId, venueName, branding, currencyCode, menus: savedMenus, locale, source, backHref }: MenuViewProps) {
+export function MenuView({ venueId, venueName, branding, currencyCode, menus: savedMenus, locale, source, backHref, team = false }: MenuViewProps) {
   const draft = usePreviewDraft<MenuDraft>(source === "preview");
   // Only hosted menus with dishes, the same rule the page applies to saved menus.
   const menus = useMemo(() => (draft ? draft.menus.filter((m) => !m.externalUrl && m.sections.some((s) => s.items.length > 0)) : savedMenus), [draft, savedMenus]);
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
-  const track = useMemo(() => createTracker({ venueId, source, page: "menu" }), [venueId, source]);
+  const track = useMemo(() => createTracker({ venueId, source, page: "menu", team }), [venueId, source, team]);
   const formatPrice = useMemo(() => priceFormatter(locale, currencyCode), [locale, currencyCode]);
   const style = useMemo(() => computeTheme(branding).style, [branding]);
   const [menuIndex, setMenuIndex] = useState(0);

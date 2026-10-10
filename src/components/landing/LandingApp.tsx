@@ -323,6 +323,8 @@ export interface LandingAppProps {
   feedbackVariant: FeedbackVariant;
   /** The bucket was freshly drawn on the server and must be remembered. */
   persistVariant: boolean;
+  /** Opened by the venue's own team (signed in): not counted as a guest visit. */
+  team?: boolean;
 }
 
 /**
@@ -330,12 +332,12 @@ export interface LandingAppProps {
  * The venue arrives server-rendered, so there is no loading flash and the
  * theme is already applied by the time this hydrates.
  */
-export function LandingApp({ venue: savedVenue, locale, source, feedbackVariant, persistVariant }: LandingAppProps) {
+export function LandingApp({ venue: savedVenue, locale, source, feedbackVariant, persistVariant, team = false }: LandingAppProps) {
   // In the editor's preview frame, the owner's unsaved changes show straight away.
   const draft = usePreviewDraft<Partial<PublicVenue>>(source === "preview");
   const venue = useMemo<PublicVenue>(() => (draft ? { ...savedVenue, ...draft, announcement: draft.announcement?.text ? draft.announcement : null } : savedVenue), [savedVenue, draft]);
   const { t, tf } = useMemo(() => createTranslator(locale), [locale]);
-  const track = useMemo(() => createTracker({ venueId: venue.id, source, page: "s" }), [venue.id, source]);
+  const track = useMemo(() => createTracker({ venueId: venue.id, source, page: "s", team }), [venue.id, source, team]);
   const theme = useMemo(() => computeTheme(venue.branding), [venue.branding]);
 
   // The saved colours arrive as a :root rule from the server; a draft overrides them in place.

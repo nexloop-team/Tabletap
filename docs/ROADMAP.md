@@ -226,6 +226,7 @@ Newest first. One line per change: what changed and why.
 - Removed: Spanish. Guest pages are English only.
 - Removed: the guest page's "Open Wi-Fi settings" button (a web page can't open them reliably); the Wi-Fi card shows the network and a one-tap password copy.
 - Added: "What guests said this week" on the overview: an AI summary of the last 7 days of feedback (headline, what guests liked, what needs attention, one suggestion). Needs 3+ notes, is saved and only rewritten when new feedback arrives, and is never emailed. The privacy policy now says feedback text is summarised with AI.
+- Fixed: scan counts. Visits by the venue's own team (signed in as owner, staff or admin) no longer count; a phone counts once per 30-minute visit even across tabs; "last N days" totals and the daily chart cover the same days in the venue's time zone (the Monday email too); the admin console counts visits, not page loads.
 - Added: an "NFC links" button next to Print on Table cards: downloads a spreadsheet (CSV) with each table's NFC link beside its QR link, with tag-writing steps under "How do I write the NFC tags?". Tags are sold and set up separately. The overview's "Where scans came from" counts a table's QR scans and NFC taps together as one total per table.
 - Fixed: the home page's two floating cards looked blurry (tilted text); they're straight now.
 - Added (admin): "Cancel renewal" and "Delete venue" (type the venue's name) on every venue in the admin console. Deleting stops Razorpay billing; both are logged. Demo venues can't be deleted.
