@@ -21,15 +21,6 @@ Requires Node 22+. The database is **PostgreSQL**:
 
 Migrations run automatically on start; restart the dev server after pulling a schema change.
 
-**Coming from the old SQLite version?** Stop the app, then copy everything across once:
-
-```bash
-node scripts/migrate-sqlite-to-postgres.mjs                    # into the local ./data/pg
-DATABASE_URL=postgres://… node scripts/migrate-sqlite-to-postgres.mjs   # into Supabase or your server
-```
-
-It creates the tables if needed, skips rows that are already there, and with `S3_*` set it also uploads the images.
-
 ### Try the owner flow locally
 
 1. Open `/signup` and create an account. You land in the onboarding wizard, and the venue starts on a 7-day free trial (no card).

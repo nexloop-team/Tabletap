@@ -40,7 +40,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
   return data as T;
 }
 
-export interface SavedVenue {
+interface SavedVenue {
   id: string;
   shortCode: string;
   config: UpdateVenueRequest["config"];

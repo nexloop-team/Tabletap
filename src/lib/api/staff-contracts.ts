@@ -39,7 +39,6 @@ export interface StaffCardView {
 }
 
 export const inviteStaffRequest = z.object({ email: z.string().trim().min(1, "Enter the staff member's email address").max(200) });
-export type InviteStaffRequest = z.input<typeof inviteStaffRequest>;
 
 export const addStaffDeviceRequest = z.object({ label: z.string().trim().min(1, "Name the device, e.g. “Front till”").max(40) });
 export type AddStaffDeviceRequest = z.input<typeof addStaffDeviceRequest>;

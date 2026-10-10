@@ -9,7 +9,7 @@ import { storedReferral } from "@/lib/referral";
 import { isPlausibleEmail, normaliseEmail } from "@/lib/validation";
 import { useLanding } from "./LandingContext";
 
-export type JoinResult = { ok: true; response: EnrollResponse; email: string } | { ok: false; error: MessageKey };
+type JoinResult = { ok: true; response: EnrollResponse; email: string } | { ok: false; error: MessageKey };
 
 function currentLocale() {
   return typeof navigator !== "undefined" ? navigator.language : "en";
@@ -32,7 +32,7 @@ function useRecordJoin() {
   );
 }
 
-export interface StampJoinInput {
+interface StampJoinInput {
   name: string;
   email: string;
   initialStamps?: 0 | 1;
@@ -76,7 +76,7 @@ export function useStampJoin() {
   );
 }
 
-export interface RewardsJoinInput {
+interface RewardsJoinInput {
   email: string;
   firstName: string;
   ageAttested: boolean;

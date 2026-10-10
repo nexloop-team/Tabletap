@@ -6,7 +6,7 @@ import { clientIp, ServiceError } from "../http";
  * NEXT_PUBLIC_TURNSTILE_SITE_KEY for the widget), so local development and
  * tests never need a network round trip.
  */
-export function captchaEnabled(): boolean {
+function captchaEnabled(): boolean {
   return !!process.env.TURNSTILE_SECRET_KEY;
 }
 

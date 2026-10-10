@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
-export interface FilterGroup {
+interface FilterGroup {
   title: string;
   options: { key: string; label: ReactNode; on: boolean; toggle: () => void }[];
 }

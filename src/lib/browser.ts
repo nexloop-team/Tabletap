@@ -1,6 +1,6 @@
 /** Browser-only helpers. Every function here must be called from an event handler or effect. */
 
-export type PlatformKey = "ios" | "android" | "windows" | "mac" | "unknown";
+type PlatformKey = "ios" | "android" | "windows" | "mac" | "unknown";
 
 export function getPlatform(): PlatformKey {
   const ua = navigator.userAgent || "";
@@ -41,7 +41,7 @@ export async function copyToClipboard(value: string): Promise<void> {
 }
 
 /** localStorage that never throws: private windows and blocked storage just forget. */
-export const safeStorage = {
+const safeStorage = {
   get(key: string): string | null {
     try {
       return window.localStorage.getItem(key);

@@ -6,15 +6,6 @@
   padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  color: var(--text-secondary);
-  font-size: 16px;
-}
-
 /* ───────────────────────── Header ───────────────────────── */
 
 .venue-header {
@@ -130,9 +121,7 @@
 }
 .header-text h1,
 .feature-label,
-.menu-title,
 .menu-section-head h2,
-.menu-item-name,
 .menu-special-name,
 .poster-text h1,
 .tile-title,
@@ -460,77 +449,6 @@
 
 /* ───────────────────────── Loyalty ───────────────────────── */
 
-.loyalty-header {
-  text-align: center;
-  padding-bottom: 16px;
-}
-.loyalty-header .loyalty-icon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 10px;
-  color: var(--loyalty-rose);
-}
-.loyalty-header .loyalty-icon svg {
-  width: 100%;
-  height: 100%;
-}
-.loyalty-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-.loyalty-header p {
-  font-size: 14px;
-  color: var(--card-text-secondary, var(--text-secondary));
-}
-.rewards-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-.rewards-grid.count-2 {
-  flex-wrap: nowrap;
-}
-.rewards-grid.count-2 .reward-card {
-  flex: 1;
-}
-.rewards-grid.count-3,
-.rewards-grid.count-4,
-.rewards-grid.count-5 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.rewards-grid .reward-card.featured {
-  grid-column: 1 / -1;
-}
-.reward-card {
-  padding: 14px 12px;
-  border-radius: 12px;
-  background: var(--input-bg);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.reward-card-num {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-.reward-card-name {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--card-text-primary, var(--text-primary));
-}
-
 /* ───────────────────────── Wi-Fi ───────────────────────── */
 
 .field {
@@ -549,27 +467,6 @@
   color: var(--card-text-secondary, var(--text-secondary));
   flex-shrink: 0;
 }
-.field-value {
-  font-size: 15px;
-  font-weight: 600;
-  text-align: end;
-  word-break: break-word;
-}
-.sheet-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}
-.hint-box {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-inline-start: 4px solid var(--success-green);
-  background: rgba(52, 199, 89, 0.1);
-  font-size: 14px;
-  line-height: 1.4;
-  border-radius: 0 8px 8px 0;
-}
 .wifi-notice {
   margin-bottom: 12px;
   font-size: 14px;
@@ -580,12 +477,6 @@
 }
 
 /* ───────────────────────── Feedback ───────────────────────── */
-
-.feedback-intro {
-  font-size: 14px;
-  color: var(--card-text-secondary, var(--text-secondary));
-  padding-bottom: 12px;
-}
 .feedback-textarea {
   width: 100%;
   min-height: 112px;
@@ -780,18 +671,6 @@
 }
 
 /* ───────────────────────── Error view ───────────────────────── */
-
-.error-container {
-  padding: 20px 16px;
-}
-.error-box {
-  border-radius: 12px;
-  border: 1px solid var(--error-red);
-  background: rgba(255, 59, 48, 0.1);
-  padding: 14px;
-  font-size: 15px;
-  line-height: 1.4;
-}
 .btn-primary {
   width: 100%;
   margin-top: 16px;
@@ -1372,9 +1251,6 @@
   border-radius: 12px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
-.my-card .card-invite {
-  margin-top: 0;
-}
 
 /* ───────────────────────── Page states ───────────────────────── */
 
@@ -1504,9 +1380,7 @@
   --shape-btn: 4px;
 }
 .landing .feature-wrapper,
-.landing .menu-list,
-.landing .menu-special,
-.landing .menu-filter {
+.landing .menu-special {
   border-radius: var(--shape-card);
 }
 .landing .feature-card:focus-visible {
@@ -2760,10 +2634,6 @@ svg.tile-glyph {
 .menu-page[data-layout="list"] .menu-special-price {
   font-size: 13.5px;
   color: var(--text-secondary);
-}
-
-.menu-badges-top {
-  display: none;
 }
 
 /* Specials as coloured tiles: deep, bright, pale in turn. */

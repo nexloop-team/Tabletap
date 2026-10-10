@@ -4,7 +4,7 @@ import { cache } from "react";
 import { isAdmin, currentUser } from "./auth/session";
 import { findPausedVenue, findVenue, venueRole } from "./repositories/venues";
 
-export type SearchParams = Record<string, string | string[] | undefined>;
+type SearchParams = Record<string, string | string[] | undefined>;
 
 export function firstParam(value: string | string[] | undefined): string {
   return ((Array.isArray(value) ? value[0] : value) ?? "").trim();

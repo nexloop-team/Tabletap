@@ -1,6 +1,6 @@
 import { missingLegalDetails } from "@/config/legal";
 
-export interface ConfigProblem {
+interface ConfigProblem {
   /** "error": something guests or owners will hit; "warn": works, but not as it should for a launch. */
   level: "error" | "warn";
   message: string;
@@ -11,7 +11,7 @@ export interface ConfigProblem {
  * missing setting shows up in the log instead of as a broken QR code, an
  * email that never arrives or a payment page that won't open.
  */
-export function productionConfigProblems(env: NodeJS.ProcessEnv = process.env): ConfigProblem[] {
+function productionConfigProblems(env: NodeJS.ProcessEnv = process.env): ConfigProblem[] {
   const problems: ConfigProblem[] = [];
   const error = (message: string) => problems.push({ level: "error", message });
   const warn = (message: string) => problems.push({ level: "warn", message });

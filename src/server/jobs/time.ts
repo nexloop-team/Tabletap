@@ -2,9 +2,9 @@ import { DEFAULT_TIME_ZONE } from "@/lib/venue/region";
 
 /** Calendar maths in a venue's own time zone (see venueTimeZone); India unless told otherwise. */
 
-export const BUSINESS_TZ = DEFAULT_TIME_ZONE;
+const BUSINESS_TZ = DEFAULT_TIME_ZONE;
 
-export interface LocalParts {
+interface LocalParts {
   year: number;
   month: number;
   day: number;

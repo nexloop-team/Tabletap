@@ -38,7 +38,6 @@ export const updateVenueRequest = z.object({ config: venueConfigPatch.optional()
 export type UpdateVenueRequest = z.input<typeof updateVenueRequest>;
 
 export const deleteVenueRequest = z.object({ confirmName: z.string().max(200) });
-export type DeleteVenueRequest = z.input<typeof deleteVenueRequest>;
 
 export const explainDishesRequest = z.object({
   items: z

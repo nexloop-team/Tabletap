@@ -14,7 +14,7 @@ import { getVenueSettings } from "../repositories/venues";
 import { sendMail } from "./mailer";
 
 /** Referral rewards a member can earn in any 30 days, so invites can't be farmed. */
-export const MAX_REFERRAL_REWARDS_PER_MONTH = 5;
+const MAX_REFERRAL_REWARDS_PER_MONTH = 5;
 
 /**
  * Things that follow a staff stamp: the "reward ready" email and referral
@@ -38,7 +38,7 @@ export async function onStaffStamp(event: { venue: PublicVenue; cardId: string; 
  * Service email (no marketing consent needed) when a stamp takes the card
  * past a reward. At most once per reward per card per day.
  */
-export async function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before: number, after: number): Promise<boolean> {
+async function sendRewardReadyEmail(venue: PublicVenue, cardId: string, before: number, after: number): Promise<boolean> {
   if (!await venueHasAccess(venue.id) || !(await getVenueSettings(venue.id)).automations.rewardReady) return false;
   const unlocked = programTiers(venue.loyaltyProgram).filter((tier) => before < tier.stampsRequired && after >= tier.stampsRequired);
   const tier = unlocked[unlocked.length - 1];
@@ -72,7 +72,7 @@ export async function sendRewardReadyEmail(venue: PublicVenue, cardId: string, b
  * The friend's first staff stamp proves a real visit, so that's when the
  * member who invited them gets their stamps. Checked once per friend card.
  */
-export async function rewardReferrer(venue: PublicVenue, friendCardId: string) {
+async function rewardReferrer(venue: PublicVenue, friendCardId: string) {
   const referral = venue.loyaltyProgram?.referral;
   const goal = stampGoal(programTiers(venue.loyaltyProgram));
   const result = await transaction(async (db) => {

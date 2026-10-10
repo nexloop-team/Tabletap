@@ -13,7 +13,7 @@ import { storage } from "../storage";
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_FILES_PER_VENUE = 500;
 
-export const MEDIA_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
+const MEDIA_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
 
 export function sniff(bytes: Buffer): string | null {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";

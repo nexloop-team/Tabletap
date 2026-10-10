@@ -3,7 +3,7 @@
 import { Check, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
-export interface ToastOptions {
+interface ToastOptions {
   text: string;
   /** One follow-up, e.g. "Undo". The toast closes when it's used. */
   action?: { label: string; onClick: () => void };

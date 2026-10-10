@@ -33,8 +33,6 @@ export const en = {
   feature_sudoku: "Sudoku",
 
   // Loyalty
-  loyalty_program: "Loyalty Program",
-  collect_stamps_rewards: "Collect stamps to unlock rewards",
   collect_stamps_single: "Collect {stamps} stamps to earn a {reward}",
   your_name: "Your name",
   first_name: "First name",
@@ -51,7 +49,6 @@ export const en = {
   view_card: "View my card",
   stamp_added: "Stamp added!",
   no_stamp_this_time: "No stamp this time - show your card on your next visit.",
-  wallet_updates_automatically: "Your card updates automatically with every stamp.",
 
   // Rewards-only
   rewards_sub: "Your rewards are delivered to a digital card.",
@@ -67,7 +64,6 @@ export const en = {
   consent_single_18: "Email me offers and news from {business}. I confirm I'm 18 or older.",
   privacy_notice: "Privacy notice",
   check_inbox_confirm: "Check your inbox to confirm your subscription.",
-  birthday_join_label: "Add your birthday if you'd like a birthday treat",
   birthday_prompt_title: "Get a treat on your birthday",
   birthday_prompt_body: "Tell {business} your birthday and we'll send you something special. Just the month and day - no year.",
   birthday_month: "Month",
@@ -77,7 +73,6 @@ export const en = {
 
   // Wi-Fi
   network_ssid: "Network",
-  security: "Security",
   password: "Password",
   no_password_required: "No password needed",
   not_provided: "Not provided",
@@ -127,7 +122,6 @@ export const en = {
   sudoku_start_failed: "Couldn't start a puzzle.",
 
   // Landing shell
-  social_links: "Follow us",
   powered_by: "Powered by {brand}",
   announcement_until: "Until {date}",
   copy: "Copy",
@@ -140,7 +134,6 @@ export const en = {
   loyalty_member_hint: "Already a member? We'll email your card link.",
 
   // Menu page
-  menu_loading: "Loading menu...",
   menu_title: "Menu",
   menu_search: "Search dishes and drinks",
   menu_no_results: "No dishes match your search.",
@@ -148,8 +141,6 @@ export const en = {
   menu_unavailable: "Sold out today",
   menu_back: "Back",
   menu_kcal: "{kcal} kcal",
-  menu_filter: "Allergens",
-  menu_filter_count: "Allergens · {count}",
   menu_no_allergen: "No {allergen}",
   menu_filter_remove: "Remove filter: no {allergen}",
   menu_filter_title: "Hide dishes that contain",
@@ -181,7 +172,6 @@ export const en = {
   food_veg: "Veg",
   food_nonveg: "Non-veg",
   food_egg: "Contains egg",
-  menu_veg_only: "Veg only",
   menu_allergy_ask: "Have a food allergy? Please tell us before you order and we'll check with the kitchen.",
   badge_new: "New",
   badge_spicy: "Spicy",
@@ -194,14 +184,10 @@ export const en = {
   card_greeting: "{name}'s card",
   card_title: "Your card",
   card_progress: "{stamps} of {required} stamps",
-  card_next_reward: "{count} more for a {reward}",
   card_reward_ready: "You've earned a {reward}! Show this card to claim it.",
-  card_unlocked: "Unlocked",
   card_member: "Member since {date}",
-  card_show: "Show this card at the counter to collect stamps and claim rewards.",
   card_show_rewards: "Show this card at the counter to claim your rewards.",
   card_not_found: "We couldn't find this card. Please use the link in your email.",
-  card_number: "Card {number}",
   card_show_staff: "Show to staff",
   card_hide_staff: "Hide code",
   card_staff_hint: "Staff scan this code to add your stamp or give you your reward.",
@@ -257,4 +243,3 @@ export const en = {
 };
 
 export type MessageKey = keyof typeof en;
-export type Messages = Record<MessageKey, string>;

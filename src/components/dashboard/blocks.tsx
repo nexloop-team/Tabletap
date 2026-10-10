@@ -21,7 +21,7 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: Re
 const compact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 });
 
 /** 1,284 stays as is; 12,900 → 12.9K. */
-export function formatCount(value: number): string {
+function formatCount(value: number): string {
   return value < 10_000 ? value.toLocaleString("en-IN") : compact.format(value);
 }
 

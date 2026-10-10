@@ -62,7 +62,7 @@ export function RewardsConsent({ checked, onChange }: { checked: boolean; onChan
   );
 }
 
-export interface BirthdayValue {
+interface BirthdayValue {
   month: string;
   day: string;
 }
@@ -158,11 +158,6 @@ export function WalletActions({ response, context }: { response: EnrollResponse;
       {!walletShown && cardCredentials && <MyCardToggle credentials={cardCredentials} />}
     </>
   );
-}
-
-/** A member can leave with their card from this response (wallet pass or web card). */
-export function hasPassInHand(response: EnrollResponse): boolean {
-  return !!(response.passBase64 || response.googleWalletUrl || response.cardUrl);
 }
 
 export function SuccessPanel({

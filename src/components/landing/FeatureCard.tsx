@@ -8,7 +8,7 @@ import { useLanding } from "./LandingContext";
  * 44px tinted circle: the feature colour behind the glyph in full colour. The
  * wash is stronger on dark cards (--icon-soft, set by the theme) so it still reads.
  */
-export function IconCircle({ tint, children }: { tint: string | null; children: ReactNode }) {
+function IconCircle({ tint, children }: { tint: string | null; children: ReactNode }) {
   return (
     <span className={`icon-circle${tint ? "" : " neutral"}`} style={tint ? ({ "--tint": tint } as CSSProperties) : undefined}>
       {children}

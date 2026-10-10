@@ -9,7 +9,7 @@ import { useConfirm } from "./confirm";
 import { useToast } from "./toast";
 import { Card, CopyButton, HelpTip } from "./ui";
 
-export interface StaffMemberView {
+interface StaffMemberView {
   userId: string;
   name: string;
   email: string;

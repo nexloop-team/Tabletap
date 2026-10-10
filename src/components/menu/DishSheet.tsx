@@ -5,7 +5,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { safeImageUrl } from "@/lib/venue/features";
 import type { MenuItem } from "@/lib/venue/types";
 
-export interface DishSheetLabels {
+interface DishSheetLabels {
   close: string;
   whatsThis: string;
   explainerNote: string;

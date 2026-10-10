@@ -449,11 +449,6 @@ body:has(.app) {
   font-size: 13px;
   color: var(--a-text-3);
 }
-.subhead {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 24px 0 12px;
-}
 
 .notice {
   display: flex;
@@ -725,11 +720,6 @@ body:has(.app) {
 .mk-head p {
   font-size: 17px;
   color: var(--a-text-2);
-}
-.mk-center {
-  text-align: center;
-  justify-items: center;
-  margin-inline: auto;
 }
 .mk-section {
   padding-block: 80px;
@@ -1060,61 +1050,9 @@ body:has(.app) {
     transition: none;
   }
 }
-.money-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 18px 24px;
-  margin: 0;
-}
-.money-grid > div {
-  display: grid;
-  gap: 2px;
-}
-.money-grid dt {
-  font-size: 13px;
-  color: var(--a-text-2);
-}
-.money-grid dd {
-  margin: 0;
-  font-family: var(--a-font-display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.money-grid span {
-  font-size: 12.5px;
-  color: var(--a-text-3);
-}
 .price-gst {
   margin: 6px 0 0;
   font-size: 14px;
-  color: var(--a-text-3);
-}
-.mk .price-card.featured .money-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 18px 24px;
-  margin: 0;
-}
-.money-grid > div {
-  display: grid;
-  gap: 2px;
-}
-.money-grid dt {
-  font-size: 13px;
-  color: var(--a-text-2);
-}
-.money-grid dd {
-  margin: 0;
-  font-family: var(--a-font-display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.money-grid span {
-  font-size: 12.5px;
   color: var(--a-text-3);
 }
 .price-gst {
@@ -2731,37 +2669,6 @@ body:has(.app) {
     flex-direction: column-reverse;
   }
 }
-
-/* "Needs attention" list on the admin overview */
-.attention-list {
-  list-style: none;
-  display: grid;
-  margin: 0 -8px;
-}
-.attention-list a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 8px;
-  border-radius: 8px;
-  text-decoration: none;
-}
-.app .attention-list a {
-  color: var(--a-text);
-}
-.attention-list a:hover {
-  background: var(--a-surface-2);
-}
-.attention-list li + li a {
-  border-top: 1px solid var(--a-border);
-  border-radius: 0;
-}
-.attention-icon {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  color: var(--a-warn);
-}
 .attention-text {
   display: grid;
   flex: 1;
@@ -2770,11 +2677,6 @@ body:has(.app) {
 }
 .attention-text span {
   font-size: 13px;
-  color: var(--a-text-3);
-}
-.attention-go {
-  width: 16px;
-  height: 16px;
   color: var(--a-text-3);
 }
 
@@ -2857,9 +2759,6 @@ body:has(.app) {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
-}
-.list-row-body {
-  margin-top: 12px;
 }
 .item-thumb {
   width: 40px;
@@ -3004,30 +2903,9 @@ body:has(.app) {
   height: 16px;
   color: var(--a-text-3);
 }
-.venue-dot {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--a-border);
-  flex: none;
-  background: center / cover no-repeat;
-}
 
 .danger-zone {
   border-color: color-mix(in srgb, var(--a-danger) 35%, var(--a-border));
-}
-
-/* "This is a Pro feature" marker in the sidebar. */
-.nav-pro {
-  flex: none;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--a-warm-soft);
-  color: var(--a-warm-text);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .venue-switch-text {
   flex: 1;
@@ -3568,9 +3446,6 @@ body:has(.app) {
   .item-row-chevron {
     transition: none;
   }
-}
-.span-all {
-  grid-column: 1 / -1;
 }
 .switch-list {
   border-top: 1px solid var(--a-border);
@@ -4338,7 +4213,6 @@ body:has(.app) {
   .skip-link,
   .no-print,
   .savebar,
-  .trial-banner,
   .account-bar,
   .page > .notice {
     display: none !important;

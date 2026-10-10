@@ -315,7 +315,7 @@ function FeatureList({ features }: { features: FeatureKey[] }) {
   );
 }
 
-export interface LandingAppProps {
+interface LandingAppProps {
   venue: PublicVenue;
   locale: Locale;
   /** The `s` query param: which QR code / table was scanned. */

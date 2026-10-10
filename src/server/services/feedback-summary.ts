@@ -4,12 +4,12 @@ import { venueHasAccess } from "../repositories/subscriptions";
 import { aiConfigured, summarizeFeedback, type FeedbackSummary } from "./ai";
 
 /** Notes needed before a summary says anything useful. */
-export const MIN_NOTES = 3;
+const MIN_NOTES = 3;
 const WINDOW_DAYS = 7;
 const MAX_NOTES = 150;
 const MAX_NOTE_CHARS = 600;
 
-export type FeedbackSummaryState =
+type FeedbackSummaryState =
   | { state: "ready"; summary: FeedbackSummary; notes: number; createdAt: string }
   | { state: "too_few"; notes: number }
   | { state: "unavailable" };

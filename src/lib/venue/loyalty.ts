@@ -14,8 +14,3 @@ export function programTiers(program: LoyaltyProgram | null | undefined): Reward
 export function stampGoal(tiers: RewardTier[]): number {
   return tiers.length ? tiers[tiers.length - 1].stampsRequired : 0;
 }
-
-/** Rewards this many stamps can pay for right now. */
-export function unlockedTiers(tiers: RewardTier[], stamps: number): RewardTier[] {
-  return tiers.filter((tier) => stamps >= tier.stampsRequired);
-}

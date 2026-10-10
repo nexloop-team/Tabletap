@@ -22,7 +22,7 @@ export const PRICE_INR = 999;
  * change the Razorpay plan to PRICE_TOTAL_INR: every price line follows.
  */
 export const CHARGES_GST = false;
-export const GST_RATE = 0.18;
+const GST_RATE = 0.18;
 /** What a venue pays a year: the price, plus GST once we charge it. */
 export const PRICE_TOTAL_INR = CHARGES_GST ? Math.round(PRICE_INR * (1 + GST_RATE) * 100) / 100 : PRICE_INR;
 
@@ -89,10 +89,6 @@ export function accessState(sub: SubscriptionState | null, now = Date.now()): Ac
   }
   const trialEnd = parseDbDate(sub.trialEndsAt);
   return trialEnd !== null && trialEnd > now ? "trial" : "unpaid";
-}
-
-export function hasAccess(sub: SubscriptionState | null, now = Date.now()): boolean {
-  return accessState(sub, now) !== "unpaid";
 }
 
 /** Whole days left in the free trial, or null when not on one. */

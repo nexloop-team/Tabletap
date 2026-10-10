@@ -13,7 +13,7 @@ import { findUserById, type User } from "../repositories/users";
  * its SHA-256, so a leaked database can't be replayed as cookies and a
  * session can be revoked by deleting its row.
  */
-export const SESSION_COOKIE = "tt_session";
+const SESSION_COOKIE = "tt_session";
 /** A session ends after this many days without a visit; every visit pushes the end back. */
 const SESSION_DAYS = 90;
 /** The cookie outlives the session so coming back extends it (browsers cap cookies at 400 days). */
@@ -110,7 +110,7 @@ export function isAdmin(user: User | null): boolean {
   return !!user && user.emailVerified && (user.adminRole || isSuperAdmin(user));
 }
 
-export type AuthTokenPurpose = "verify_email" | "reset_password";
+type AuthTokenPurpose = "verify_email" | "reset_password";
 
 /** One-time link tokens (email verification, password reset); stored hashed like sessions. */
 export async function createAuthToken(userId: string, purpose: AuthTokenPurpose, ttlMinutes: number): Promise<string> {

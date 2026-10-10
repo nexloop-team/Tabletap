@@ -17,7 +17,7 @@ function rewardNoun(value: string) {
 }
 
 /** One line on how the card works, then the reward ladder when there's more than one reward. */
-export function RewardsSummary({ program }: { program: LoyaltyProgram }) {
+function RewardsSummary({ program }: { program: LoyaltyProgram }) {
   const { tf } = useLanding();
   const tiers = program.rewardTiers ?? [];
   const top = tiers.length > 0 ? tiers[tiers.length - 1] : { stampsRequired: program.stampsRequired, rewardName: program.rewardName };

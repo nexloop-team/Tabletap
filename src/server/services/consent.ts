@@ -6,13 +6,13 @@ import { newToken } from "../ids";
 import { findCustomerByConsentToken, setConsent, type CustomerRow } from "../repositories/customers";
 import { sendMail, type Mail } from "./mailer";
 
-export interface ConsentAnswer {
+interface ConsentAnswer {
   /** The single box: "email me offers … I confirm I'm 13/18 or older". */
   marketingConsent: boolean;
   ageAttested: boolean;
 }
 
-export interface ConsentOutcome {
+interface ConsentOutcome {
   /** True when a double-opt-in email was requested for this answer. */
   confirmationPending: boolean;
   /** Email to send once the surrounding transaction has committed. */

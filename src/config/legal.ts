@@ -11,7 +11,7 @@ import { BRAND } from "./brand";
  * rebuild. Startup warns in production while any required one is missing,
  * and the pages show the gap rather than inventing a value.
  */
-export interface LegalDetails {
+interface LegalDetails {
   /**
    * The business that runs Tabletap, as its own business (not under any other
    * company): a partnership firm, a proprietor "trading as Tabletap", or

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Db } from "../db";
 import { getDb } from "../db";
 
-export interface NewFeedback {
+interface NewFeedback {
   id: string;
   venueId: string;
   text: string;

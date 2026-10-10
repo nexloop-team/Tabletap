@@ -27,7 +27,7 @@ export interface SudokuState {
 
 const HISTORY_LIMIT = 200;
 
-export function generatePuzzle(level: SudokuLevel): { puzzle: string; solution: string } | null {
+function generatePuzzle(level: SudokuLevel): { puzzle: string; solution: string } | null {
   try {
     const game = getSudoku(level);
     const puzzle = game.puzzle.replace(/-/g, "0");
@@ -91,7 +91,7 @@ function place(s: SudokuState, index: number, digit: number) {
   for (const p of peers(index)) s.notes[p] &= ~bit;
 }
 
-export function isSolved(s: SudokuState): boolean {
+function isSolved(s: SudokuState): boolean {
   return s.values.every((v, i) => v === solutionAt(s, i));
 }
 
@@ -183,7 +183,7 @@ function candidates(values: number[], index: number): number[] {
  * mistake" is the honest answer to "I'm stuck". Otherwise prefer a cell with a
  * single candidate (one a human could deduce), then the first empty cell.
  */
-export function findHint(s: SudokuState): { index: number; value: number; wasMistake: boolean } | null {
+function findHint(s: SudokuState): { index: number; value: number; wasMistake: boolean } | null {
   if (s.solvedAt) return null;
   for (let i = 0; i < 81; i++) {
     if (!isGiven(s, i) && s.values[i] && s.values[i] !== solutionAt(s, i)) return { index: i, value: solutionAt(s, i), wasMistake: true };

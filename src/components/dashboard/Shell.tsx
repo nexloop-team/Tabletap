@@ -11,7 +11,7 @@ import { initials } from "@/lib/format";
 import { ConfirmProvider } from "./confirm";
 import { ToastProvider } from "./toast";
 
-export interface ShellVenue {
+interface ShellVenue {
   id: string;
   name: string;
   /** Feedback the owner hasn't opened yet: a count on the Feedback nav item. */
@@ -21,7 +21,7 @@ export interface ShellVenue {
   logoUrl: string | null;
 }
 
-export interface ShellUser {
+interface ShellUser {
   name: string;
   email: string;
   isAdmin: boolean;
